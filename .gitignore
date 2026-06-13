@@ -1,0 +1,70 @@
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Node.js
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.npm/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build directories
+out/
+
+# Python (if used)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env/
+env/
+.venv/
+
+# Java (if used)
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+.agent/
+.codex/
