@@ -748,6 +748,16 @@ Each seeded concert must include ticket types such as SVIP, VIP, GA, CAT1, CAT2 
 - [Risk] CSV import can corrupt guest list if a bad file overwrites good data. -> Mitigation: stage rows, validate before upsert, record import reports, and make imports idempotent by file checksum and row natural keys.
 - [Risk] Team members can accidentally bypass module boundaries. -> Mitigation: document dependency rules, use ports/adapters, and require use-case tests with in-memory adapters for critical business logic.
 
+## Spec Semantics
+
+After `define-ticketbox-blueprint` is archived normally, `openspec/specs/` becomes the accepted target system contract for TicketBox. These main specs define the behavior, architecture expectations, and engineering mechanisms the project must eventually satisfy.
+
+The presence of a capability in `openspec/specs/` does not mean that capability has already been implemented. Implementation completion is tracked separately through future implementation changes, task checklists, tests, pull requests, and `docs/roadmap.md`.
+
+Future implementation changes should reference the relevant target specs instead of redefining the same requirements. For example, an `implement-ticket-purchase` change should reference the archived `ticket-purchase` spec, then define the concrete database migrations, use cases, adapters, UI work, and tests needed to satisfy that target contract.
+
+If implementation reveals that the accepted target behavior or architecture is wrong, the team should create or update an OpenSpec change that explicitly modifies the relevant specs or design decisions. The team should not silently let implementation drift away from the archived contract.
+
 ## Migration Plan
 
 This is an initial blueprint change, so there is no production migration. Implementation should proceed through separate OpenSpec changes:

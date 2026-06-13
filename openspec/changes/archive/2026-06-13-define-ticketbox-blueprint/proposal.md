@@ -10,6 +10,7 @@ TicketBox needs a precise blueprint before implementation because the project co
 - Establish a production-like but feasible architecture using a Node.js/NestJS modular monolith backend, clean/hexagonal module boundaries, PostgreSQL, Redis, BullMQ background workers, object storage, customer web, admin web, and React Native check-in app.
 - Define C4 diagrams, high-level architecture, database model, access control model, business flows, acceptance criteria, and implementation tasks.
 - Document explicit trade-offs and non-goals so the 5-week scope remains realistic while still satisfying all required features.
+- Define OpenSpec governance semantics so archived main specs are understood as the accepted target system contract, not proof that implementation is complete.
 - No breaking changes are introduced because this is the initial system blueprint and no official OpenSpec specs exist yet.
 
 ## Capabilities
@@ -26,6 +27,7 @@ TicketBox needs a precise blueprint before implementation because the project co
 - `ai-artist-bio`: PDF press kit upload, text extraction, cleanup, AI adapter invocation, generated artist bio review, and publication on concert detail pages.
 - `platform-protection`: Rate limiting, bot/flood mitigation, Redis caching, cache invalidation, graceful degradation, observability, and load-test expectations.
 - `submission-readiness`: README, seed data, local Docker runtime, demo scenarios, test evidence, and final blueprint packaging for course submission.
+- `project-governance`: OpenSpec source-of-truth semantics, archive expectations, implementation change traceability, and implementation status tracking.
 
 ### Modified Capabilities
 
@@ -36,4 +38,5 @@ TicketBox needs a precise blueprint before implementation because the project co
 - Creates the OpenSpec planning source for the project under `openspec/changes/define-ticketbox-blueprint`.
 - Defines future implementation boundaries for backend modules, frontend applications, React Native check-in app, database schema, Redis usage, BullMQ worker jobs, payment simulator, AI adapter, and CSV importer.
 - Establishes the blueprint content that can later be exported into the course-required `blueprint/` folder or PDF.
+- Establishes that archived main specs represent target behavior and architecture contracts, while implementation completion is tracked by future changes, tasks, tests, and roadmap progress.
 - Guides future implementation changes such as `implement-platform-foundation`, `implement-concert-management`, `implement-ticket-purchase`, `implement-payment-reliability`, `implement-checkin-offline-sync`, and `harden-submission`.

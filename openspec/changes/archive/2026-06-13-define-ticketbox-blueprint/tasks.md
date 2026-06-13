@@ -19,6 +19,7 @@
 - [x] 2.10 Create `blueprint/specs/ai-bio.md` from `specs/ai-artist-bio/spec.md`
 - [x] 2.11 Create `blueprint/specs/platform-protection.md` from `specs/platform-protection/spec.md`
 - [x] 2.12 Create `blueprint/specs/submission-readiness.md` from `specs/submission-readiness/spec.md`
+- [x] 2.13 Create `blueprint/specs/project-governance.md` from `specs/project-governance/spec.md`
 
 ## 3. Add Team Roadmap Reference
 
@@ -31,3 +32,10 @@
 - [x] 4.2 Check that `blueprint/` matches the required submission structure in `docs/requirements.md`
 - [x] 4.3 Check that every required technical mechanism is covered: rate limiting, circuit breaker, idempotency, caching, concurrency-safe inventory, per-user limit, offline check-in, CSV import, and AI bio
 - [x] 4.4 Mark the blueprint change ready for team review
+
+## 5. Archive Semantics Clarification
+
+- [x] 5.1 Add `project-governance` capability to the proposal
+- [x] 5.2 Add project governance spec explaining that archived specs are target contracts, not implementation-complete evidence
+- [x] 5.3 Add `Spec Semantics` section to OpenSpec and course blueprint design documents
+- [x] 5.4 Validate the change remains suitable for normal archive without `--skip-specs`
