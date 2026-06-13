@@ -2,9 +2,10 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+.claude
 Thumbs.db
 ehthumbs.db
-
+SLASH_COMMANDS_GUIDE.md
 # Logs
 logs
 *.log
