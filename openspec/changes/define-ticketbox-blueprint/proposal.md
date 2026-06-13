@@ -7,7 +7,7 @@ TicketBox needs a precise blueprint before implementation because the project co
 - Define the end-to-end TicketBox system blueprint for a 5-week team project.
 - Specify the functional scope for customer ticket purchase, organizer administration, check-in staff workflows, notifications, AI artist bio generation, and VIP guest list import.
 - Specify the technical mechanisms required by the assignment: concurrency-safe inventory reservation, per-user ticket limits, rate limiting, payment circuit breaker, idempotency, caching, offline check-in sync, and CSV import resilience.
-- Establish a production-like but feasible architecture using a modular monolith backend, clean/hexagonal module boundaries, PostgreSQL, Redis, background workers, object storage, customer web, admin web, and check-in PWA/mobile web.
+- Establish a production-like but feasible architecture using a Node.js/NestJS modular monolith backend, clean/hexagonal module boundaries, PostgreSQL, Redis, BullMQ background workers, object storage, customer web, admin web, and React Native check-in app.
 - Define C4 diagrams, high-level architecture, database model, access control model, business flows, acceptance criteria, and implementation tasks.
 - Document explicit trade-offs and non-goals so the 5-week scope remains realistic while still satisfying all required features.
 - No breaking changes are introduced because this is the initial system blueprint and no official OpenSpec specs exist yet.
@@ -34,6 +34,6 @@ TicketBox needs a precise blueprint before implementation because the project co
 ## Impact
 
 - Creates the OpenSpec planning source for the project under `openspec/changes/define-ticketbox-blueprint`.
-- Defines future implementation boundaries for backend modules, frontend applications, check-in app/PWA, database schema, Redis usage, worker jobs, payment simulator, AI adapter, and CSV importer.
+- Defines future implementation boundaries for backend modules, frontend applications, React Native check-in app, database schema, Redis usage, BullMQ worker jobs, payment simulator, AI adapter, and CSV importer.
 - Establishes the blueprint content that can later be exported into the course-required `blueprint/` folder or PDF.
 - Guides future implementation changes such as `implement-platform-foundation`, `implement-concert-management`, `implement-ticket-purchase`, `implement-payment-reliability`, `implement-checkin-offline-sync`, and `harden-submission`.

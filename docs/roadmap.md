@@ -9,13 +9,13 @@ This roadmap is the team's official implementation plan for building TicketBox a
 - [ ] 1.3 Finalize C4 Level 1 and C4 Level 2 diagrams in the blueprint
 - [ ] 1.4 Finalize the high-level architecture diagram and critical data flows
 - [ ] 1.5 Finalize the PostgreSQL schema draft and Redis responsibility list
-- [ ] 1.6 Finalize ADRs for modular monolith, PostgreSQL, Redis, payment simulator, PWA check-in, and worker queue
+- [ ] 1.6 Finalize ADRs for NestJS modular monolith, PostgreSQL, Redis, payment simulator, React Native check-in, and BullMQ worker queue
 - [ ] 1.7 Review all OpenSpec capability specs for testability and missing scenarios
 - [ ] 1.8 Split implementation ownership across the 4 team members
 
 ## 2. Week 1 - Platform Foundation
 
-- [ ] 2.1 Create repository structure for backend API, customer web, admin web, check-in PWA, worker, data, and docs
+- [ ] 2.1 Create repository structure for backend API, customer web, admin web, React Native check-in app, worker, data, and docs
 - [ ] 2.2 Configure Docker Compose for backend, frontend apps, PostgreSQL, Redis, worker, mail dev server, and object storage or local file storage
 - [ ] 2.3 Add database migration tooling and initial schema migration
 - [ ] 2.4 Add seed script for required sample concerts, ticket types, prices, sale windows, limits, and seating zones
@@ -81,10 +81,10 @@ This roadmap is the team's official implementation plan for building TicketBox a
 
 ## 8. Week 5 - Offline Check-in
 
-- [ ] 8.1 Implement check-in PWA authentication and staff assignment loading
+- [ ] 8.1 Implement React Native check-in app authentication and staff assignment loading
 - [ ] 8.2 Implement online QR scan endpoint with duplicate prevention
-- [ ] 8.3 Implement PWA QR scan UI for online and offline modes
-- [ ] 8.4 Implement local offline scan queue using browser persistent storage
+- [ ] 8.3 Implement React Native QR scan UI for online and offline modes
+- [ ] 8.4 Implement local offline scan queue using device persistent storage
 - [ ] 8.5 Implement batch sync endpoint with per-event accepted, duplicate, invalid, and conflict results
 - [ ] 8.6 Implement retry and sync status UI for pending offline scans
 - [ ] 8.7 Add tests for online duplicate prevention, offline queue persistence, successful sync, and conflict rejection

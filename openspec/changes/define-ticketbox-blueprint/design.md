@@ -2,7 +2,7 @@
 
 TicketBox is a course project for a concert ticketing system in Vietnam. The system must cover the complete lifecycle from concert publishing to ticket purchase, payment confirmation, QR e-ticket delivery, gate check-in, AI artist bio generation, and sponsor VIP guest list import.
 
-The project scope is 5 weeks, so the architecture must be production-like enough to demonstrate the required engineering mechanisms while remaining feasible for a small student team. The design therefore favors a modular monolith with strict module boundaries over distributed microservices. The codebase should still be structured around bounded contexts and ports/adapters so individual modules can be split later if needed.
+The project scope is 5 weeks, so the architecture must be production-like enough to demonstrate the required engineering mechanisms while remaining feasible for a small student team. The design therefore favors a Node.js/NestJS modular monolith with strict module boundaries over distributed microservices. The codebase should still be structured around bounded contexts and ports/adapters so individual modules can be split later if needed.
 
 Primary stakeholders:
 
@@ -45,9 +45,9 @@ Key constraints from `docs/requirements.md`:
 
 ## Decisions
 
-### Decision 1: Use a modular monolith with clean/hexagonal module boundaries
+### Decision 1: Use Node.js/NestJS modular monolith with clean/hexagonal module boundaries
 
-TicketBox will be implemented as one backend deployable split into bounded-context modules:
+TicketBox will be implemented as one Node.js/NestJS backend deployable split into bounded-context modules:
 
 - Identity and Access
 - Concert Management
@@ -70,6 +70,7 @@ Inner layers do not import ORM models, HTTP controllers, Redis clients, queue cl
 Rationale:
 
 - A 5-week project benefits from one runtime, one database, and simpler debugging.
+- NestJS provides modules, dependency injection, guards, interceptors, and testing conventions that fit clean/hexagonal boundaries.
 - Clean boundaries keep domain logic testable without running PostgreSQL, Redis, or external APIs.
 - The assignment requires many integrations and reliability patterns; ports/adapters allow realistic simulators and future real providers.
 
@@ -77,6 +78,7 @@ Alternatives considered:
 
 - Microservices: closer to large-scale production, but too much operational overhead for 5 weeks.
 - Simple layered CRUD app: faster initially, but business rules such as reservation, idempotency, and offline sync would leak into controllers and become hard to verify.
+- Python/FastAPI or Java/Spring: viable alternatives, but the team selected Node.js/NestJS for TypeScript consistency across backend and web apps.
 
 ### Decision 2: Use PostgreSQL as the source of truth and Redis as a supporting store
 
@@ -194,19 +196,19 @@ Rate limiting will be enforced at the backend middleware layer using Redis token
 - admin write limit by role/user
 - check-in sync limit by device ID
 
-For sale opening spikes, checkout may also return `429` with retry-after. A waiting-room style fair queue is a stretch goal if core requirements are complete.
+For sale opening spikes, checkout may also return `429` with retry-after. A waiting-room/fair-queue mechanism is explicitly a stretch goal after rate limiting is complete.
 
 Rationale:
 
 - Token bucket allows controlled bursts while bounding sustained request rate.
 - Redis counters work across multiple backend instances in local or future deployments.
 
-### Decision 8: Use PWA/mobile web for check-in with offline event queue
+### Decision 8: Use React Native for check-in with offline event queue
 
-The check-in app will be a PWA/mobile web app:
+The check-in app will be a React Native mobile app:
 
 - online mode calls the check-in API immediately
-- offline mode stores scan events in IndexedDB/local storage
+- offline mode stores scan events in SQLite; AsyncStorage is limited to lightweight app/session state
 - sync mode uploads batches when network returns
 - server validates each event and returns per-event result
 
@@ -218,8 +220,8 @@ Offline limitation:
 
 Rationale:
 
-- PWA is feasible in 5 weeks and satisfies mobile check-in behavior.
-- IndexedDB/local storage provides enough persistence for demo and weak-network scenarios.
+- React Native better matches the requirement for a mobile check-in app and gives more direct access to camera scanning and device storage.
+- The sync contract stays independent of the mobile framework, so a future mobile client could reuse the same backend API.
 
 ### Decision 9: Use background workers for async integrations
 
@@ -233,7 +235,12 @@ Workers process:
 - scheduled guest list CSV import
 - cache invalidation jobs if needed
 
-Queue technology can be Redis-backed BullMQ if using Node.js, or Celery/RQ if using Python. The blueprint requires the worker boundary, not a specific language.
+Queue technology will be Redis-backed BullMQ because the backend stack is Node.js/NestJS.
+
+Rationale:
+
+- BullMQ uses Redis, which is already part of the architecture for cache, rate limiting, idempotency, and circuit breaker state.
+- NestJS has established integration patterns for producers, processors, retries, delayed jobs, and repeatable scheduled jobs.
 
 Rationale:
 
@@ -256,6 +263,28 @@ Rationale:
 
 - Keeps large binary files out of PostgreSQL.
 - Allows later replacement with S3-compatible storage.
+
+### Decision 11: Use GeminiAI-compatible provider adapter with deterministic local fallback
+
+AI Artist Bio generation will use an `AiBioGeneratorPort` with two adapters:
+
+- GeminiAI-compatible provider adapter for demo or production-like runs
+- deterministic local fallback for development and grading environments without API keys or network access
+
+Rationale:
+
+- The assignment requires the system to send extracted press-kit text to an AI model, but grading should not fail because credentials are unavailable.
+- The fallback keeps tests and local demo deterministic while preserving the provider integration boundary.
+
+### Decision 12: Use Redis short-TTL near-real-time availability and keep WebSocket/SSE as stretch
+
+Ticket availability displayed on public pages will use Redis-backed near-real-time snapshots with short TTL and active invalidation. WebSocket/SSE live updates are a stretch goal, not a required baseline.
+
+Rationale:
+
+- Final correctness is enforced by the reservation transaction, not by the public availability number.
+- Short-TTL cache reduces database pressure under high read load while keeping availability close enough for browsing.
+- WebSocket/SSE adds connection management complexity that is not necessary to prove no oversell.
 
 ### C4 Level 1: System Context
 
@@ -294,7 +323,7 @@ Person(staff, "Check-in Staff")
 System_Boundary(ticketbox, "TicketBox") {
   Container(customerWeb, "Customer Web", "React/Next.js", "Concert browsing, checkout, e-ticket view")
   Container(adminWeb, "Admin Web", "React/Next.js", "Concert, ticket type, revenue, imports, AI bio management")
-  Container(checkinApp, "Check-in PWA", "PWA", "QR scanning, offline queue, sync")
+  Container(checkinApp, "Check-in Mobile App", "React Native", "QR scanning, offline queue, sync")
   Container(api, "Backend API", "Modular monolith", "REST API, auth, domain use cases, integration adapters")
   Container(worker, "Background Worker", "Worker process", "Async jobs, reminders, imports, AI processing")
   ContainerDb(postgres, "PostgreSQL", "SQL", "Transactional source of truth")
@@ -329,7 +358,7 @@ Rel(csv, worker, "Scheduled file import")
 ### High-Level Architecture Flow
 
 ```text
-Customer Web/Admin Web/Check-in PWA
+Customer Web/Admin Web/React Native Check-in App
         |
         v
 Backend API middleware
@@ -391,16 +420,16 @@ Failure handling:
 #### Offline check-in and sync
 
 ```text
-1. Staff logs into Check-in PWA before the event.
-2. PWA stores session and minimal event/check-in metadata.
+1. Staff logs into the React Native check-in app before the event.
+2. The mobile app stores session and minimal event/check-in metadata.
 3. If online, scan submits ticket QR to API immediately.
 4. API validates ticket, event, role, and previous check-in state.
 5. API writes accepted check-in event transactionally.
-6. If offline, PWA stores scan event locally with device_id, timestamp, and QR payload hash.
-7. When network returns, PWA sends a batch sync.
+6. If offline, the mobile app stores scan event locally with device_id, timestamp, and QR payload hash.
+7. When network returns, the mobile app sends a batch sync.
 8. API validates each event independently.
 9. API returns accepted, duplicate, invalid, or conflict per event.
-10. PWA marks synced records and shows rejected/conflict results to staff.
+10. The mobile app marks synced records and shows rejected/conflict results to staff.
 ```
 
 Failure handling:
@@ -649,7 +678,7 @@ Enforcement points:
 - Controllers declare required permissions per endpoint.
 - Application use cases re-check ownership or assignment rules, such as organizer owns concert or staff is assigned to concert.
 - Frontend route guards hide inaccessible screens but are not the source of truth.
-- Check-in PWA can cache session metadata, but server validates every sync request.
+- The React Native check-in app can cache session metadata, but server validates every sync request.
 
 ### API Surface
 
@@ -691,7 +720,7 @@ docker compose up
   - backend-api
   - customer-web
   - admin-web
-  - checkin-pwa
+  - checkin-mobile
   - worker
   - postgres
   - redis
@@ -710,7 +739,7 @@ Each seeded concert must include ticket types such as SVIP, VIP, GA, CAT1, CAT2 
 
 ## Risks / Trade-offs
 
-- [Risk] Five weeks is short for all required features. -> Mitigation: use modular monolith, payment simulator, PWA check-in, and prioritize correctness of required mechanisms over microservice deployment.
+- [Risk] Five weeks is short for all required features. -> Mitigation: use NestJS modular monolith, payment simulator, React Native check-in with a narrow sync contract, and prioritize correctness of required mechanisms over microservice deployment.
 - [Risk] SQL row locks can become a bottleneck on hot SVIP ticket types. -> Mitigation: this is acceptable for correctness in the assignment; load tests should show no oversell. Future scaling could introduce queue-based sale admission or sharded inventory counters.
 - [Risk] Cached availability can briefly differ from real inventory. -> Mitigation: final availability is checked inside the reservation transaction; public availability is labeled as near real-time.
 - [Risk] Offline check-in cannot globally prevent duplicates while devices are isolated. -> Mitigation: document the limitation, prevent duplicates online, persist offline scans, and detect conflicts on sync.
@@ -741,8 +770,4 @@ The official 5-week team implementation roadmap is maintained in `docs/roadmap.m
 
 ## Open Questions
 
-- Which backend language/framework will the team use: Node.js/NestJS, Python/FastAPI, Java/Spring, or another stack?
-- Will the check-in app be implemented as a PWA only, or as React Native with the same offline-sync contract?
-- Which AI provider will be used in the demo, and is a deterministic local fallback required for grading without API keys?
-- Does the course require real-time seat availability over WebSocket/SSE, or is short-TTL near-real-time cache acceptable?
-- Does the team want a waiting-room/fair-queue mechanism as a stretch goal after rate limiting is complete?
+- None. The team has resolved the remaining provider and local persistence decisions for the blueprint.
