@@ -22,6 +22,35 @@ The local dependency stack starts:
 
 - PostgreSQL on `localhost:5432`
 - Redis on `localhost:6379`
+- Maildev SMTP on `localhost:1025`
+- Maildev inbox on `http://localhost:1080`
+
+## Environment
+
+Copy `.env.example` to `.env` before starting the API or worker. Notification
+delivery uses deterministic local email defaults unless a future adapter changes
+the provider:
+
+```bash
+EMAIL_PROVIDER=local
+EMAIL_FROM=no-reply@ticketbox.test
+EMAIL_MAX_ATTEMPTS=3
+EMAIL_RETRY_BACKOFF_MS=5000
+```
+
+For visible local email demo evidence, start dependencies and switch the email
+provider to Maildev SMTP:
+
+```bash
+EMAIL_PROVIDER=smtp
+EMAIL_SMTP_HOST=localhost
+EMAIL_SMTP_PORT=1025
+MAILDEV_WEB_URL=http://localhost:1080
+```
+
+Then open `http://localhost:1080` to inspect the local inbox. Maildev is a local
+demo provider only; `EMAIL_PROVIDER=local` remains the deterministic default for
+tests and development without SMTP.
 
 ## Database
 
@@ -89,7 +118,8 @@ If PostgreSQL or Redis is unavailable, `GET /health` returns an unhealthy respon
 npm run dev:worker
 ```
 
-The worker starts a NestJS application context and registers the placeholder `platform.health` BullMQ processor. Domain jobs are intentionally not implemented in this foundation change.
+The worker starts a NestJS application context and registers BullMQ processors,
+including platform health checks and notification delivery jobs.
 
 ## Verification
 
@@ -113,9 +143,11 @@ This change covers only platform foundation:
 - NestJS API and worker skeletons
 - shared backend infrastructure modules
 - Docker Compose for PostgreSQL and Redis
+- Docker Compose for Maildev local email demo
 - Prisma datasource configuration and baseline domain schema
 - database migration and deterministic seed data
 - Redis and BullMQ wiring
+- notification delivery worker wiring
 - environment validation
 - health check
 - base README

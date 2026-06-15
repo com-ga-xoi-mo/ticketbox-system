@@ -1,0 +1,153 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { NotificationChannelPort } from '../../domain/ports/notification-channel.port';
+import type {
+  NotificationRepositoryPort,
+  RecordDeliveryAttemptInput,
+  UpdateNotificationStatusInput,
+  UpsertNotificationInput,
+} from '../../domain/ports/notification-repository.port';
+import {
+  NotificationAttemptStatus,
+  NotificationChannel,
+  NotificationStatus,
+  type DeliveryAttemptRecord,
+  type NotificationRecord,
+} from '../../domain/notification.types';
+import { FailingEmailChannelAdapter } from '../../testing/failing-email-channel.adapter';
+import { DeliverNotificationUseCase } from './deliver-notification.use-case';
+
+function emailNotification(
+  overrides: Partial<NotificationRecord> = {},
+): NotificationRecord {
+  return {
+    id: 'notification-1',
+    userId: 'user-1',
+    concertId: 'concert-1',
+    channel: NotificationChannel.EMAIL,
+    type: 'PURCHASE_CONFIRMATION',
+    dedupeKey: 'purchase-confirmation:order-1:email',
+    status: NotificationStatus.PENDING,
+    subject: 'TicketBox confirmation',
+    body: 'Confirmed',
+    scheduledAt: null,
+    sentAt: null,
+    failedAttemptCount: 0,
+    ...overrides,
+  };
+}
+
+class FakeNotificationRepository implements NotificationRepositoryPort {
+  notification: NotificationRecord | null = emailNotification();
+  attempts: DeliveryAttemptRecord[] = [];
+
+  async upsertByDedupeKey(_input: UpsertNotificationInput): Promise<NotificationRecord> {
+    throw new Error('not used');
+  }
+
+  async findById(_notificationId: string): Promise<NotificationRecord | null> {
+    return this.notification;
+  }
+
+  async recordDeliveryAttempt(
+    input: RecordDeliveryAttemptInput,
+  ): Promise<DeliveryAttemptRecord> {
+    const attempt: DeliveryAttemptRecord = {
+      id: `attempt-${this.attempts.length + 1}`,
+      notificationId: input.notificationId,
+      status: input.status,
+      provider: input.provider ?? null,
+      providerMessageId: input.providerMessageId ?? null,
+      errorMessage: input.errorMessage ?? null,
+      attemptedAt: new Date('2026-06-15T12:00:00.000Z'),
+    };
+    this.attempts.push(attempt);
+    return attempt;
+  }
+
+  async updateStatus(input: UpdateNotificationStatusInput): Promise<NotificationRecord> {
+    if (!this.notification) throw new Error('notification missing');
+    this.notification = {
+      ...this.notification,
+      status: input.status,
+      sentAt: input.sentAt ?? this.notification.sentAt,
+    };
+    return this.notification;
+  }
+}
+
+describe('DeliverNotificationUseCase', () => {
+  let repository: FakeNotificationRepository;
+
+  beforeEach(() => {
+    repository = new FakeNotificationRepository();
+  });
+
+  it('records a successful email attempt and marks notification sent', async () => {
+    const emailChannel: NotificationChannelPort = {
+      send: vi.fn(async () => ({
+        provider: 'local',
+        providerMessageId: 'local:abc',
+      })),
+    };
+    const useCase = new DeliverNotificationUseCase(repository, emailChannel, 3);
+
+    const outcome = await useCase.execute('notification-1', 'audience@ticketbox.test');
+
+    expect(outcome.shouldRetry).toBe(false);
+    expect(outcome.status).toBe(NotificationStatus.SENT);
+    expect(repository.attempts[0]).toMatchObject({
+      status: NotificationAttemptStatus.SUCCEEDED,
+      provider: 'local',
+      providerMessageId: 'local:abc',
+    });
+    expect(emailChannel.send).toHaveBeenCalledWith(
+      expect.objectContaining({ toEmail: 'audience@ticketbox.test' }),
+    );
+  });
+
+  it('records transient email failure and leaves notification retryable', async () => {
+    const useCase = new DeliverNotificationUseCase(
+      repository,
+      new FailingEmailChannelAdapter('SMTP unavailable'),
+      3,
+    );
+
+    const outcome = await useCase.execute('notification-1', 'audience@ticketbox.test');
+
+    expect(outcome.shouldRetry).toBe(true);
+    expect(outcome.status).toBe(NotificationStatus.PENDING);
+    expect(repository.attempts[0]).toMatchObject({
+      status: NotificationAttemptStatus.FAILED,
+      errorMessage: 'SMTP unavailable',
+    });
+  });
+
+  it('marks notification failed when retry attempts are exhausted', async () => {
+    repository.notification = emailNotification({ failedAttemptCount: 2 });
+    const useCase = new DeliverNotificationUseCase(
+      repository,
+      new FailingEmailChannelAdapter('SMTP unavailable'),
+      3,
+    );
+
+    const outcome = await useCase.execute('notification-1', 'audience@ticketbox.test');
+
+    expect(outcome.shouldRetry).toBe(false);
+    expect(outcome.status).toBe(NotificationStatus.FAILED);
+  });
+
+  it('marks in-app notification sent without calling the email adapter', async () => {
+    repository.notification = emailNotification({
+      channel: NotificationChannel.IN_APP,
+      status: NotificationStatus.PENDING,
+    });
+    const emailChannel: NotificationChannelPort = { send: vi.fn() };
+    const useCase = new DeliverNotificationUseCase(repository, emailChannel, 3);
+
+    const outcome = await useCase.execute('notification-1');
+
+    expect(outcome.status).toBe(NotificationStatus.SENT);
+    expect(emailChannel.send).not.toHaveBeenCalled();
+  });
+});

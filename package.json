@@ -14,7 +14,7 @@
     "packages/*"
   ],
   "scripts": {
-    "start:deps": "docker compose up -d postgres redis",
+    "start:deps": "docker compose up -d postgres redis maildev",
     "stop:deps": "docker compose down",
     "dev:api": "nest start api --watch",
     "dev:worker": "nest start worker --watch",

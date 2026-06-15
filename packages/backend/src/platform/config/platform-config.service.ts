@@ -47,4 +47,32 @@ export class PlatformConfigService {
   get bcryptRounds(): number {
     return this.configService.get('BCRYPT_ROUNDS');
   }
+
+  get emailProvider(): PlatformEnv['EMAIL_PROVIDER'] {
+    return this.configService.get('EMAIL_PROVIDER');
+  }
+
+  get emailFrom(): string {
+    return this.configService.get('EMAIL_FROM');
+  }
+
+  get emailMaxAttempts(): number {
+    return this.configService.get('EMAIL_MAX_ATTEMPTS');
+  }
+
+  get emailRetryBackoffMs(): number {
+    return this.configService.get('EMAIL_RETRY_BACKOFF_MS');
+  }
+
+  get emailSmtpHost(): string {
+    return this.configService.get('EMAIL_SMTP_HOST');
+  }
+
+  get emailSmtpPort(): number {
+    return this.configService.get('EMAIL_SMTP_PORT');
+  }
+
+  get maildevWebUrl(): string | undefined {
+    return this.configService.get('MAILDEV_WEB_URL', { infer: true });
+  }
 }
