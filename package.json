@@ -1,0 +1,55 @@
+{
+  "name": "ticketbox-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TicketBox platform foundation workspace.",
+  "license": "UNLICENSED",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:deps": "docker compose up -d postgres redis",
+    "stop:deps": "docker compose down",
+    "dev:api": "nest start api --watch",
+    "dev:worker": "nest start worker --watch",
+    "build": "nest build api && nest build worker",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --passWithNoTests",
+    "health": "node tools/check-health.mjs",
+    "verify:workspace": "node tools/verify-workspace.mjs"
+  },
+  "dependencies": {
+    "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@prisma/client": "^6.0.0",
+    "bullmq": "^5.0.0",
+    "ioredis": "^5.0.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "prisma": "^6.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

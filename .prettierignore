@@ -1,0 +1,8 @@
+blueprint/
+coverage/
+dist/
+docs/
+node_modules/
+openspec/changes/archive/
+openspec/specs/
+package-lock.json
