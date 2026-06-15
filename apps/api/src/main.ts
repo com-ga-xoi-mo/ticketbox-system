@@ -16,6 +16,7 @@ async function bootstrap(): Promise<void> {
       transform: true,
     }),
   );
+  app.enableCors({ origin: true });
 
   const config = app.get(PlatformConfigService);
 
