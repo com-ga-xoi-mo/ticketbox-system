@@ -8,6 +8,9 @@ export const envSchema = z.object({
   REDIS_PORT: z.coerce.number().int().min(1).max(65535).default(6379),
   REDIS_PASSWORD: z.string().optional(),
   QUEUE_PREFIX: z.string().min(1).default('ticketbox'),
+  JWT_SECRET: z.string().min(1),
+  JWT_EXPIRY: z.string().min(1).default('1h'),
+  BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
 });
 
 export type PlatformEnv = z.infer<typeof envSchema>;

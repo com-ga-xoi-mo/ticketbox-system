@@ -35,4 +35,16 @@ export class PlatformConfigService {
       enableReadyCheck: true,
     };
   }
+
+  get jwtSecret(): string {
+    return this.configService.get('JWT_SECRET');
+  }
+
+  get jwtExpiry(): string {
+    return this.configService.get('JWT_EXPIRY');
+  }
+
+  get bcryptRounds(): number {
+    return this.configService.get('BCRYPT_ROUNDS');
+  }
 }

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BackendWorkerModule } from '../../../packages/backend/src';
+import { BackendWorkerModule } from '@ticketbox/backend';
 
 @Module({
   imports: [BackendWorkerModule],
