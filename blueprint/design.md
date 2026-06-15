@@ -493,8 +493,24 @@ concerts(
   poster_asset_id,
   seating_map_asset_id,
   created_by,
+  published_at,
+  cancelled_at,
+  cancel_reason,
   created_at,
   updated_at
+)
+
+seating_zones(
+  id pk,
+  concert_id fk,
+  svg_element_id,
+  label,
+  color,
+  display_order,
+  status,
+  created_at,
+  updated_at,
+  unique(concert_id, svg_element_id)
 )
 
 ticket_types(
@@ -502,7 +518,7 @@ ticket_types(
   concert_id fk,
   code,
   name,
-  zone,
+  description,
   price_amount,
   price_currency,
   total_quantity,
@@ -514,6 +530,13 @@ ticket_types(
   status,
   version,
   unique(concert_id, code)
+)
+
+ticket_type_zones(
+  concert_id fk,
+  ticket_type_id fk,
+  seating_zone_id fk,
+  primary key(ticket_type_id, seating_zone_id)
 )
 
 orders(
@@ -611,7 +634,10 @@ assets(
   content_type,
   size_bytes,
   checksum,
-  created_at
+  uploaded_by,
+  status,
+  created_at,
+  updated_at
 )
 
 artist_bio_jobs(
@@ -658,6 +684,10 @@ guest_list_entries(
 Important consistency rules:
 
 - `ticket_types.sold_quantity + reserved_quantity <= total_quantity`.
+- `ticket_types.total_quantity`, `reserved_quantity`, and `sold_quantity` must be non-negative.
+- `ticket_types.price_amount >= 0`, `max_per_user > 0`, and `sale_starts_at < sale_ends_at`.
+- `ticket_type_zones` mappings must connect ticket types and seating zones from the same concert.
+- Seating map SVG files must be sanitized or rejected if they contain scripts, event handlers, external references, unsupported content, or exceed configured file limits.
 - Paid orders generate tickets exactly once.
 - A successful payment callback can fulfill an order only if the order is not already fulfilled.
 - A ticket can have at most one accepted check-in event.

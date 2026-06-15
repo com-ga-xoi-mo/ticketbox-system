@@ -1,8 +1,34 @@
-# concert-management Specification
+## ADDED Requirements
 
-## Purpose
-TBD - created by archiving change define-ticketbox-blueprint. Update Purpose after archive.
-## Requirements
+### Requirement: Seating map zone mapping
+The system SHALL allow organizers to define seating zones from uploaded SVG element IDs and map ticket types to those zones.
+
+#### Scenario: Organizer defines seating zones from SVG elements
+- **WHEN** an organizer uploads a seating map SVG with identifiable element IDs for a concert
+- **THEN** the system SHALL allow the organizer to save selected SVG element IDs as seating zones with labels, colors, display order, and status for that concert
+
+#### Scenario: Unsafe seating map SVG is rejected
+- **WHEN** an organizer uploads a seating map SVG containing scripts, event handlers, external references, unsupported content, or file size beyond the configured limit
+- **THEN** the system SHALL reject the SVG before storing it as an active seating map asset
+
+#### Scenario: Seating zone color falls back to default
+- **WHEN** an organizer defines a seating zone without a custom color
+- **THEN** the system SHALL allow the zone and provide enough data for the frontend to render it with a default color
+
+#### Scenario: Organizer maps ticket type to multiple zones
+- **WHEN** an organizer configures a ticket type that covers more than one seating area
+- **THEN** the system SHALL allow that ticket type to be mapped to multiple seating zones from the same concert
+
+#### Scenario: Organizer maps multiple ticket types to one zone
+- **WHEN** an organizer offers multiple ticket types for the same seating area
+- **THEN** the system SHALL allow multiple ticket types from the same concert to map to the same seating zone
+
+#### Scenario: Cross-concert zone mapping is rejected
+- **WHEN** an organizer attempts to map a ticket type from one concert to a seating zone from another concert
+- **THEN** the system SHALL reject the mapping
+
+## MODIFIED Requirements
+
 ### Requirement: Public concert catalog
 The system SHALL show upcoming concerts with artist, venue, schedule, poster, seating map asset, seating zones, ticket types, prices, sale windows, ticket-to-zone mappings, and near-real-time availability.
 
@@ -55,31 +81,3 @@ The system SHALL allow organizers to configure ticket type code, name, descripti
 #### Scenario: Same ticket type code is allowed across concerts
 - **WHEN** different concerts use the same ticket type code
 - **THEN** the system SHALL allow the code because ticket type codes are unique only within each concert
-
-### Requirement: Seating map zone mapping
-The system SHALL allow organizers to define seating zones from uploaded SVG element IDs and map ticket types to those zones.
-
-#### Scenario: Organizer defines seating zones from SVG elements
-- **WHEN** an organizer uploads a seating map SVG with identifiable element IDs for a concert
-- **THEN** the system SHALL allow the organizer to save selected SVG element IDs as seating zones with labels, colors, display order, and status for that concert
-
-#### Scenario: Unsafe seating map SVG is rejected
-- **WHEN** an organizer uploads a seating map SVG containing scripts, event handlers, external references, unsupported content, or file size beyond the configured limit
-- **THEN** the system SHALL reject the SVG before storing it as an active seating map asset
-
-#### Scenario: Seating zone color falls back to default
-- **WHEN** an organizer defines a seating zone without a custom color
-- **THEN** the system SHALL allow the zone and provide enough data for the frontend to render it with a default color
-
-#### Scenario: Organizer maps ticket type to multiple zones
-- **WHEN** an organizer configures a ticket type that covers more than one seating area
-- **THEN** the system SHALL allow that ticket type to be mapped to multiple seating zones from the same concert
-
-#### Scenario: Organizer maps multiple ticket types to one zone
-- **WHEN** an organizer offers multiple ticket types for the same seating area
-- **THEN** the system SHALL allow multiple ticket types from the same concert to map to the same seating zone
-
-#### Scenario: Cross-concert zone mapping is rejected
-- **WHEN** an organizer attempts to map a ticket type from one concert to a seating zone from another concert
-- **THEN** the system SHALL reject the mapping
-
