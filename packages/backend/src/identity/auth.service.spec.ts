@@ -12,7 +12,8 @@ import { Role } from './domain/role.enum';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const mockRole = { id: 'role-id-audience', code: 'AUDIENCE', name: 'Audience' };
+const AUDIENCE_ROLE_ID = 'role-id-audience';
+const mockRole = { id: AUDIENCE_ROLE_ID, code: 'AUDIENCE', name: 'Audience' };
 
 const mockUserWithRoles = {
   id: 'user-id-1',
@@ -32,7 +33,7 @@ function buildMocks() {
       create: vi.fn(),
     },
     role: {
-      findUnique: vi.fn(),
+      findUnique: vi.fn().mockResolvedValue(mockRole), // used by onModuleInit
     },
   } as unknown as PrismaService;
 
@@ -41,12 +42,18 @@ function buildMocks() {
   } as unknown as JwtService;
 
   const config = {
-    bcryptRounds: 1, // fast in tests
+    bcryptRounds: 1,
     jwtSecret: 'test-secret',
     jwtExpiry: '1h',
   } as unknown as PlatformConfigService;
 
   return { prisma, jwtService, config };
+}
+
+async function buildService(mocks: ReturnType<typeof buildMocks>) {
+  const service = new AuthService(mocks.prisma, mocks.jwtService, mocks.config);
+  await service.onModuleInit(); // warm up audienceRoleId cache
+  return service;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,11 +65,11 @@ describe('AuthService', () => {
   let prisma: ReturnType<typeof buildMocks>['prisma'];
   let jwtService: ReturnType<typeof buildMocks>['jwtService'];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const mocks = buildMocks();
     prisma = mocks.prisma;
     jwtService = mocks.jwtService;
-    service = new AuthService(prisma, jwtService, mocks.config);
+    service = await buildService(mocks);
   });
 
   // -------------------------------------------------------------------------
@@ -71,8 +78,6 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('9.1 happy path: creates user and returns JWT token', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-      vi.mocked(prisma.role.findUnique).mockResolvedValue(mockRole as any);
       const createdUser = {
         ...mockUserWithRoles,
         passwordHash: await bcrypt.hash('password123', 1),
@@ -90,10 +95,13 @@ describe('AuthService', () => {
         sub: createdUser.id,
         roles: [Role.AUDIENCE],
       });
+      // Should NOT call role.findUnique again (cached in onModuleInit)
+      expect(prisma.role.findUnique).toHaveBeenCalledTimes(1); // only onModuleInit
     });
 
-    it('9.2 throws ConflictException when email already registered', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUserWithRoles as any);
+    it('9.2 throws ConflictException when email already registered (pre-existing)', async () => {
+      const prismaError = Object.assign(new Error('Unique constraint'), { code: 'P2002' });
+      vi.mocked(prisma.user.create).mockRejectedValue(prismaError);
 
       await expect(
         service.register({
@@ -102,6 +110,29 @@ describe('AuthService', () => {
           displayName: 'Test User',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('9.2b throws ConflictException on concurrent registration race condition (P2002)', async () => {
+      // Simulates two concurrent requests: both pass pre-check, DB throws unique violation
+      const prismaError = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+      vi.mocked(prisma.user.create).mockRejectedValue(prismaError);
+
+      await expect(
+        service.register({
+          email: 'race@example.com',
+          password: 'password123',
+          displayName: 'Race User',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rethrows unknown DB errors (not P2002)', async () => {
+      const unknownError = new Error('Connection lost');
+      vi.mocked(prisma.user.create).mockRejectedValue(unknownError);
+
+      await expect(
+        service.register({ email: 'x@x.com', password: 'password123', displayName: 'X' }),
+      ).rejects.toThrow('Connection lost');
     });
   });
 
@@ -143,6 +174,20 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'nobody@example.com', password: 'anypassword' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // onModuleInit
+  // -------------------------------------------------------------------------
+
+  describe('onModuleInit', () => {
+    it('throws if AUDIENCE role is missing from DB', async () => {
+      const { prisma: p, jwtService: j, config: c } = buildMocks();
+      vi.mocked(p.role.findUnique).mockResolvedValue(null);
+
+      const svc = new AuthService(p, j, c);
+      await expect(svc.onModuleInit()).rejects.toThrow('AUDIENCE role not found');
     });
   });
 });

@@ -68,4 +68,4 @@
 - [ ] 11.2 Run `npm run test:e2e` — all auth E2E tests pass
 - [x] 11.3 Run `npm run build` — no TypeScript errors
 - [ ] 11.4 Verify `GET /health` still returns `200` (no regression)
-- [ ] 11.5 Commit all changes on `feature/implement-auth-rbac` and open PR against `dev`
+- [x] 11.5 Commit all changes on `feature/implement-auth-rbac` and open PR against `dev`
