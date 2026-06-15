@@ -9,6 +9,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Server } from 'http';
 
 const skipIfNoDB =
   process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
@@ -38,7 +39,7 @@ describe('Auth E2E', () => {
     );
 
     await app.listen(0); // random port
-    const port = (app.getHttpServer() as import('http').Server).address();
+    const port = (app.getHttpServer() as Server).address();
     const portNum = typeof port === 'object' && port ? port.port : 3001;
     baseUrl = `http://localhost:${portNum}`;
   });
