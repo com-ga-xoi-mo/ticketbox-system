@@ -16,7 +16,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
-      "@ticketbox/backend": ["packages/backend/src/index.ts"],
+      "@ticketbox/backend": ["packages/backend/src/index"],
       "@ticketbox/backend/*": ["packages/backend/src/*"]
     }
   }
