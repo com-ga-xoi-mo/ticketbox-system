@@ -65,7 +65,7 @@
 ## 11. Verification & Cleanup
 
 - [x] 11.1 Run `npm run test` (unit tests) — all auth service tests pass
-- [ ] 11.2 Run `npm run test:e2e` — all auth E2E tests pass
+- [x] 11.2 Run `npm run test:e2e` — all auth E2E tests pass
 - [x] 11.3 Run `npm run build` — no TypeScript errors
-- [ ] 11.4 Verify `GET /health` still returns `200` (no regression)
+- [x] 11.4 Verify `GET /health` still returns `200` (no regression)
 - [x] 11.5 Commit all changes on `feature/implement-auth-rbac` and open PR against `dev`
