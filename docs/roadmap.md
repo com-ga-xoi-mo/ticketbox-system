@@ -17,8 +17,8 @@ This roadmap is the team's official implementation plan for building TicketBox a
 
 - [ ] 2.1 Create repository structure for backend API, customer web, admin web, React Native check-in app, worker, data, and docs
 - [ ] 2.2 Configure Docker Compose for backend, frontend apps, PostgreSQL, Redis, worker, mail dev server, and object storage or local file storage
-- [ ] 2.3 Add database migration tooling and initial schema migration
-- [ ] 2.4 Add seed script for required sample concerts, ticket types, prices, sale windows, limits, and seating zones
+- [x] 2.3 Add database migration tooling and initial schema migration
+- [x] 2.4 Add seed script for required sample concerts, ticket types, prices, sale windows, limits, and seating zones
 - [ ] 2.5 Add shared backend error format, configuration loading, request logging, and health check endpoints
 - [ ] 2.6 Add OpenAPI or API documentation generation
 
