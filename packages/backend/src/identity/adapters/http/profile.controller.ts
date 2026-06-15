@@ -1,11 +1,17 @@
 import { Controller, Get, Request, UseGuards } from '@nestjs/common';
 
+import type { AuthenticatedUser } from '../../domain/authenticated-user.interface';
+import { Role } from '../../domain/role.enum';
 import { Roles } from './decorators/roles.decorator';
-import { Role } from './domain/role.enum';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import type { AuthenticatedUser } from './strategies/jwt.strategy';
+import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
 
+/**
+ * HTTP adapter for the authenticated user's own profile.
+ *
+ * Demonstrates how JwtAuthGuard + RolesGuard protect a route.
+ * All authenticated users (any role) may access their own profile.
+ */
 @Controller('me')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProfileController {

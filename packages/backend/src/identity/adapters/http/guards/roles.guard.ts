@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
+import type { AuthenticatedUser } from '../../../domain/authenticated-user.interface';
+import type { Role } from '../../../domain/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import type { Role } from '../domain/role.enum';
-import type { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -20,7 +20,7 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    // No @Roles() decorator — access allowed (guard is a no-op)
+    // No @Roles() decorator: access allowed (guard is a no-op).
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
