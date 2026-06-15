@@ -112,6 +112,53 @@ Expected healthy response shape:
 
 If PostgreSQL or Redis is unavailable, `GET /health` returns an unhealthy response with the failing dependency status.
 
+### Public Concert Catalog
+
+The public catalog APIs are read-only and return upcoming published concerts from PostgreSQL.
+
+```text
+GET /concerts
+GET /concerts/:slug
+GET /concerts/:slug/availability
+```
+
+Example:
+
+```bash
+curl http://localhost:3000/concerts
+curl http://localhost:3000/concerts/anh-trai-say-hi-2026
+curl http://localhost:3000/concerts/anh-trai-say-hi-2026/availability
+```
+
+Catalog detail responses include poster metadata, seating map metadata, seating zones, ticket types, ticket-to-zone mappings, and derived `availableQuantity`. Internal inventory counters such as `reservedQuantity` and `soldQuantity` are used for calculation but are not exposed by the public API.
+
+Availability is currently calculated from source-of-truth ticket type rows:
+
+```text
+availableQuantity = max(totalQuantity - reservedQuantity - soldQuantity, 0)
+```
+
+Redis cache-aside for concert list/detail, short-TTL availability caching, and invalidation are deferred to the `implement-concert-caching` change.
+
+### Read-Only Catalog Demo
+
+A small static verification surface is available at:
+
+```text
+apps/catalog-demo/index.html
+```
+
+Demo steps:
+
+```bash
+npm run start:deps
+npm run db:migrate
+npm run db:seed
+npm run dev:api
+```
+
+Then open `apps/catalog-demo/index.html` in a browser, keep the API base URL as `http://localhost:3000`, and load the catalog. The demo is intentionally read-only: it verifies list/detail data, ticket types, seating zones, mappings, and availability without implementing checkout, login, admin management, or seating map upload.
+
 ## Worker
 
 ```bash
@@ -138,7 +185,7 @@ Use `npm run verify:workspace` for a lightweight root workspace script check.
 
 ## Current Scope Boundaries
 
-This change covers only platform foundation:
+The current implemented baseline covers:
 
 - NestJS API and worker skeletons
 - shared backend infrastructure modules
@@ -151,8 +198,12 @@ This change covers only platform foundation:
 - environment validation
 - health check
 - base README
+- public concert catalog list/detail/availability APIs
+- read-only static catalog demo surface
 
 Deferred follow-on changes:
 
-- `implement-auth-rbac`: authentication and authorization
-- feature changes for concert catalog, ticketing, payment, notifications, imports, AI bio, and check-in
+- `implement-concert-admin-management`: organizer/admin concert and ticket type management
+- `implement-seating-map-assets`: seating map upload, sanitization, and zone authoring
+- `implement-concert-caching`: Redis catalog cache and availability invalidation
+- ticketing, payment, notifications, imports, AI bio, and check-in changes
