@@ -24,7 +24,17 @@
     "format:check": "prettier --check .",
     "test": "vitest run --passWithNoTests",
     "health": "node tools/check-health.mjs",
-    "verify:workspace": "node tools/verify-workspace.mjs"
+    "verify:workspace": "node tools/verify-workspace.mjs",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset",
+    "db:studio": "prisma studio",
+    "verify:prisma": "prisma validate && prisma generate",
+    "verify:database": "node tools/verify-database-seed.mjs"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.0",

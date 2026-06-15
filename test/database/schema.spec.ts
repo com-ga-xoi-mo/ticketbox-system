@@ -1,0 +1,64 @@
+/**
+ * Schema validation tests.
+ *
+ * These tests verify that the Prisma schema is valid and that the generated
+ * Prisma Client exports the expected models and enum types. They run without
+ * requiring a live database connection.
+ */
+
+import { describe, expect, it } from 'vitest';
+
+describe('Prisma schema validation', () => {
+  it('imports PrismaClient from @prisma/client without errors', async () => {
+    // Dynamic import ensures module resolution is verified at test time.
+    const { PrismaClient } = await import('@prisma/client');
+    expect(PrismaClient).toBeDefined();
+    expect(typeof PrismaClient).toBe('function');
+  });
+
+  it('exports all required enum types', async () => {
+    const client = await import('@prisma/client');
+
+    // User & RBAC
+    expect(client.UserStatus).toBeDefined();
+    expect(client.RoleCode).toBeDefined();
+
+    // Concert catalog
+    expect(client.ConcertStatus).toBeDefined();
+    expect(client.AssetKind).toBeDefined();
+    expect(client.AssetStatus).toBeDefined();
+    expect(client.SeatingZoneStatus).toBeDefined();
+    expect(client.TicketTypeStatus).toBeDefined();
+
+    // Orders & payments
+    expect(client.OrderStatus).toBeDefined();
+    expect(client.PaymentStatus).toBeDefined();
+    expect(client.TicketStatus).toBeDefined();
+
+    // Operational
+    expect(client.CheckinEventResult).toBeDefined();
+    expect(client.NotificationStatus).toBeDefined();
+    expect(client.ArtistBioStatus).toBeDefined();
+  });
+
+  it('exports all required RoleCode values', async () => {
+    const { RoleCode } = await import('@prisma/client');
+    expect(RoleCode.AUDIENCE).toBe('AUDIENCE');
+    expect(RoleCode.ORGANIZER).toBe('ORGANIZER');
+    expect(RoleCode.CHECKIN_STAFF).toBe('CHECKIN_STAFF');
+    expect(RoleCode.ADMIN).toBe('ADMIN');
+  });
+
+  it('exports all required ConcertStatus values', async () => {
+    const { ConcertStatus } = await import('@prisma/client');
+    expect(ConcertStatus.DRAFT).toBe('DRAFT');
+    expect(ConcertStatus.PUBLISHED).toBe('PUBLISHED');
+    expect(ConcertStatus.CANCELLED).toBe('CANCELLED');
+  });
+
+  it('exports all required UserStatus values', async () => {
+    const { UserStatus } = await import('@prisma/client');
+    expect(UserStatus.ACTIVE).toBe('ACTIVE');
+    expect(UserStatus.DISABLED).toBe('DISABLED');
+  });
+});
