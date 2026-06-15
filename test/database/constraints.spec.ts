@@ -29,6 +29,7 @@ const REQUIRED_CONSTRAINTS = [
 
 const REQUIRED_INDEXES = [
   'checkin_events_one_accepted_per_ticket_idx',
+  'checkin_staff_assignments_active_concert_wide_unique',
   'ticket_types_concert_id_code_key',
   'seating_zones_concert_id_svg_element_id_key',
   'idempotency_records_user_id_operation_idempotency_key_key',
