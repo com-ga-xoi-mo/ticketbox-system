@@ -24,6 +24,10 @@ export class PlatformConfigService {
     return this.configService.get('QUEUE_PREFIX');
   }
 
+  get internalApiKey(): string {
+    return this.configService.get('INTERNAL_API_KEY');
+  }
+
   get redisOptions(): RedisOptions {
     const password = this.configService.get('REDIS_PASSWORD', { infer: true });
 
@@ -46,5 +50,9 @@ export class PlatformConfigService {
 
   get bcryptRounds(): number {
     return this.configService.get('BCRYPT_ROUNDS');
+  }
+
+  get orderReservationTtlMinutes(): number {
+    return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
   }
 }

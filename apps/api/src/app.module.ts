@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { BackendCoreModule, HealthModule } from '@ticketbox/backend';
+import { BackendCoreModule, HealthModule, OrderModule } from '@ticketbox/backend';
 
 @Module({
-  imports: [BackendCoreModule, HealthModule],
+  imports: [BackendCoreModule, HealthModule, OrderModule],
 })
 export class AppModule {}
