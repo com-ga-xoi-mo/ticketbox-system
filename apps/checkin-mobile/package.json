@@ -1,0 +1,24 @@
+{
+  "name": "@ticketbox/checkin-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TicketBox React Native check-in staff mobile app.",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.mts",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "expo": "^52.0.0",
+    "expo-camera": "^16.0.0",
+    "expo-secure-store": "^14.0.0",
+    "react": "^18.3.1",
+    "react-native": "^0.76.0"
+  },
+  "devDependencies": {}
+}
