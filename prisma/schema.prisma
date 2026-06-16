@@ -532,6 +532,8 @@ model Notification {
   userId      String              @map("user_id") @db.Uuid
   concertId   String?             @map("concert_id") @db.Uuid
   channel     NotificationChannel
+  type        String              @default("GENERAL") @db.VarChar(80)
+  dedupeKey   String              @unique @map("dedupe_key") @db.VarChar(220)
   status      NotificationStatus  @default(PENDING)
   subject     String?             @db.VarChar(240)
   body        String

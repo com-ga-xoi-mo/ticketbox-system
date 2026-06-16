@@ -12,7 +12,7 @@ import {
 const prisma = new PrismaClient();
 
 const demoPasswordHash =
-  '$2b$10$t2nU6RS/XRbvaLJyUQVls./TiWHrh8nrOArQ8.NVVEANyZpmlhile'; // hashes to 'demoPassword'
+  '$2b$10$8c.VgqzGzMFgwfEpq2K5XOct3iK5I.THdHvnyrIX.MIlCBJ7PTPNe'; // hashes to 'demoPassword'
 
 type SeedZone = {
   svgElementId: string;
