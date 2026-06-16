@@ -18,11 +18,13 @@
     "stop:deps": "docker compose down",
     "dev:api": "nest start api --watch",
     "dev:worker": "nest start worker --watch",
+    "dev:checkin-mobile": "npm --workspace @ticketbox/checkin-mobile run start",
     "build": "nest build api && nest build worker",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --passWithNoTests",
+    "test:checkin-mobile": "npm --workspace @ticketbox/checkin-mobile run test",
     "test:e2e": "vitest run test/**/*.e2e-spec.ts",
     "health": "node tools/check-health.mjs",
     "verify:workspace": "node tools/verify-workspace.mjs",
@@ -32,7 +34,8 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "verify:prisma": "prisma validate && prisma generate",
-    "verify:database": "node tools/verify-database-seed.mjs"
+    "verify:database": "node tools/verify-database-seed.mjs",
+    "verify:checkin-mobile": "npm --workspace @ticketbox/checkin-mobile run verify"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

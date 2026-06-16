@@ -168,6 +168,32 @@ npm run dev:worker
 The worker starts a NestJS application context and registers BullMQ processors,
 including platform health checks and notification delivery jobs.
 
+## Check-in Mobile App
+
+The React Native check-in staff mobile workspace lives at:
+
+```text
+apps/checkin-mobile/
+```
+
+Run the mobile app after installing workspace dependencies:
+
+```bash
+npm run dev:checkin-mobile
+```
+
+Verify the mobile foundation without a live backend check-in API:
+
+```bash
+npm run verify:checkin-mobile
+```
+
+The mobile app uses `EXPO_PUBLIC_API_BASE_URL` for the backend API base URL and
+defaults to `http://localhost:3000`. The current mobile slice provides staff
+login/session handling, assignment loading boundaries, and QR scan workflow
+state. Backend scan endpoints and offline sync are implemented by later
+OpenSpec changes.
+
 ## Verification
 
 ```bash
