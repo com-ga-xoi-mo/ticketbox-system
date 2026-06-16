@@ -5,7 +5,6 @@ import type {
   NotificationRepositoryPort,
   RecordDeliveryAttemptInput,
   UpdateNotificationStatusInput,
-  UpsertNotificationInput,
 } from '../../domain/ports/notification-repository.port';
 import {
   NotificationAttemptStatus,
@@ -41,11 +40,11 @@ class FakeNotificationRepository implements NotificationRepositoryPort {
   notification: NotificationRecord | null = emailNotification();
   attempts: DeliveryAttemptRecord[] = [];
 
-  async upsertByDedupeKey(_input: UpsertNotificationInput): Promise<NotificationRecord> {
+  async upsertByDedupeKey(): Promise<NotificationRecord> {
     throw new Error('not used');
   }
 
-  async findById(_notificationId: string): Promise<NotificationRecord | null> {
+  async findById(): Promise<NotificationRecord | null> {
     return this.notification;
   }
 

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Job, Queue } from 'bullmq';
 
-import { CreatePurchaseConfirmationNotificationsUseCase } from '../../application/use-cases/create-purchase-confirmation-notifications.use-case';
-import { DeliverNotificationUseCase } from '../../application/use-cases/deliver-notification.use-case';
+import type { CreatePurchaseConfirmationNotificationsUseCase } from '../../application/use-cases/create-purchase-confirmation-notifications.use-case';
+import type { DeliverNotificationUseCase } from '../../application/use-cases/deliver-notification.use-case';
 import { NotificationChannel, NotificationStatus } from '../../domain/notification.types';
 import type { OrderPaidForNotification } from '../../domain/events/order-paid-for-notification.event';
 import type { PlatformConfigService } from '../../../platform/config/platform-config.service';
