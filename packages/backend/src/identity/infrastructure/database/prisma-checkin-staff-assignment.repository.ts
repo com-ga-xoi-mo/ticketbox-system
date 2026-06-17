@@ -31,6 +31,16 @@ export class PrismaCheckinStaffAssignmentRepository
 {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAssignmentById(
+    assignmentId: string,
+  ): Promise<CheckinStaffAssignmentRecord | null> {
+    const assignment = await this.prisma.checkinStaffAssignment.findUnique({
+      where: { id: assignmentId },
+    });
+
+    return assignment ? this.toAssignmentRecord(assignment) : null;
+  }
+
   async findActiveAssignment(params: {
     staffUserId: string;
     concertId: string;
