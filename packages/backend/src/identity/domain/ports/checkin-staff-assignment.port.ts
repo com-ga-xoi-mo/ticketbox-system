@@ -21,6 +21,8 @@ export interface CreateCheckinStaffAssignmentData {
 }
 
 export interface CheckinStaffAssignmentRepositoryPort {
+  findAssignmentById(assignmentId: string): Promise<CheckinStaffAssignmentRecord | null>;
+
   findActiveAssignment(params: {
     staffUserId: string;
     concertId: string;

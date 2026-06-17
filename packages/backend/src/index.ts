@@ -14,4 +14,5 @@ export * from './platform/redis/redis.module';
 export * from './platform/redis/redis.tokens';
 export * from './concert-management/concert-management.module';
 export * from './identity/auth.module';
+export * from './checkin/checkin.module';
 export * from './notification/notification.module';

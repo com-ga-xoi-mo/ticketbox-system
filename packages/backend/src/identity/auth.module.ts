@@ -151,6 +151,7 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     AuthorizeConcertManagementUseCase,
     AuthorizeCheckinAssignmentUseCase,
     ManageCheckinStaffAssignmentsUseCase,
+    CHECKIN_STAFF_ASSIGNMENT_REPOSITORY,
   ],
 })
 export class AuthModule {}
