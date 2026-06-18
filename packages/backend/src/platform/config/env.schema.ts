@@ -18,6 +18,17 @@ export const envSchema = z.object({
   EMAIL_SMTP_HOST: z.string().min(1).default('localhost'),
   EMAIL_SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
   MAILDEV_WEB_URL: z.string().url().optional(),
+  ARTIST_BIO_PDF_MAX_BYTES: z.coerce.number().int().min(1).default(5 * 1024 * 1024),
+  ARTIST_BIO_INPUT_MAX_CHARS: z.coerce.number().int().min(100).default(12000),
+  ARTIST_BIO_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+  AI_ARTIST_BIO_PROVIDER: z.enum(['local', 'gemini']).default('local'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_URL: z
+    .string()
+    .url()
+    .default('https://generativelanguage.googleapis.com/v1beta/models'),
+  GEMINI_MODEL: z.string().min(1).default('gemini-1.5-flash'),
+  GEMINI_TIMEOUT_MS: z.coerce.number().int().min(100).default(10000),
 });
 
 export type PlatformEnv = z.infer<typeof envSchema>;

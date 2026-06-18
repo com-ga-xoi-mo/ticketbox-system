@@ -616,20 +616,25 @@ model GuestListEntry {
 }
 
 model ArtistBio {
-  id             String          @id @default(uuid()) @db.Uuid
-  concertId      String          @map("concert_id") @db.Uuid
+  id              String          @id @default(uuid()) @db.Uuid
+  concertId       String          @map("concert_id") @db.Uuid
   pressKitAssetId String?        @map("press_kit_asset_id") @db.Uuid
-  requestedById  String?         @map("requested_by_id") @db.Uuid
-  reviewedById   String?         @map("reviewed_by_id") @db.Uuid
-  status         ArtistBioStatus @default(DRAFT)
-  sourceText     String?         @map("source_text")
-  generatedBio   String?         @map("generated_bio")
-  publishedBio   String?         @map("published_bio")
-  provider       String?         @db.VarChar(80)
-  errorMessage   String?         @map("error_message")
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  publishedAt    DateTime?       @map("published_at") @db.Timestamptz(6)
+  requestedById   String?         @map("requested_by_id") @db.Uuid
+  reviewedById    String?         @map("reviewed_by_id") @db.Uuid
+  status          ArtistBioStatus @default(DRAFT)
+  sourceText      String?         @map("source_text")
+  generatedBio    String?         @map("generated_bio")
+  publishedBio    String?         @map("published_bio")
+  provider        String?         @db.VarChar(80)
+  errorMessage    String?         @map("error_message")
+  retryCount      Int             @default(0) @map("retry_count")
+  maxAttempts     Int             @default(3) @map("max_attempts")
+  lastAttemptedAt DateTime?       @map("last_attempted_at") @db.Timestamptz(6)
+  nextRetryAt     DateTime?       @map("next_retry_at") @db.Timestamptz(6)
+  metadata        Json?
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  publishedAt     DateTime?       @map("published_at") @db.Timestamptz(6)
 
   concert       Concert @relation(fields: [concertId], references: [id], onDelete: Cascade)
   pressKitAsset Asset?  @relation(fields: [pressKitAssetId], references: [id], onDelete: SetNull)
@@ -637,6 +642,7 @@ model ArtistBio {
   reviewedBy    User?   @relation("ArtistBioReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([concertId, status])
+  @@index([status, nextRetryAt])
   @@map("artist_bios")
 }
 

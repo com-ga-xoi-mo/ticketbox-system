@@ -1,4 +1,4 @@
-import { ConcertStatus } from '@prisma/client';
+import { ArtistBioStatus, ConcertStatus } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PrismaService } from '../../../platform/database/prisma.service';
@@ -57,6 +57,7 @@ function sampleConcert() {
         status: 'ACTIVE',
       },
     ],
+    artistBios: [],
     ticketTypes: [
       {
         id: 'ticket-type-1',
@@ -120,6 +121,21 @@ describe('PrismaPublicConcertCatalogRepository', () => {
           startsAt: { gte: now },
           slug: 'anh-trai-say-hi-2026',
         },
+        include: expect.objectContaining({
+          artistBios: {
+            where: {
+              status: ArtistBioStatus.PUBLISHED,
+              publishedBio: {
+                not: null,
+              },
+            },
+            orderBy: { publishedAt: 'desc' },
+            take: 1,
+            select: {
+              publishedBio: true,
+            },
+          },
+        }),
       }),
     );
     expect(detail?.ticketTypes[0]).toMatchObject({
@@ -132,6 +148,19 @@ describe('PrismaPublicConcertCatalogRepository', () => {
     ]);
     expect('reservedQuantity' in detail!.ticketTypes[0]).toBe(false);
     expect('soldQuantity' in detail!.ticketTypes[0]).toBe(false);
+    expect(detail?.publishedArtistBio).toBeNull();
+  });
+
+  it('exposes only the latest published artist bio on public concert detail', async () => {
+    const findFirst = vi.fn().mockResolvedValue({
+      ...sampleConcert(),
+      artistBios: [{ publishedBio: 'Approved public artist biography' }],
+    });
+    const repository = createRepositoryWithConcertApi({ findFirst });
+
+    const detail = await repository.findPublishedUpcomingDetailBySlug('anh-trai-say-hi-2026', now);
+
+    expect(detail?.publishedArtistBio).toBe('Approved public artist biography');
   });
 
   it('returns compact availability snapshots for public concerts', async () => {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConcertStatus } from '@prisma/client';
+import { ArtistBioStatus, ConcertStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { calculateAvailableQuantity } from '../../domain/catalog-availability';
@@ -77,6 +77,7 @@ type ConcertDetailRecord = ConcertSummaryRecord & {
   venueAddress: string | null;
   seatingMapAsset: AssetRecord | null;
   seatingZones: SeatingZoneRecord[];
+  artistBios: { publishedBio: string | null }[];
 };
 
 @Injectable()
@@ -109,6 +110,19 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
         seatingMapAsset: true,
         seatingZones: {
           orderBy: [{ displayOrder: 'asc' }, { label: 'asc' }],
+        },
+        artistBios: {
+          where: {
+            status: ArtistBioStatus.PUBLISHED,
+            publishedBio: {
+              not: null,
+            },
+          },
+          orderBy: { publishedAt: 'desc' },
+          take: 1,
+          select: {
+            publishedBio: true,
+          },
         },
         ticketTypes: {
           orderBy: { code: 'asc' },
@@ -190,6 +204,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
     return {
       ...this.toConcertSummary(concert),
       description: concert.description,
+      publishedArtistBio: concert.artistBios[0]?.publishedBio ?? null,
       venueAddress: concert.venueAddress,
       seatingMapAsset: this.toAssetMetadata(concert.seatingMapAsset),
       seatingZones: concert.seatingZones.map((zone) => this.toSeatingZoneCatalogItem(zone)),
