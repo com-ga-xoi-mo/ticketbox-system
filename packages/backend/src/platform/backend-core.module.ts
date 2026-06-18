@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../identity/auth.module';
+import { AiArtistBioModule } from '../ai-artist-bio/ai-artist-bio.module';
 import { CheckinModule } from '../checkin/checkin.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PlatformConfigModule } from './config/platform-config.module';
@@ -13,6 +14,7 @@ import { RedisModule } from './redis/redis.module';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    AiArtistBioModule,
     CheckinModule,
     NotificationModule,
   ],
@@ -21,6 +23,7 @@ import { RedisModule } from './redis/redis.module';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    AiArtistBioModule,
     CheckinModule,
     NotificationModule,
   ],

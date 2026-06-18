@@ -75,4 +75,37 @@ export class PlatformConfigService {
   get maildevWebUrl(): string | undefined {
     return this.configService.get('MAILDEV_WEB_URL', { infer: true });
   }
+
+  get artistBioPdfMaxBytes(): number {
+    return this.configService.get('ARTIST_BIO_PDF_MAX_BYTES');
+  }
+
+  get artistBioInputMaxChars(): number {
+    return this.configService.get('ARTIST_BIO_INPUT_MAX_CHARS');
+  }
+
+  get artistBioMaxAttempts(): number {
+    return this.configService.get('ARTIST_BIO_MAX_ATTEMPTS');
+  }
+
+  get aiArtistBioProvider(): PlatformEnv['AI_ARTIST_BIO_PROVIDER'] {
+    return this.configService.get('AI_ARTIST_BIO_PROVIDER');
+  }
+
+  get geminiApiKey(): string | undefined {
+    const value = this.configService.get('GEMINI_API_KEY', { infer: true });
+    return value === '' ? undefined : value;
+  }
+
+  get geminiApiUrl(): string {
+    return this.configService.get('GEMINI_API_URL');
+  }
+
+  get geminiModel(): string {
+    return this.configService.get('GEMINI_MODEL');
+  }
+
+  get geminiTimeoutMs(): number {
+    return this.configService.get('GEMINI_TIMEOUT_MS');
+  }
 }

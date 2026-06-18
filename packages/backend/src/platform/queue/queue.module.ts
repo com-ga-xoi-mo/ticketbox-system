@@ -7,6 +7,7 @@ import {
   NOTIFICATION_DELIVERY_QUEUE,
   NOTIFICATION_PURCHASE_CONFIRMATION_QUEUE,
   PLATFORM_HEALTH_QUEUE,
+  ARTIST_BIO_QUEUE_NAME,
 } from './platform-queue.constants';
 
 @Module({
@@ -28,6 +29,9 @@ import {
     }),
     BullModule.registerQueue({
       name: NOTIFICATION_DELIVERY_QUEUE,
+    }),
+    BullModule.registerQueue({
+      name: ARTIST_BIO_QUEUE_NAME,
     }),
   ],
   exports: [BullModule],

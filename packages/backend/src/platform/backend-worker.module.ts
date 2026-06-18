@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { BackendCoreModule } from './backend-core.module';
+import { ArtistBioProcessor } from '../ai-artist-bio/ai-artist-bio.module';
 import { NotificationDeliveryProcessor } from '../notification/infrastructure/queue/notification-delivery.processor';
 import { PurchaseConfirmationProcessor } from '../notification/infrastructure/queue/purchase-confirmation.processor';
 import { PlatformHealthProcessor } from './queue/platform-health.processor';
@@ -10,6 +11,7 @@ import { QueueModule } from './queue/queue.module';
   imports: [BackendCoreModule, QueueModule],
   providers: [
     PlatformHealthProcessor,
+    ArtistBioProcessor,
     PurchaseConfirmationProcessor,
     NotificationDeliveryProcessor,
   ],

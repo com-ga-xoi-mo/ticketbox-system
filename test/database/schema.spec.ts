@@ -56,6 +56,21 @@ describe('Prisma schema validation', () => {
     expect(ConcertStatus.CANCELLED).toBe('CANCELLED');
   });
 
+  it('generates ArtistBio retry metadata fields from Prisma schema', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const artistBio = Prisma.dmmf.datamodel.models.find((model) => model.name === 'ArtistBio');
+
+    expect(artistBio?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining([
+        'retryCount',
+        'maxAttempts',
+        'lastAttemptedAt',
+        'nextRetryAt',
+        'metadata',
+      ]),
+    );
+  });
+
   it('exports all required UserStatus values', async () => {
     const { UserStatus } = await import('@prisma/client');
     expect(UserStatus.ACTIVE).toBe('ACTIVE');

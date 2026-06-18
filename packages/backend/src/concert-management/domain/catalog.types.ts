@@ -82,6 +82,7 @@ export type ConcertDetail = {
   title: string;
   artistName: string;
   description: string | null;
+  publishedArtistBio: string | null;
   venueName: string;
   venueAddress: string | null;
   city: string;
