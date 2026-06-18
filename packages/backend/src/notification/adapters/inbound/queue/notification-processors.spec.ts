@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Job, Queue } from 'bullmq';
 
-import type { CreatePurchaseConfirmationNotificationsUseCase } from '../../application/use-cases/create-purchase-confirmation-notifications.use-case';
-import type { DeliverNotificationUseCase } from '../../application/use-cases/deliver-notification.use-case';
-import { NotificationChannel, NotificationStatus } from '../../domain/notification.types';
-import type { OrderPaidForNotification } from '../../domain/events/order-paid-for-notification.event';
-import type { PlatformConfigService } from '../../../platform/config/platform-config.service';
+import type { CreatePurchaseConfirmationNotificationsUseCase } from '../../../application/use-cases/create-purchase-confirmation-notifications.use-case';
+import type { DeliverNotificationUseCase } from '../../../application/use-cases/deliver-notification.use-case';
+import { NotificationChannel, NotificationStatus } from '../../../domain/notification.types';
+import type { OrderPaidForNotification } from '../../../domain/events/order-paid-for-notification.event';
+import type { PlatformConfigService } from '../../../../platform/config/platform-config.service';
 import { NotificationDeliveryProcessor } from './notification-delivery.processor';
 import { PurchaseConfirmationProcessor } from './purchase-confirmation.processor';
 import type {
   NotificationDeliveryJobData,
   PurchaseConfirmationJobData,
-} from './notification-job.types';
+} from '../../../infrastructure/queue/notification-job.types';
 
 function orderPaidEvent(): OrderPaidForNotification {
   return {
