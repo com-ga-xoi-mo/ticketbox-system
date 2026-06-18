@@ -362,6 +362,7 @@ Scope:
 - no-oversell logic
 - reservation TTL
 - expired reservation release worker
+- Does not enforce `max_per_user`; continue with `implement-per-user-ticket-limit` after this change is complete
 
 Branch:
 
@@ -380,6 +381,8 @@ Owner: Member 3
 Scope:
 
 - max tickets per user enforcement
+- depends on completed inventory reservation transaction path
+- count paid orders plus active, unexpired reservations for the same user and ticket type
 - concurrent same-user request protection
 - tests for limit bypass attempts
 
@@ -783,7 +786,7 @@ Start after relevant base modules exist:
 
 ### Wave 4: Reliability and offline behavior
 
-Start after main flows exist:
+Start after main flows exist. For Member 3 ticketing work, do `implement-per-user-ticket-limit` immediately after `implement-inventory-reservation` before QR issuance/payment hardening, because it extends the checkout transaction path.
 
 - `implement-per-user-ticket-limit`
 - `implement-qr-ticket-issuance`

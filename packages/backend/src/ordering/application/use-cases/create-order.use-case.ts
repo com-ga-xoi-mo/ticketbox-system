@@ -5,6 +5,7 @@ import { Order } from '../../domain/order.entity';
 import { OrderItem } from '../../domain/order-item.entity';
 import { OrderStatus } from '../../domain/order-status.enum';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
+import type { IInventoryReservationRepository } from '../../domain/ports/inventory-reservation.port';
 import type { TicketTypePricingRepositoryPort } from '../../domain/ports/ticket-type-pricing.port';
 
 export interface CreateOrderItemCommand {
@@ -30,6 +31,7 @@ export class CreateOrderUseCase {
 
   constructor(
     private readonly orderRepository: IOrderRepository,
+    private readonly inventoryReservationRepository: IInventoryReservationRepository,
     private readonly ticketTypePricingRepository: TicketTypePricingRepositoryPort,
     options: CreateOrderUseCaseOptions,
   ) {
@@ -88,7 +90,7 @@ export class CreateOrderUseCase {
       items,
     });
 
-    return this.orderRepository.create(order);
+    return this.inventoryReservationRepository.reserve(order);
   }
 
   private addReservationTtl(now: Date): Date {

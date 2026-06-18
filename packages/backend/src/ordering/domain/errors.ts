@@ -34,3 +34,31 @@ export class TicketTypeNotFoundError extends Error {
     this.name = 'TicketTypeNotFoundError';
   }
 }
+
+export class TicketTypeInactiveError extends Error {
+  constructor(ticketTypeId: string) {
+    super(`Ticket type is not active: ${ticketTypeId}`);
+    this.name = 'TicketTypeInactiveError';
+  }
+}
+
+export class TicketTypeSaleWindowError extends Error {
+  constructor(ticketTypeId: string) {
+    super(`Ticket type is outside the sale window: ${ticketTypeId}`);
+    this.name = 'TicketTypeSaleWindowError';
+  }
+}
+
+export class InsufficientTicketInventoryError extends Error {
+  constructor(ticketTypeId: string, requestedQuantity: number) {
+    super(`Insufficient inventory for ticket type ${ticketTypeId}: ${requestedQuantity}`);
+    this.name = 'InsufficientTicketInventoryError';
+  }
+}
+
+export class InventoryReservationConflictError extends Error {
+  constructor(orderId: string) {
+    super(`Inventory reservation conflict for order: ${orderId}`);
+    this.name = 'InventoryReservationConflictError';
+  }
+}

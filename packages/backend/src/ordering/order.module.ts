@@ -16,6 +16,14 @@ import {
   type IOrderEventPublisher,
 } from './domain/ports/order-event-publisher.port';
 import {
+  INVENTORY_ADJUSTMENT_REPOSITORY,
+  type IInventoryAdjustmentRepository,
+} from './domain/ports/inventory-adjustment.port';
+import {
+  INVENTORY_RESERVATION_REPOSITORY,
+  type IInventoryReservationRepository,
+} from './domain/ports/inventory-reservation.port';
+import {
   ORDER_REPOSITORY,
   type IOrderRepository,
 } from './domain/ports/order-repository.port';
@@ -23,6 +31,7 @@ import {
   TICKET_TYPE_PRICING_REPOSITORY,
   type TicketTypePricingRepositoryPort,
 } from './domain/ports/ticket-type-pricing.port';
+import { PrismaInventoryReservationRepository } from './infrastructure/database/prisma-inventory-reservation.repository';
 import { PrismaOrderRepository } from './infrastructure/database/prisma-order.repository';
 import { PrismaTicketTypePricingRepository } from './infrastructure/database/prisma-ticket-type-pricing.repository';
 import { NoopOrderEventPublisher } from './infrastructure/events/noop-order-event-publisher';
@@ -33,15 +42,26 @@ import { NoopOrderEventPublisher } from './infrastructure/events/noop-order-even
   providers: [
     {
       provide: CreateOrderUseCase,
-      inject: [ORDER_REPOSITORY, TICKET_TYPE_PRICING_REPOSITORY, PlatformConfigService],
+      inject: [
+        ORDER_REPOSITORY,
+        INVENTORY_RESERVATION_REPOSITORY,
+        TICKET_TYPE_PRICING_REPOSITORY,
+        PlatformConfigService,
+      ],
       useFactory: (
         orderRepository: IOrderRepository,
+        inventoryReservationRepository: IInventoryReservationRepository,
         ticketTypePricingRepository: TicketTypePricingRepositoryPort,
         config: PlatformConfigService,
       ) =>
-        new CreateOrderUseCase(orderRepository, ticketTypePricingRepository, {
-          reservationTtlMinutes: config.orderReservationTtlMinutes,
-        }),
+        new CreateOrderUseCase(
+          orderRepository,
+          inventoryReservationRepository,
+          ticketTypePricingRepository,
+          {
+            reservationTtlMinutes: config.orderReservationTtlMinutes,
+          },
+        ),
     },
     {
       provide: GetOrderUseCase,
@@ -57,11 +77,17 @@ import { NoopOrderEventPublisher } from './infrastructure/events/noop-order-even
     },
     {
       provide: TransitionOrderStatusUseCase,
-      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER],
+      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER, INVENTORY_ADJUSTMENT_REPOSITORY],
       useFactory: (
         orderRepository: IOrderRepository,
         orderEventPublisher: IOrderEventPublisher,
-      ) => new TransitionOrderStatusUseCase(orderRepository, orderEventPublisher),
+        inventoryAdjustmentRepository: IInventoryAdjustmentRepository,
+      ) =>
+        new TransitionOrderStatusUseCase(
+          orderRepository,
+          orderEventPublisher,
+          inventoryAdjustmentRepository,
+        ),
     },
     {
       provide: ORDER_REPOSITORY,
@@ -74,6 +100,15 @@ import { NoopOrderEventPublisher } from './infrastructure/events/noop-order-even
     {
       provide: TICKET_TYPE_PRICING_REPOSITORY,
       useClass: PrismaTicketTypePricingRepository,
+    },
+    PrismaInventoryReservationRepository,
+    {
+      provide: INVENTORY_RESERVATION_REPOSITORY,
+      useExisting: PrismaInventoryReservationRepository,
+    },
+    {
+      provide: INVENTORY_ADJUSTMENT_REPOSITORY,
+      useExisting: PrismaInventoryReservationRepository,
     },
     InternalApiKeyGuard,
   ],

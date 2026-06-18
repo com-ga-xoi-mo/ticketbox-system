@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,8 +6,12 @@ import { Role } from '../../../identity/domain/role.enum';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import {
+  InsufficientTicketInventoryError,
+  InventoryReservationConflictError,
   OrderNotFoundError,
+  TicketTypeInactiveError,
   TicketTypeNotFoundError,
+  TicketTypeSaleWindowError,
 } from '../../domain/errors';
 import { Order } from '../../domain/order.entity';
 import { OrderItem } from '../../domain/order-item.entity';
@@ -100,6 +104,42 @@ describe('OrderController', () => {
         request,
       ),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it.each([
+    new TicketTypeInactiveError('ticket-type-1'),
+    new TicketTypeSaleWindowError('ticket-type-1'),
+  ])('maps invalid ticket type sale state to 400', async (error) => {
+    createOrderUseCase.execute.mockRejectedValue(error);
+
+    await expect(
+      controller.createOrder(
+        {
+          concertId: 'concert-1',
+          idempotencyKey: 'idem-1',
+          items: [{ ticketTypeId: 'ticket-type-1', quantity: 2 }],
+        },
+        request,
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it.each([
+    new InsufficientTicketInventoryError('ticket-type-1', 2),
+    new InventoryReservationConflictError('order-1'),
+  ])('maps inventory reservation conflicts to 409', async (error) => {
+    createOrderUseCase.execute.mockRejectedValue(error);
+
+    await expect(
+      controller.createOrder(
+        {
+          concertId: 'concert-1',
+          idempotencyKey: 'idem-1',
+          items: [{ ticketTypeId: 'ticket-type-1', quantity: 2 }],
+        },
+        request,
+      ),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('lists current user orders', async () => {

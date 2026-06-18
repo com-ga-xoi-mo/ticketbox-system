@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TicketTypeNotFoundError } from '../../domain/errors';
 import { Order } from '../../domain/order.entity';
 import { OrderStatus } from '../../domain/order-status.enum';
+import type { IInventoryReservationRepository } from '../../domain/ports/inventory-reservation.port';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
 import type { TicketTypePricingRepositoryPort } from '../../domain/ports/ticket-type-pricing.port';
 import { CreateOrderUseCase } from './create-order.use-case';
@@ -39,19 +40,32 @@ function buildPricingRepository(): TicketTypePricingRepositoryPort {
   };
 }
 
+function buildInventoryReservationRepository(): IInventoryReservationRepository {
+  return {
+    reserve: vi.fn(async (order: Order) => order),
+  };
+}
+
 describe('CreateOrderUseCase', () => {
   let orderRepository: IOrderRepository;
+  let inventoryReservationRepository: IInventoryReservationRepository;
   let ticketTypePricingRepository: TicketTypePricingRepositoryPort;
   let useCase: CreateOrderUseCase;
   const now = new Date('2026-06-16T10:00:00.000Z');
 
   beforeEach(() => {
     orderRepository = buildRepository();
+    inventoryReservationRepository = buildInventoryReservationRepository();
     ticketTypePricingRepository = buildPricingRepository();
-    useCase = new CreateOrderUseCase(orderRepository, ticketTypePricingRepository, {
-      reservationTtlMinutes: 15,
-      now: () => now,
-    });
+    useCase = new CreateOrderUseCase(
+      orderRepository,
+      inventoryReservationRepository,
+      ticketTypePricingRepository,
+      {
+        reservationTtlMinutes: 15,
+        now: () => now,
+      },
+    );
   });
 
   it('creates a pending-payment order', async () => {
@@ -71,7 +85,9 @@ describe('CreateOrderUseCase', () => {
     expect(result.userId).toBe('user-1');
     expect(result.concertId).toBe('concert-1');
     expect(result.idempotencyKey).toBe('idem-1');
-    expect(orderRepository.create).toHaveBeenCalledWith(expect.any(Order));
+    expect(inventoryReservationRepository.reserve).toHaveBeenCalledWith(
+      expect.any(Order),
+    );
   });
 
   it('generates an order number with the expected format', async () => {
@@ -129,7 +145,7 @@ describe('CreateOrderUseCase', () => {
     });
 
     expect(result).toBe(existingOrder);
-    expect(orderRepository.create).not.toHaveBeenCalled();
+    expect(inventoryReservationRepository.reserve).not.toHaveBeenCalled();
   });
 
   it('sets reservationExpiresAt from the configured TTL', async () => {

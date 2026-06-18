@@ -7,6 +7,7 @@ import {
 } from '../../domain/errors';
 import { Order } from '../../domain/order.entity';
 import { OrderStatus } from '../../domain/order-status.enum';
+import type { IInventoryAdjustmentRepository } from '../../domain/ports/inventory-adjustment.port';
 import type { IOrderEventPublisher } from '../../domain/ports/order-event-publisher.port';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
 import { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
@@ -38,6 +39,12 @@ function buildRepository(): IOrderRepository {
 function buildEventPublisher(): IOrderEventPublisher {
   return {
     publishAll: vi.fn(),
+  };
+}
+
+function buildInventoryAdjustmentRepository(): IInventoryAdjustmentRepository {
+  return {
+    applyStatusTransition: vi.fn(async ({ nextStatus }) => buildOrder(nextStatus)),
   };
 }
 
@@ -151,5 +158,70 @@ describe('TransitionOrderStatusUseCase', () => {
     ).rejects.toThrow(OrderConflictError);
 
     expect(eventPublisher.publishAll).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    OrderStatus.PAID,
+    OrderStatus.EXPIRED,
+    OrderStatus.FAILED,
+    OrderStatus.CANCELLED,
+  ])(
+    'uses inventory adjustment persistence for pending-payment -> %s',
+    async (nextStatus) => {
+      const inventoryAdjustmentRepository = buildInventoryAdjustmentRepository();
+      useCase = new TransitionOrderStatusUseCase(
+        orderRepository,
+        eventPublisher,
+        inventoryAdjustmentRepository,
+      );
+      vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder());
+
+      const result = await useCase.execute({
+        userId: 'user-1',
+        orderId: 'order-1',
+        status: nextStatus,
+        occurredAt,
+      });
+
+      expect(result.status).toBe(nextStatus);
+      expect(inventoryAdjustmentRepository.applyStatusTransition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: 'order-1',
+          expectedStatus: OrderStatus.PENDING_PAYMENT,
+          nextStatus,
+        }),
+      );
+      expect(orderRepository.updateStatus).not.toHaveBeenCalled();
+      expect(eventPublisher.publishAll).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ orderId: 'order-1' }),
+        ]),
+      );
+    },
+  );
+
+  it('keeps non-inventory transitions on the order repository', async () => {
+    const inventoryAdjustmentRepository = buildInventoryAdjustmentRepository();
+    useCase = new TransitionOrderStatusUseCase(
+      orderRepository,
+      eventPublisher,
+      inventoryAdjustmentRepository,
+    );
+    vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder(OrderStatus.PAID));
+
+    await useCase.execute({
+      userId: 'user-1',
+      orderId: 'order-1',
+      status: OrderStatus.REFUNDED,
+      occurredAt,
+    });
+
+    expect(orderRepository.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedStatus: OrderStatus.PAID,
+        nextStatus: OrderStatus.REFUNDED,
+      }),
+    );
+    expect(inventoryAdjustmentRepository.applyStatusTransition).not.toHaveBeenCalled();
   });
 });

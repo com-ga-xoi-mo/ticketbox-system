@@ -1,5 +1,7 @@
 import {
   Body,
+  BadRequestException,
+  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -18,8 +20,12 @@ import { CreateOrderUseCase } from '../../application/use-cases/create-order.use
 import { GetOrderUseCase } from '../../application/use-cases/get-order.use-case';
 import { ListUserOrdersUseCase } from '../../application/use-cases/list-user-orders.use-case';
 import {
+  InsufficientTicketInventoryError,
+  InventoryReservationConflictError,
   OrderNotFoundError,
+  TicketTypeInactiveError,
   TicketTypeNotFoundError,
+  TicketTypeSaleWindowError,
 } from '../../domain/errors';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { serializeOrder } from './order-response.presenter';
@@ -54,6 +60,18 @@ export class OrderController {
     } catch (err: unknown) {
       if (err instanceof TicketTypeNotFoundError) {
         throw new NotFoundException(err.message);
+      }
+      if (
+        err instanceof TicketTypeInactiveError ||
+        err instanceof TicketTypeSaleWindowError
+      ) {
+        throw new BadRequestException(err.message);
+      }
+      if (
+        err instanceof InsufficientTicketInventoryError ||
+        err instanceof InventoryReservationConflictError
+      ) {
+        throw new ConflictException(err.message);
       }
       throw err;
     }
