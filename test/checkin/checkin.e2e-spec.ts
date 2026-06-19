@@ -73,7 +73,7 @@ describe('Check-in API E2E', () => {
         ticketTypeId: ticketType.id,
         quantity: 1,
         unitPriceVnd: ticketType.priceVnd,
-        subtotalVnd: ticketType.priceVnd,
+        totalPriceVnd: ticketType.priceVnd,
       },
     });
 

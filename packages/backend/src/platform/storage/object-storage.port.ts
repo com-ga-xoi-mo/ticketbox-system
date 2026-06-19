@@ -8,6 +8,8 @@ export interface PutObjectInput {
 
 export interface ObjectStoragePort {
   putObject(input: PutObjectInput): Promise<void>;
-  getObject(storageKey: string): Promise<Buffer>;
+  getObject(key: string): Promise<Buffer>;
+  deleteObject(key: string): Promise<void>;
+  objectExists(key: string): Promise<boolean>;
+  getPublicUrl(key: string): string;
 }
-

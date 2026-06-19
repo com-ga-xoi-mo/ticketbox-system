@@ -3,7 +3,7 @@ import { ArtistBioNotFoundError, ArtistBioProcessingError } from '../../domain/e
 import { ArtistBioStatus, type ArtistBioJobResult } from '../../domain/artist-bio.types';
 import type { AiBioGeneratorPort } from '../../domain/ports/ai-bio-generator.port';
 import type { ArtistBioRepositoryPort } from '../../domain/ports/artist-bio-repository.port';
-import type { ObjectStoragePort } from '../../domain/ports/object-storage.port';
+import type { ObjectStoragePort } from '../../../platform/storage';
 import type { PdfTextExtractorPort } from '../../domain/ports/pdf-text-extractor.port';
 
 export class ProcessArtistBioUseCase {

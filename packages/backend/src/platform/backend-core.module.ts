@@ -7,10 +7,12 @@ import { NotificationModule } from '../notification/notification.module';
 import { PlatformConfigModule } from './config/platform-config.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
     PlatformConfigModule,
+    StorageModule.forRoot(),
     DatabaseModule,
     RedisModule,
     AuthModule,
@@ -20,6 +22,7 @@ import { RedisModule } from './redis/redis.module';
   ],
   exports: [
     PlatformConfigModule,
+    StorageModule,
     DatabaseModule,
     RedisModule,
     AuthModule,
