@@ -1,4 +1,4 @@
-import { ArtistBioStatus, ConcertStatus } from '@prisma/client';
+import { ArtistBioStatus, ConcertStatus, SeatingZoneStatus } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PrismaService } from '../../../platform/database/prisma.service';
@@ -56,6 +56,15 @@ function sampleConcert() {
         displayOrder: 1,
         status: 'ACTIVE',
       },
+      {
+        id: 'inactive-zone',
+        concertId: 'concert-1',
+        svgElementId: 'zone-inactive',
+        label: 'Inactive',
+        color: null,
+        displayOrder: 2,
+        status: 'INACTIVE',
+      },
     ],
     artistBios: [],
     ticketTypes: [
@@ -78,11 +87,19 @@ function sampleConcert() {
             ticketTypeId: 'ticket-type-1',
             seatingZoneId: 'zone-1',
             concertId: 'concert-1',
+            seatingZone: { status: 'ACTIVE' },
+          },
+          {
+            ticketTypeId: 'ticket-type-1',
+            seatingZoneId: 'inactive-zone',
+            concertId: 'concert-1',
+            seatingZone: { status: 'INACTIVE' },
           },
           {
             ticketTypeId: 'ticket-type-1',
             seatingZoneId: 'foreign-zone',
             concertId: 'other-concert',
+            seatingZone: { status: 'ACTIVE' },
           },
         ],
       },
@@ -122,6 +139,12 @@ describe('PrismaPublicConcertCatalogRepository', () => {
           slug: 'anh-trai-say-hi-2026',
         },
         include: expect.objectContaining({
+          seatingZones: {
+            where: {
+              status: SeatingZoneStatus.ACTIVE,
+            },
+            orderBy: [{ displayOrder: 'asc' }, { label: 'asc' }],
+          },
           artistBios: {
             where: {
               status: ArtistBioStatus.PUBLISHED,
@@ -143,6 +166,7 @@ describe('PrismaPublicConcertCatalogRepository', () => {
       availableQuantity: 125,
       zoneIds: ['zone-1'],
     });
+    expect(detail?.seatingZones.map((zone) => zone.id)).toEqual(['zone-1']);
     expect(detail?.ticketTypeZoneMappings).toEqual([
       { ticketTypeId: 'ticket-type-1', seatingZoneId: 'zone-1' },
     ]);
