@@ -10,6 +10,7 @@ import {
   InventoryReservationConflictError,
   OrderNotFoundError,
   PerUserTicketLimitExceededError,
+  TicketNotFoundError,
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
@@ -17,6 +18,7 @@ import {
 import { Order } from '../../domain/order.entity';
 import { OrderItem } from '../../domain/order-item.entity';
 import { OrderStatus } from '../../domain/order-status.enum';
+import { TicketStatus } from '../../domain/ticket-status.enum';
 import { OrderController } from './order.controller';
 
 function buildOrder(overrides: Partial<ConstructorParameters<typeof Order>[0]> = {}) {
@@ -49,16 +51,22 @@ describe('OrderController', () => {
   let createOrderUseCase: { execute: ReturnType<typeof vi.fn> };
   let getOrderUseCase: { execute: ReturnType<typeof vi.fn> };
   let listUserOrdersUseCase: { execute: ReturnType<typeof vi.fn> };
+  let listUserTicketsUseCase: { execute: ReturnType<typeof vi.fn> };
+  let getUserTicketUseCase: { execute: ReturnType<typeof vi.fn> };
   const request = { user: { id: 'user-1', roles: [Role.AUDIENCE] } };
 
   beforeEach(() => {
     createOrderUseCase = { execute: vi.fn() };
     getOrderUseCase = { execute: vi.fn() };
     listUserOrdersUseCase = { execute: vi.fn() };
+    listUserTicketsUseCase = { execute: vi.fn() };
+    getUserTicketUseCase = { execute: vi.fn() };
     controller = new OrderController(
       createOrderUseCase as never,
       getOrderUseCase as never,
       listUserOrdersUseCase as never,
+      listUserTicketsUseCase as never,
+      getUserTicketUseCase as never,
     );
   });
 
@@ -151,6 +159,77 @@ describe('OrderController', () => {
 
     expect(listUserOrdersUseCase.execute).toHaveBeenCalledWith({ userId: 'user-1' });
     expect(result).toHaveLength(1);
+  });
+
+  it('lists current user tickets', async () => {
+    listUserTicketsUseCase.execute.mockResolvedValue([
+      {
+        id: 'ticket-1',
+        ticketNumber: 'TCK-ORD-001',
+        orderId: 'order-1',
+        orderNumber: 'ORD-20260616-ABC123',
+        userId: 'user-1',
+        concertId: 'concert-1',
+        concertTitle: 'Concert',
+        concertStartsAt: new Date('2026-07-01T12:00:00.000Z'),
+        ticketTypeId: 'ticket-type-1',
+        ticketTypeName: 'VIP',
+        ticketTypeCode: 'VIP',
+        status: TicketStatus.ISSUED,
+        issuedAt: new Date('2026-06-16T10:30:00.000Z'),
+        checkedInAt: null,
+      },
+    ]);
+
+    const result = await controller.listMyTickets(request);
+
+    expect(listUserTicketsUseCase.execute).toHaveBeenCalledWith({ userId: 'user-1' });
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'ticket-1',
+        concertStartsAt: '2026-07-01T12:00:00.000Z',
+        issuedAt: '2026-06-16T10:30:00.000Z',
+      }),
+    ]);
+  });
+
+  it('gets current user ticket detail with QR payload', async () => {
+    getUserTicketUseCase.execute.mockResolvedValue({
+      id: 'ticket-1',
+      ticketNumber: 'TCK-ORD-001',
+      orderId: 'order-1',
+      orderNumber: 'ORD-20260616-ABC123',
+      userId: 'user-1',
+      concertId: 'concert-1',
+      concertTitle: 'Concert',
+      concertStartsAt: new Date('2026-07-01T12:00:00.000Z'),
+      ticketTypeId: 'ticket-type-1',
+      ticketTypeName: 'VIP',
+      ticketTypeCode: 'VIP',
+      status: TicketStatus.ISSUED,
+      issuedAt: new Date('2026-06-16T10:30:00.000Z'),
+      checkedInAt: null,
+      qrPayload: 'signed.qr.payload',
+    });
+
+    const result = await controller.getMyTicket('ticket-1', request);
+
+    expect(getUserTicketUseCase.execute).toHaveBeenCalledWith({
+      userId: 'user-1',
+      ticketId: 'ticket-1',
+    });
+    expect(result).toMatchObject({
+      id: 'ticket-1',
+      qrPayload: 'signed.qr.payload',
+    });
+  });
+
+  it('maps missing or non-owned ticket detail errors to 404', async () => {
+    getUserTicketUseCase.execute.mockRejectedValue(new TicketNotFoundError('ticket-1'));
+
+    await expect(controller.getMyTicket('ticket-1', request)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('gets current user order detail', async () => {

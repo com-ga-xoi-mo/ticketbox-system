@@ -11,6 +11,7 @@ export const envSchema = z.object({
   INTERNAL_API_KEY: z.string().min(1).default('ticketbox-internal-dev-key'),
   JWT_SECRET: z.string().min(1),
   JWT_EXPIRY: z.string().min(1).default('1h'),
+  QR_TOKEN_SECRET: z.string().min(1).default('ticketbox-qr-token-dev-secret'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
   ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
 });

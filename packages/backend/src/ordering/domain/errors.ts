@@ -76,3 +76,37 @@ export class PerUserTicketLimitExceededError extends Error {
     this.name = 'PerUserTicketLimitExceededError';
   }
 }
+
+export class TicketIssuanceOrderNotFoundError extends Error {
+  constructor(public readonly orderId: string) {
+    super(`Order not found for ticket issuance: ${orderId}`);
+    this.name = 'TicketIssuanceOrderNotFoundError';
+  }
+}
+
+export class TicketIssuanceOrderNotPaidError extends Error {
+  constructor(public readonly orderId: string) {
+    super(`Cannot issue tickets for unpaid order: ${orderId}`);
+    this.name = 'TicketIssuanceOrderNotPaidError';
+  }
+}
+
+export class TicketPartialIssuanceConflictError extends Error {
+  constructor(
+    public readonly orderId: string,
+    public readonly expectedTickets: number,
+    public readonly existingTickets: number,
+  ) {
+    super(
+      `Ticket issuance conflict for order ${orderId}: expected=${expectedTickets}, existing=${existingTickets}`,
+    );
+    this.name = 'TicketPartialIssuanceConflictError';
+  }
+}
+
+export class TicketNotFoundError extends Error {
+  constructor(public readonly ticketId: string) {
+    super(`Ticket not found: ${ticketId}`);
+    this.name = 'TicketNotFoundError';
+  }
+}

@@ -405,7 +405,8 @@ Scope:
 - ticket issuance after paid order
 - QR token generation
 - QR hash storage
-- customer ticket detail API/page
+- customer ticket detail API
+- frontend ticket QR display as a follow-up change after backend issuance is complete
 
 Branch:
 
@@ -416,6 +417,12 @@ feature/implement-qr-ticket-issuance
 Primary specs:
 
 - `ticket-purchase`
+
+Follow-up after backend issuance:
+
+- `implement-customer-ticket-qr-page`
+- Scope: fetch ticket detail and render QR code in the customer UI using `qrPayload`
+- Start this only after `implement-qr-ticket-issuance` is complete and archived
 
 #### `implement-payment-simulator`
 

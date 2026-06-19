@@ -48,6 +48,10 @@ export class PlatformConfigService {
     return this.configService.get('JWT_EXPIRY');
   }
 
+  get qrTokenSecret(): string {
+    return this.configService.get('QR_TOKEN_SECRET');
+  }
+
   get bcryptRounds(): number {
     return this.configService.get('BCRYPT_ROUNDS');
   }

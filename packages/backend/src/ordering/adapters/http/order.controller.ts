@@ -17,19 +17,26 @@ import { Roles } from '../../../identity/adapters/http/decorators/roles.decorato
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
+import { GetUserTicketUseCase } from '../../application/use-cases/get-user-ticket.use-case';
 import { GetOrderUseCase } from '../../application/use-cases/get-order.use-case';
+import { ListUserTicketsUseCase } from '../../application/use-cases/list-user-tickets.use-case';
 import { ListUserOrdersUseCase } from '../../application/use-cases/list-user-orders.use-case';
 import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
   OrderNotFoundError,
   PerUserTicketLimitExceededError,
+  TicketNotFoundError,
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
 } from '../../domain/errors';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { serializeOrder } from './order-response.presenter';
+import {
+  serializeTicketDetail,
+  serializeTicketSummary,
+} from './ticket-response.presenter';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -38,6 +45,8 @@ export class OrderController {
     private readonly createOrderUseCase: CreateOrderUseCase,
     private readonly getOrderUseCase: GetOrderUseCase,
     private readonly listUserOrdersUseCase: ListUserOrdersUseCase,
+    private readonly listUserTicketsUseCase: ListUserTicketsUseCase,
+    private readonly getUserTicketUseCase: GetUserTicketUseCase,
   ) {}
 
   @Post('checkout/orders')
@@ -84,6 +93,34 @@ export class OrderController {
   async listMyOrders(@Request() req: { user: AuthenticatedUser }) {
     const orders = await this.listUserOrdersUseCase.execute({ userId: req.user.id });
     return orders.map((order) => serializeOrder(order));
+  }
+
+  @Get('me/tickets')
+  @Roles(Role.AUDIENCE)
+  async listMyTickets(@Request() req: { user: AuthenticatedUser }) {
+    const tickets = await this.listUserTicketsUseCase.execute({ userId: req.user.id });
+    return tickets.map((ticket) => serializeTicketSummary(ticket));
+  }
+
+  @Get('me/tickets/:id')
+  @Roles(Role.AUDIENCE)
+  async getMyTicket(
+    @Param('id') ticketId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    try {
+      const ticket = await this.getUserTicketUseCase.execute({
+        userId: req.user.id,
+        ticketId,
+      });
+
+      return serializeTicketDetail(ticket);
+    } catch (err: unknown) {
+      if (err instanceof TicketNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      throw err;
+    }
   }
 
   @Get('me/orders/:id')
