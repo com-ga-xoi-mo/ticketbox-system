@@ -57,6 +57,34 @@
     {
       "key": "uniqueSlug",
       "value": ""
+    },
+    {
+      "key": "artistBioId",
+      "value": ""
+    },
+    {
+      "key": "pressKitPdfBase64",
+      "value": "JVBERi0xLjQKMSAwIG9iago8PC9UeXBlL0NhdGFsb2c+PgplbmRvYmoKJSVFT0Y="
+    },
+    {
+      "key": "seatingMapAssetId",
+      "value": ""
+    },
+    {
+      "key": "seatingMapStorageKey",
+      "value": ""
+    },
+    {
+      "key": "seatingMapPublicUrl",
+      "value": ""
+    },
+    {
+      "key": "zoneVipId",
+      "value": ""
+    },
+    {
+      "key": "zoneGaId",
+      "value": ""
     }
   ],
   "item": [
@@ -70,8 +98,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
             }
           }
         },
@@ -101,8 +133,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/concerts",
-              "host": ["{{baseUrl}}"],
-              "path": ["concerts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "concerts"
+              ]
             }
           }
         },
@@ -129,8 +165,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/concerts/{{concertSlug}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["concerts", "{{concertSlug}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "concerts",
+                "{{concertSlug}}"
+              ]
             }
           }
         },
@@ -141,8 +182,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/concerts/{{concertSlug}}/availability",
-              "host": ["{{baseUrl}}"],
-              "path": ["concerts", "{{concertSlug}}", "availability"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "concerts",
+                "{{concertSlug}}",
+                "availability"
+              ]
             }
           }
         }
@@ -182,8 +229,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -218,8 +270,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -254,8 +311,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -290,8 +352,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -324,8 +391,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/me/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["me", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me",
+                "profile"
+              ]
             }
           }
         },
@@ -345,8 +417,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
             }
           }
         }
@@ -376,7 +453,8 @@
                   "  pm.expect(pm.response.code).to.be.oneOf([201, 200]);",
                   "  pm.expect(pm.response.json()).to.have.property('id');",
                   "});",
-                  "pm.collectionVariables.set('createdConcertId', pm.response.json().id);"
+                  "pm.collectionVariables.set('createdConcertId', pm.response.json().id);",
+                  "pm.collectionVariables.set('concertSlug', pm.collectionVariables.get('uniqueSlug'));"
                 ]
               }
             }
@@ -399,8 +477,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/organizer/concerts",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizer", "concerts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts"
+              ]
             }
           }
         },
@@ -439,8 +522,225 @@
             },
             "url": {
               "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/ticket-types",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizer", "concerts", "{{createdConcertId}}", "ticket-types"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "ticket-types"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Organizer Upload Seating Map SVG",
+          "description": "In Postman, set Body -> form-data -> key `file` to type `File` and choose a local `.svg` file. Use a safe SVG for success requests; use an SVG containing `<script>` for the unsafe negative test.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Organizer Upload Seating Map SVG returns 201', function () {",
+                  "  pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.expect(body).to.have.property('asset');",
+                  "pm.expect(body.asset).to.have.property('id');",
+                  "pm.expect(body.asset.kind).to.equal('SEATING_MAP');",
+                  "pm.expect(body.asset.storageKey).to.include('seating-maps/');",
+                  "pm.expect(body.asset).to.have.property('publicUrl');",
+                  "pm.expect(body.asset.checksum).to.match(/^sha256:/);",
+                  "pm.expect(body.concert.seatingMapAssetId).to.equal(body.asset.id);",
+                  "pm.collectionVariables.set('seatingMapAssetId', body.asset.id);",
+                  "pm.collectionVariables.set('seatingMapStorageKey', body.asset.storageKey);",
+                  "pm.collectionVariables.set('seatingMapPublicUrl', body.asset.publicUrl || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/seating-map",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "seating-map"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Organizer Upload Unsafe SVG - Expects 400",
+          "description": "In Postman, set Body -> form-data -> key `file` to type `File` and choose a local `.svg` file. Use a safe SVG for success requests; use an SVG containing `<script>` for the unsafe negative test.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Organizer Upload Unsafe SVG - Expects 400 returns 400', function () {",
+                  "  pm.expect(pm.response.code).to.equal(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/seating-map",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "seating-map"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Organizer Upsert Seating Zones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('organizer can upsert seating zones', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('zones');",
+                  "});",
+                  "const zones = pm.response.json().zones || [];",
+                  "const vip = zones.find((zone) => zone.svgElementId === 'zone-vip');",
+                  "const ga = zones.find((zone) => zone.svgElementId === 'zone-ga');",
+                  "pm.expect(vip).to.not.be.undefined;",
+                  "pm.expect(ga).to.not.be.undefined;",
+                  "pm.collectionVariables.set('zoneVipId', vip.id);",
+                  "pm.collectionVariables.set('zoneGaId', ga.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zones\": [\n    {\n      \"svgElementId\": \"zone-vip\",\n      \"label\": \"VIP\",\n      \"color\": \"#FFD700\",\n      \"displayOrder\": 1,\n      \"status\": \"ACTIVE\"\n    },\n    {\n      \"svgElementId\": \"zone-ga\",\n      \"label\": \"General Admission\",\n      \"color\": \"#4169E1\",\n      \"displayOrder\": 2,\n      \"status\": \"ACTIVE\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/seating-zones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "seating-zones"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Organizer Map Ticket Type To Zones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('organizer can map ticket type to zones', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('ticketTypeId');",
+                  "  pm.expect(pm.response.json()).to.have.property('mappedZones');",
+                  "  pm.expect(pm.response.json().mappedZones.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seatingZoneIds\": [\n    \"{{zoneVipId}}\",\n    \"{{zoneGaId}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/ticket-types/{{ticketTypeId}}/zone-mappings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "ticket-types",
+                "{{ticketTypeId}}",
+                "zone-mappings"
+              ]
             }
           }
         },
@@ -456,8 +756,52 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/organizer/concerts/{{createdConcertId}}/publish",
-              "host": ["{{baseUrl}}"],
-              "path": ["organizer", "concerts", "{{createdConcertId}}", "publish"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{createdConcertId}}",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public Get Created Concert Detail - Verify Seating Map",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('public detail includes seating map data', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('seatingMapAsset');",
+                  "  pm.expect(body.seatingMapAsset).to.not.equal(null);",
+                  "  pm.expect(body).to.have.property('seatingZones');",
+                  "  pm.expect(body.seatingZones.length).to.be.greaterThan(0);",
+                  "  pm.expect(body).to.have.property('ticketTypeZoneMappings');",
+                  "  pm.expect(body.ticketTypeZoneMappings.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/concerts/{{concertSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "concerts",
+                "{{concertSlug}}"
+              ]
             }
           }
         },
@@ -492,8 +836,169 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/concerts",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "concerts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Upload Seating Map SVG",
+          "description": "In Postman, set Body -> form-data -> key `file` to type `File` and choose a local `.svg` file. Use a safe SVG for success requests; use an SVG containing `<script>` for the unsafe negative test.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin Upload Seating Map SVG returns 201', function () {",
+                  "  pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.asset.kind).to.equal('SEATING_MAP');",
+                  "pm.collectionVariables.set('seatingMapAssetId', body.asset.id);",
+                  "pm.collectionVariables.set('seatingMapStorageKey', body.asset.storageKey);",
+                  "pm.collectionVariables.set('seatingMapPublicUrl', body.asset.publicUrl || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{createdConcertId}}/seating-map",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{createdConcertId}}",
+                "seating-map"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Upsert Seating Zones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin can upsert seating zones', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('zones');",
+                  "});",
+                  "const zones = pm.response.json().zones || [];",
+                  "const vip = zones.find((zone) => zone.svgElementId === 'zone-vip');",
+                  "const ga = zones.find((zone) => zone.svgElementId === 'zone-ga');",
+                  "pm.expect(vip).to.not.be.undefined;",
+                  "pm.expect(ga).to.not.be.undefined;",
+                  "pm.collectionVariables.set('zoneVipId', vip.id);",
+                  "pm.collectionVariables.set('zoneGaId', ga.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zones\": [\n    {\n      \"svgElementId\": \"zone-vip\",\n      \"label\": \"VIP\",\n      \"color\": \"#FFD700\",\n      \"displayOrder\": 1,\n      \"status\": \"ACTIVE\"\n    },\n    {\n      \"svgElementId\": \"zone-ga\",\n      \"label\": \"General Admission\",\n      \"color\": \"#4169E1\",\n      \"displayOrder\": 2,\n      \"status\": \"ACTIVE\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{createdConcertId}}/seating-zones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{createdConcertId}}",
+                "seating-zones"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Map Ticket Type To Zones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin can map ticket type to zones', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('ticketTypeId');",
+                  "  pm.expect(pm.response.json()).to.have.property('mappedZones');",
+                  "  pm.expect(pm.response.json().mappedZones.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seatingZoneIds\": [\n    \"{{zoneVipId}}\",\n    \"{{zoneGaId}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{createdConcertId}}/ticket-types/{{ticketTypeId}}/zone-mappings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{createdConcertId}}",
+                "ticket-types",
+                "{{ticketTypeId}}",
+                "zone-mappings"
+              ]
             }
           }
         }
@@ -530,8 +1035,15 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/staff",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "concerts", "{{concertId}}", "staff"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "staff"
+              ]
             }
           }
         },
@@ -569,8 +1081,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/staff",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "concerts", "{{concertId}}", "staff"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "staff"
+              ]
             }
           }
         },
@@ -586,8 +1105,16 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/staff/{{assignmentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "concerts", "{{concertId}}", "staff", "{{assignmentId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "staff",
+                "{{assignmentId}}"
+              ]
             }
           }
         }
@@ -609,8 +1136,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/checkin/assignments",
-              "host": ["{{baseUrl}}"],
-              "path": ["checkin", "assignments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkin",
+                "assignments"
+              ]
             }
           }
         },
@@ -634,8 +1166,242 @@
             },
             "url": {
               "raw": "{{baseUrl}}/checkin/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["checkin", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkin",
+                "scan"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. AI Artist Bio and Object Storage",
+      "description": "Manual checks for the current upload flow that uses ObjectStoragePort. The PDF is sent as base64 JSON, decoded by the backend, then stored by STORAGE_DRIVER=local or STORAGE_DRIVER=s3.",
+      "item": [
+        {
+          "name": "Admin Upload Artist Press Kit PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin upload creates artist bio workflow', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('pressKitAsset');",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('artistBioId', json.id);",
+                  "if (json.concertId) pm.collectionVariables.set('concertId', json.concertId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalName\": \"artist-profile-postman.pdf\",\n  \"contentType\": \"application/pdf\",\n  \"contentBase64\": \"{{pressKitPdfBase64}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/artist-bio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Get Latest Artist Bio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin can get latest artist bio', function () {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('artistBioId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/artist-bio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Organizer Upload Artist Press Kit PDF",
+          "description": "Requires the logged-in organizer to own the target concert. Use a seeded organizer-owned concert or a concert created by Organizer Create Concert.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('organizer upload response is handled', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 403, 404]);",
+                  "});",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.collectionVariables.set('artistBioId', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalName\": \"organizer-artist-profile-postman.pdf\",\n  \"contentType\": \"application/pdf\",\n  \"contentBase64\": \"{{pressKitPdfBase64}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizer/concerts/{{concertId}}/artist-bio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizer",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Retry Artist Bio Job",
+          "description": "Useful after a failed job. If the current job is not failed, backend may reject it; that is expected business validation.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/artist-bio/{{artistBioId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio",
+                "{{artistBioId}}",
+                "retry"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Publish Artist Bio",
+          "description": "Requires the workflow to be READY_FOR_REVIEW. If called too early, backend should reject it.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/artist-bio/{{artistBioId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio",
+                "{{artistBioId}}",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Reject Artist Bio",
+          "description": "Requires the workflow to be READY_FOR_REVIEW. If called too early, backend should reject it.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/concerts/{{concertId}}/artist-bio/{{artistBioId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "concerts",
+                "{{concertId}}",
+                "artist-bio",
+                "{{artistBioId}}",
+                "reject"
+              ]
             }
           }
         }

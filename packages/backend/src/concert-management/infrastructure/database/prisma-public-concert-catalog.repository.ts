@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ArtistBioStatus, ConcertStatus } from '@prisma/client';
+import { ArtistBioStatus, ConcertStatus, SeatingZoneStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { calculateAvailableQuantity } from '../../domain/catalog-availability';
@@ -40,6 +40,9 @@ type TicketTypeZoneRecord = {
   ticketTypeId: string;
   seatingZoneId: string;
   concertId: string;
+  seatingZone?: {
+    status: string;
+  };
 };
 
 type TicketTypeRecord = {
@@ -109,6 +112,9 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
         posterAsset: true,
         seatingMapAsset: true,
         seatingZones: {
+          where: {
+            status: SeatingZoneStatus.ACTIVE,
+          },
           orderBy: [{ displayOrder: 'asc' }, { label: 'asc' }],
         },
         artistBios: {
@@ -129,6 +135,13 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
           include: {
             zones: {
               orderBy: { createdAt: 'asc' },
+              include: {
+                seatingZone: {
+                  select: {
+                    status: true,
+                  },
+                },
+              },
             },
           },
         },
@@ -154,6 +167,13 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
           include: {
             zones: {
               orderBy: { createdAt: 'asc' },
+              include: {
+                seatingZone: {
+                  select: {
+                    status: true,
+                  },
+                },
+              },
             },
           },
         },
@@ -207,7 +227,9 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       publishedArtistBio: concert.artistBios[0]?.publishedBio ?? null,
       venueAddress: concert.venueAddress,
       seatingMapAsset: this.toAssetMetadata(concert.seatingMapAsset),
-      seatingZones: concert.seatingZones.map((zone) => this.toSeatingZoneCatalogItem(zone)),
+      seatingZones: concert.seatingZones
+        .filter((zone) => zone.status === SeatingZoneStatus.ACTIVE)
+        .map((zone) => this.toSeatingZoneCatalogItem(zone)),
       ticketTypes,
       ticketTypeZoneMappings: this.toTicketTypeZoneMappings(concert.ticketTypes, concert.id),
     };
@@ -288,7 +310,11 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
   ): TicketTypeZoneMapping[] {
     return ticketTypes.flatMap((ticketType) =>
       (ticketType.zones ?? [])
-        .filter((mapping) => mapping.concertId === concertId)
+        .filter(
+          (mapping) =>
+            mapping.concertId === concertId &&
+            mapping.seatingZone?.status === SeatingZoneStatus.ACTIVE,
+        )
         .map((mapping) => ({
           ticketTypeId: mapping.ticketTypeId,
           seatingZoneId: mapping.seatingZoneId,
@@ -298,7 +324,10 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
 
   private zoneIdsForTicketType(ticketType: TicketTypeRecord, concertId: string): string[] {
     return (ticketType.zones ?? [])
-      .filter((mapping) => mapping.concertId === concertId)
+      .filter(
+        (mapping) =>
+          mapping.concertId === concertId && mapping.seatingZone?.status === SeatingZoneStatus.ACTIVE,
+      )
       .map((mapping) => mapping.seatingZoneId);
   }
 

@@ -12,6 +12,7 @@ export * from './platform/queue/queue.module';
 export * from './platform/redis/redis-health.indicator';
 export * from './platform/redis/redis.module';
 export * from './platform/redis/redis.tokens';
+export * from './platform/storage';
 export * from './concert-management/concert-management.module';
 export * from './ai-artist-bio/ai-artist-bio.module';
 export * from './identity/auth.module';
