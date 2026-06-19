@@ -23,6 +23,7 @@ import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
   OrderNotFoundError,
+  PerUserTicketLimitExceededError,
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
@@ -69,7 +70,8 @@ export class OrderController {
       }
       if (
         err instanceof InsufficientTicketInventoryError ||
-        err instanceof InventoryReservationConflictError
+        err instanceof InventoryReservationConflictError ||
+        err instanceof PerUserTicketLimitExceededError
       ) {
         throw new ConflictException(err.message);
       }

@@ -62,3 +62,17 @@ export class InventoryReservationConflictError extends Error {
     this.name = 'InventoryReservationConflictError';
   }
 }
+
+export class PerUserTicketLimitExceededError extends Error {
+  constructor(
+    public readonly ticketTypeId: string,
+    public readonly maxPerUser: number,
+    public readonly existingQuantity: number,
+    public readonly requestedQuantity: number,
+  ) {
+    super(
+      `Per-user ticket limit exceeded for ticket type ${ticketTypeId}: max=${maxPerUser}, existing=${existingQuantity}, requested=${requestedQuantity}`,
+    );
+    this.name = 'PerUserTicketLimitExceededError';
+  }
+}

@@ -5,6 +5,7 @@ import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
   OrderConflictError,
+  PerUserTicketLimitExceededError,
   TicketTypeInactiveError,
   TicketTypeSaleWindowError,
 } from '../../domain/errors';
@@ -80,6 +81,7 @@ function buildLockedTicketType(overrides: Record<string, unknown> = {}) {
     totalQuantity: 10,
     reservedQuantity: 3,
     soldQuantity: 4,
+    maxPerUser: 10,
     saleStartsAt: new Date('2026-06-01T00:00:00.000Z'),
     saleEndsAt: new Date('2026-06-30T23:59:59.000Z'),
     status: TicketTypeStatus.ACTIVE,
@@ -94,6 +96,9 @@ describe('PrismaInventoryReservationRepository', () => {
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
       updateMany: ReturnType<typeof vi.fn>;
+    };
+    orderItem: {
+      groupBy: ReturnType<typeof vi.fn>;
     };
     ticketType: {
       update: ReturnType<typeof vi.fn>;
@@ -116,6 +121,9 @@ describe('PrismaInventoryReservationRepository', () => {
         create: vi.fn(),
         updateMany: vi.fn(),
       },
+      orderItem: {
+        groupBy: vi.fn(),
+      },
       ticketType: {
         update: vi.fn(),
         updateMany: vi.fn(),
@@ -128,6 +136,7 @@ describe('PrismaInventoryReservationRepository', () => {
       },
     };
     repository = new PrismaInventoryReservationRepository(prisma as never);
+    tx.orderItem.groupBy.mockResolvedValue([]);
   });
 
   it('locks ticket types, creates order, and increments reserved quantity in one transaction', async () => {
@@ -139,6 +148,35 @@ describe('PrismaInventoryReservationRepository', () => {
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.orderItem.groupBy).toHaveBeenCalledWith({
+      by: ['ticketTypeId'],
+      where: {
+        ticketTypeId: {
+          in: ['ticket-type-1'],
+        },
+        order: {
+          userId: 'user-1',
+          OR: [
+            { status: OrderStatus.PAID },
+            {
+              status: OrderStatus.PENDING_PAYMENT,
+              reservationExpiresAt: {
+                gt: now,
+              },
+            },
+          ],
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.orderItem.groupBy.mock.invocationCallOrder[0],
+    );
+    expect(tx.orderItem.groupBy.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.order.create.mock.invocationCallOrder[0],
+    );
     expect(tx.order.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -196,16 +234,215 @@ describe('PrismaInventoryReservationRepository', () => {
   ])(
     'rejects inactive or out-of-window ticket types',
     async (lockedTicketType, expectedError) => {
+      tx.order.findUnique.mockResolvedValueOnce(null);
+      tx.$queryRaw.mockResolvedValueOnce([lockedTicketType]);
+
+      await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(
+        expectedError,
+      );
+      expect(tx.order.create).not.toHaveBeenCalled();
+      expect(tx.ticketType.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects when paid quantity plus requested quantity exceeds max per user', async () => {
     tx.order.findUnique.mockResolvedValueOnce(null);
-    tx.$queryRaw.mockResolvedValueOnce([lockedTicketType]);
+    tx.$queryRaw.mockResolvedValueOnce([buildLockedTicketType({ maxPerUser: 2 })]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([
+      {
+        ticketTypeId: 'ticket-type-1',
+        _sum: { quantity: 1 },
+      },
+    ]);
 
     await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(
-      expectedError,
+      PerUserTicketLimitExceededError,
+    );
+
+    expect(tx.order.create).not.toHaveBeenCalled();
+    expect(tx.ticketType.update).not.toHaveBeenCalled();
+  });
+
+  it('counts active pending reservations toward the max per user limit', async () => {
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([buildLockedTicketType({ maxPerUser: 3 })]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([
+      {
+        ticketTypeId: 'ticket-type-1',
+        _sum: { quantity: 2 },
+      },
+    ]);
+
+    await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(
+      PerUserTicketLimitExceededError,
+    );
+
+    expect(tx.orderItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          order: expect.objectContaining({
+            OR: expect.arrayContaining([
+              {
+                status: OrderStatus.PENDING_PAYMENT,
+                reservationExpiresAt: { gt: now },
+              },
+            ]),
+          }),
+        }),
+      }),
     );
     expect(tx.order.create).not.toHaveBeenCalled();
     expect(tx.ticketType.update).not.toHaveBeenCalled();
-    },
-  );
+  });
+
+  it('prevents concurrent same-user reservations from bypassing max per user after the row lock', async () => {
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([buildLockedTicketType({ maxPerUser: 2 })]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([
+      {
+        ticketTypeId: 'ticket-type-1',
+        _sum: { quantity: 1 },
+      },
+    ]);
+
+    await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(
+      PerUserTicketLimitExceededError,
+    );
+
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.orderItem.groupBy.mock.invocationCallOrder[0],
+    );
+    expect(tx.order.create).not.toHaveBeenCalled();
+    expect(tx.ticketType.update).not.toHaveBeenCalled();
+  });
+
+  it('does not count expired pending reservations toward the max per user limit', async () => {
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([buildLockedTicketType({ maxPerUser: 2 })]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([]);
+    tx.order.create.mockResolvedValueOnce(buildPrismaOrder());
+
+    await expect(repository.reserve(buildDomainOrder())).resolves.toMatchObject({
+      id: 'order-1',
+      status: OrderStatus.PENDING_PAYMENT,
+    });
+
+    expect(tx.orderItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          order: expect.objectContaining({
+            OR: expect.arrayContaining([
+              {
+                status: OrderStatus.PENDING_PAYMENT,
+                reservationExpiresAt: { gt: now },
+              },
+            ]),
+          }),
+        }),
+      }),
+    );
+    expect(tx.order.create).toHaveBeenCalledTimes(1);
+    expect(tx.ticketType.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows checkout when existing quantity plus requested quantity equals max per user', async () => {
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([buildLockedTicketType({ maxPerUser: 3 })]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([
+      {
+        ticketTypeId: 'ticket-type-1',
+        _sum: { quantity: 1 },
+      },
+    ]);
+    tx.order.create.mockResolvedValueOnce(buildPrismaOrder());
+
+    await expect(repository.reserve(buildDomainOrder())).resolves.toMatchObject({
+      id: 'order-1',
+    });
+
+    expect(tx.order.create).toHaveBeenCalledTimes(1);
+    expect(tx.ticketType.update).toHaveBeenCalledWith({
+      where: { id: 'ticket-type-1' },
+      data: { reservedQuantity: { increment: 2 } },
+    });
+  });
+
+  it('evaluates max per user independently for multi-ticket checkout', async () => {
+    const order = buildDomainOrder({
+      totalAmountVnd: 450000,
+      items: [
+        new OrderItem({
+          id: 'item-1',
+          ticketTypeId: 'ticket-type-1',
+          quantity: 2,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 300000,
+        }),
+        new OrderItem({
+          id: 'item-2',
+          ticketTypeId: 'ticket-type-2',
+          quantity: 1,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 150000,
+        }),
+      ],
+    });
+    const createdOrder = buildPrismaOrder({
+      totalAmountVnd: 450000,
+      items: [
+        {
+          id: 'item-1',
+          orderId: 'order-1',
+          ticketTypeId: 'ticket-type-1',
+          quantity: 2,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 300000,
+        },
+        {
+          id: 'item-2',
+          orderId: 'order-1',
+          ticketTypeId: 'ticket-type-2',
+          quantity: 1,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 150000,
+        },
+      ],
+    });
+
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([
+      buildLockedTicketType({ id: 'ticket-type-1', maxPerUser: 3 }),
+      buildLockedTicketType({ id: 'ticket-type-2', maxPerUser: 1 }),
+    ]);
+    tx.orderItem.groupBy.mockResolvedValueOnce([
+      {
+        ticketTypeId: 'ticket-type-1',
+        _sum: { quantity: 1 },
+      },
+    ]);
+    tx.order.create.mockResolvedValueOnce(createdOrder);
+
+    const result = await repository.reserve(order);
+
+    expect(result.items).toHaveLength(2);
+    expect(tx.orderItem.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          ticketTypeId: {
+            in: ['ticket-type-1', 'ticket-type-2'],
+          },
+        }),
+      }),
+    );
+    expect(tx.ticketType.update).toHaveBeenCalledWith({
+      where: { id: 'ticket-type-1' },
+      data: { reservedQuantity: { increment: 2 } },
+    });
+    expect(tx.ticketType.update).toHaveBeenCalledWith({
+      where: { id: 'ticket-type-2' },
+      data: { reservedQuantity: { increment: 1 } },
+    });
+  });
 
   it('returns an existing idempotent order without reserving again', async () => {
     tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder());
@@ -214,6 +451,7 @@ describe('PrismaInventoryReservationRepository', () => {
 
     expect(result.id).toBe('order-1');
     expect(tx.$queryRaw).not.toHaveBeenCalled();
+    expect(tx.orderItem.groupBy).not.toHaveBeenCalled();
     expect(tx.order.create).not.toHaveBeenCalled();
     expect(tx.ticketType.update).not.toHaveBeenCalled();
   });

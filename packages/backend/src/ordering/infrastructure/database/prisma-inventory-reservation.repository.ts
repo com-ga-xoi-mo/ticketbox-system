@@ -9,6 +9,7 @@ import {
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
+  PerUserTicketLimitExceededError,
 } from '../../domain/errors';
 import { Order } from '../../domain/order.entity';
 import { OrderItem } from '../../domain/order-item.entity';
@@ -26,6 +27,7 @@ interface LockedTicketTypeRecord {
   totalQuantity: number;
   reservedQuantity: number;
   soldQuantity: number;
+  maxPerUser: number;
   saleStartsAt: Date;
   saleEndsAt: Date;
   status: TicketTypeStatus;
@@ -89,6 +91,19 @@ export class PrismaInventoryReservationRepository
           requestedQuantities,
           concertId: order.concertId,
           now: order.createdAt,
+        });
+
+        const existingUserQuantities = await this.findUserQuantitiesByTicketType(
+          tx,
+          order.userId,
+          [...requestedQuantities.keys()],
+          order.createdAt,
+        );
+
+        this.validatePerUserTicketLimits({
+          ticketTypes: lockedTicketTypes,
+          requestedQuantities,
+          existingUserQuantities,
         });
 
         const createdOrder = await tx.order.create({
@@ -243,6 +258,7 @@ export class PrismaInventoryReservationRepository
         total_quantity AS "totalQuantity",
         reserved_quantity AS "reservedQuantity",
         sold_quantity AS "soldQuantity",
+        max_per_user AS "maxPerUser",
         sale_starts_at AS "saleStartsAt",
         sale_ends_at AS "saleEndsAt",
         status
@@ -285,6 +301,71 @@ export class PrismaInventoryReservationRepository
 
       if (requestedQuantity > remainingQuantity) {
         throw new InsufficientTicketInventoryError(ticketTypeId, requestedQuantity);
+      }
+    }
+  }
+
+  private async findUserQuantitiesByTicketType(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    ticketTypeIds: string[],
+    now: Date,
+  ): Promise<Map<string, number>> {
+    const groupedQuantities = await tx.orderItem.groupBy({
+      by: ['ticketTypeId'],
+      where: {
+        ticketTypeId: {
+          in: ticketTypeIds,
+        },
+        order: {
+          userId,
+          OR: [
+            { status: OrderStatus.PAID },
+            {
+              status: OrderStatus.PENDING_PAYMENT,
+              reservationExpiresAt: {
+                gt: now,
+              },
+            },
+          ],
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+
+    return new Map(
+      groupedQuantities.map((quantity) => [
+        quantity.ticketTypeId,
+        quantity._sum.quantity ?? 0,
+      ]),
+    );
+  }
+
+  private validatePerUserTicketLimits(params: {
+    ticketTypes: LockedTicketTypeRecord[];
+    requestedQuantities: Map<string, number>;
+    existingUserQuantities: Map<string, number>;
+  }): void {
+    const ticketTypeById = new Map(
+      params.ticketTypes.map((ticketType) => [ticketType.id, ticketType]),
+    );
+
+    for (const [ticketTypeId, requestedQuantity] of params.requestedQuantities) {
+      const ticketType = ticketTypeById.get(ticketTypeId);
+      if (!ticketType) {
+        continue;
+      }
+
+      const existingQuantity = params.existingUserQuantities.get(ticketTypeId) ?? 0;
+      if (existingQuantity + requestedQuantity > ticketType.maxPerUser) {
+        throw new PerUserTicketLimitExceededError(
+          ticketTypeId,
+          ticketType.maxPerUser,
+          existingQuantity,
+          requestedQuantity,
+        );
       }
     }
   }

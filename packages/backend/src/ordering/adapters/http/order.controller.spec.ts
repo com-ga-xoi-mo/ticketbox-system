@@ -9,6 +9,7 @@ import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
   OrderNotFoundError,
+  PerUserTicketLimitExceededError,
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
@@ -127,6 +128,7 @@ describe('OrderController', () => {
   it.each([
     new InsufficientTicketInventoryError('ticket-type-1', 2),
     new InventoryReservationConflictError('order-1'),
+    new PerUserTicketLimitExceededError('ticket-type-1', 2, 1, 2),
   ])('maps inventory reservation conflicts to 409', async (error) => {
     createOrderUseCase.execute.mockRejectedValue(error);
 
