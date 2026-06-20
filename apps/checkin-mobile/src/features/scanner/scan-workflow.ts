@@ -7,16 +7,18 @@ import type {
 } from '../../api/checkin-mobile-api.types';
 
 export type ScanWorkflowState =
+  | { readonly status: 'initializing' }
   | { readonly status: 'ready' }
   | { readonly status: 'submitting'; readonly request: OnlineScanRequest }
   | { readonly status: 'result'; readonly result: OnlineScanResult }
   | { readonly status: 'recoverable-error'; readonly message: string };
 
-export type DeviceIdProvider = () => string;
+export type DeviceIdProvider = () => Promise<string>;
 export type Clock = () => Date;
 
 export class ScanWorkflow {
-  private currentState: ScanWorkflowState = { status: 'ready' };
+  private currentState: ScanWorkflowState = { status: 'initializing' };
+  private deviceId: string | null = null;
 
   constructor(
     private readonly checkinApi: CheckinApiClient,
@@ -28,8 +30,24 @@ export class ScanWorkflow {
     return this.currentState;
   }
 
+  async initialize(): Promise<ScanWorkflowState> {
+    this.currentState = { status: 'initializing' };
+    try {
+      this.deviceId = await this.deviceIdProvider();
+      this.currentState = { status: 'ready' };
+    } catch (error) {
+      this.currentState = {
+        status: 'recoverable-error',
+        message: error instanceof Error ? error.message : 'Unable to initialize this installation',
+      };
+    }
+    return this.currentState;
+  }
+
   reset(): ScanWorkflowState {
-    this.currentState = { status: 'ready' };
+    this.currentState = this.deviceId
+      ? { status: 'ready' }
+      : { status: 'recoverable-error', message: 'Installation identifier is unavailable' };
     return this.currentState;
   }
 
@@ -38,7 +56,7 @@ export class ScanWorkflow {
     assignment: StaffAssignment,
     session: MobileSession,
   ): Promise<ScanWorkflowState> {
-    if (this.currentState.status === 'submitting') {
+    if (this.currentState.status !== 'ready' || !this.deviceId) {
       return this.currentState;
     }
 
@@ -48,7 +66,7 @@ export class ScanWorkflow {
       gate: assignment.gate,
       qrPayload,
       scannedAt: this.clock().toISOString(),
-      deviceId: this.deviceIdProvider(),
+      deviceId: this.deviceId,
     };
 
     this.currentState = { status: 'submitting', request };

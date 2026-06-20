@@ -14,7 +14,9 @@ class FakeAssignmentApi implements AssignmentApiClient {
 
 describe('AssignmentController', () => {
   it('loads active assignments and selects the first one by default', async () => {
-    const controller = new AssignmentController(new FakeAssignmentApi([activeAssignment, secondAssignment]));
+    const controller = new AssignmentController(
+      new FakeAssignmentApi([activeAssignment, secondAssignment]),
+    );
 
     const state = await controller.load(staffSession);
 
@@ -26,9 +28,8 @@ describe('AssignmentController', () => {
     expect(controller.canOpenScanner(state)).toBe(true);
   });
 
-  it('returns empty when no active assignments exist', async () => {
-    const revokedAssignment: StaffAssignment = { ...activeAssignment, status: 'REVOKED' };
-    const controller = new AssignmentController(new FakeAssignmentApi([revokedAssignment]));
+  it('returns empty when the active-assignment API returns an empty array', async () => {
+    const controller = new AssignmentController(new FakeAssignmentApi([]));
 
     const state = await controller.load(staffSession);
 
@@ -49,7 +50,9 @@ describe('AssignmentController', () => {
   });
 
   it('updates the selected assignment by id', async () => {
-    const controller = new AssignmentController(new FakeAssignmentApi([activeAssignment, secondAssignment]));
+    const controller = new AssignmentController(
+      new FakeAssignmentApi([activeAssignment, secondAssignment]),
+    );
     const loaded = await controller.load(staffSession);
 
     const selected = controller.select(loaded, secondAssignment.assignmentId);

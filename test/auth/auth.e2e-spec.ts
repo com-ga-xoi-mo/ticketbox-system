@@ -11,8 +11,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'http';
 
-const skipIfNoDB =
-  process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
+const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 describe('Auth E2E', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,7 +63,7 @@ describe('Auth E2E', () => {
     });
 
     expect(res.status).toBe(201);
-    const body = await res.json() as { accessToken: string };
+    const body = (await res.json()) as { accessToken: string };
     expect(typeof body.accessToken).toBe('string');
     expect(body.accessToken.length).toBeGreaterThan(10);
     registeredToken = body.accessToken;
@@ -106,7 +105,7 @@ describe('Auth E2E', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json() as { accessToken: string };
+    const body = (await res.json()) as { accessToken: string };
     expect(typeof body.accessToken).toBe('string');
   });
 
@@ -133,8 +132,15 @@ describe('Auth E2E', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json() as { id: string; roles: string[] };
+    const body = (await res.json()) as {
+      id: string;
+      email: string;
+      displayName: string;
+      roles: string[];
+    };
     expect(typeof body.id).toBe('string');
+    expect(body.email).toBe(testEmail);
+    expect(body.displayName).toBe(testDisplayName);
     expect(Array.isArray(body.roles)).toBe(true);
     expect(body.roles).toContain('AUDIENCE');
   });

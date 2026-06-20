@@ -1,4 +1,5 @@
-import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class OnlineCheckinDto {
   @IsUUID()
@@ -7,7 +8,9 @@ export class OnlineCheckinDto {
   @IsUUID()
   concertId!: string;
 
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   gate?: string;
 
@@ -18,7 +21,9 @@ export class OnlineCheckinDto {
   @IsDateString()
   scannedAt!: string;
 
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  @IsOptional()
-  deviceId?: string;
+  @IsNotEmpty()
+  @MaxLength(160)
+  deviceId!: string;
 }

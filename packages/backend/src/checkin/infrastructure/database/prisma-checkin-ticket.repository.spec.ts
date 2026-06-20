@@ -1,8 +1,4 @@
-import {
-  CheckinEventResult,
-  CheckinEventSource,
-  TicketStatus,
-} from '@prisma/client';
+import { CheckinEventResult, CheckinEventSource, TicketStatus } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PrismaCheckinTicketRepository } from './prisma-checkin-ticket.repository';
@@ -60,9 +56,7 @@ describe('PrismaCheckinTicketRepository', () => {
         findFirst: vi.fn(),
         create: vi.fn(),
       },
-      $transaction: vi.fn((callback: (transaction: typeof tx) => Promise<unknown>) =>
-        callback(tx),
-      ),
+      $transaction: vi.fn((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)),
     };
     repository = new PrismaCheckinTicketRepository(prisma as never);
   });
@@ -120,6 +114,7 @@ describe('PrismaCheckinTicketRepository', () => {
         concertId: 'concert-1',
         staffId: 'staff-1',
         scannedQrHash: 'hash-1',
+        deviceId: 'device-1',
         occurredAt,
       }),
     ).resolves.toMatchObject({

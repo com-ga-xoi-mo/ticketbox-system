@@ -3,8 +3,7 @@ import type { Server } from 'node:http';
 import { OrderStatus, PrismaClient, TicketStatus } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const skipIfNoDB =
-  process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
+const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 const prisma = new PrismaClient();
 
@@ -141,6 +140,43 @@ describe('Check-in API E2E', () => {
     });
   });
 
+  skipIfNoDB('lists only the authenticated staff active assignments as a raw array', async () => {
+    const res = await fetch(`${baseUrl}/checkin/assignments`, {
+      headers: { Authorization: `Bearer ${staffToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Array<{
+      assignmentId: string;
+      concertId: string;
+      status: string;
+    }>;
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ assignmentId, concertId, status: 'ACTIVE' }),
+      ]),
+    );
+  });
+
+  skipIfNoDB.each([
+    ['missing', undefined],
+    ['blank', '   '],
+    ['oversized', 'x'.repeat(161)],
+  ])('rejects %s deviceId with 400 and no check-in side effects', async (_name, deviceId) => {
+    const before = await prisma.checkinEvent.count({ where: { ticketId } });
+    const body: Record<string, unknown> = makeScanBody();
+    if (deviceId === undefined) delete body.deviceId;
+    else body.deviceId = deviceId;
+
+    const res = await fetch(`${baseUrl}/checkin/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken}` },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(400);
+    await expect(prisma.checkinEvent.count({ where: { ticketId } })).resolves.toBe(before);
+  });
+
   skipIfNoDB('accepts a valid unused ticket and rejects repeated scans as duplicate', async () => {
     const accepted = await fetch(`${baseUrl}/checkin/scan`, {
       method: 'POST',
@@ -156,11 +192,13 @@ describe('Check-in API E2E', () => {
       status: string;
       ticketId: string;
       checkinEventId: string;
+      checkedInAt: string;
     };
     expect(acceptedBody).toMatchObject({
       status: 'accepted',
       ticketId,
     });
+    expect(new Date(acceptedBody.checkedInAt).toISOString()).toBe(acceptedBody.checkedInAt);
 
     const duplicate = await fetch(`${baseUrl}/checkin/scan`, {
       method: 'POST',

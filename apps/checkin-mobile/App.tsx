@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 import { getMobileEnv } from './src/config/mobile-env';
@@ -13,19 +13,47 @@ import { AssignmentController } from './src/features/assignments/assignment-stat
 import type { ScanWorkflowState } from './src/features/scanner/scan-workflow';
 import { ScanWorkflow } from './src/features/scanner/scan-workflow';
 import { ExpoSecureSessionStore } from './src/storage/session-store';
+import { getOrCreateInstallationId } from './src/storage/installation-id';
+import { restoreStartupSession } from './src/app/restore-startup-session';
 
 const env = getMobileEnv();
 
 export default function App(): React.JSX.Element {
-  const [authState, setAuthState] = useState<AuthState>({ status: 'unauthenticated' });
+  const [authState, setAuthState] = useState<AuthState>({ status: 'restoring' });
   const [assignmentState, setAssignmentState] = useState<AssignmentState>({ status: 'idle' });
-  const [scanState, setScanState] = useState<ScanWorkflowState>({ status: 'ready' });
+  const [scanState, setScanState] = useState<ScanWorkflowState>({ status: 'initializing' });
   const [route, setRoute] = useState<'auth' | 'assignments' | 'scanner'>('auth');
   const apiClient = useMemo(() => new HttpCheckinMobileApiClient({ baseUrl: env.apiBaseUrl }), []);
   const sessionStore = useMemo(() => new ExpoSecureSessionStore(), []);
-  const authController = useMemo(() => new AuthSessionController(apiClient, sessionStore), [apiClient, sessionStore]);
+  const authController = useMemo(
+    () => new AuthSessionController(apiClient, sessionStore),
+    [apiClient, sessionStore],
+  );
   const assignmentController = useMemo(() => new AssignmentController(apiClient), [apiClient]);
-  const scanWorkflow = useMemo(() => new ScanWorkflow(apiClient, () => 'checkin-mobile-device'), [apiClient]);
+  const scanWorkflow = useMemo(
+    () => new ScanWorkflow(apiClient, getOrCreateInstallationId),
+    [apiClient],
+  );
+
+  useEffect(() => {
+    void scanWorkflow.initialize().then(setScanState);
+  }, [scanWorkflow]);
+
+  useEffect(() => {
+    let active = true;
+    setAuthState({ status: 'restoring' });
+
+    void restoreStartupSession(authController, assignmentController).then((restored) => {
+      if (!active) return;
+      setAuthState(restored.auth);
+      setAssignmentState(restored.assignments);
+      setRoute(restored.auth.status === 'authenticated' ? 'assignments' : 'auth');
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [assignmentController, authController]);
 
   async function loadAssignments(auth: AuthState): Promise<void> {
     if (auth.status !== 'authenticated') {
@@ -75,10 +103,16 @@ export default function App(): React.JSX.Element {
                 return;
               }
 
-              void scanWorkflow.submitDecodedPayload(payload, assignmentState.selected, authState.session).then(setScanState);
+              void scanWorkflow
+                .submitDecodedPayload(payload, assignmentState.selected, authState.session)
+                .then(setScanState);
               setScanState(scanWorkflow.state);
             }}
             onReset={() => setScanState(scanWorkflow.reset())}
+            onRetryInitialization={() => {
+              setScanState({ status: 'initializing' });
+              void scanWorkflow.initialize().then(setScanState);
+            }}
             state={scanState}
           />
         ) : null}
