@@ -1,0 +1,37 @@
+{
+  "name": "@ticketbox/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TicketBox admin & organizer web portal.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run --config vitest.config.mts",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.17",
+    "@radix-ui/react-tabs": "^1.1.15",
+    "@tanstack/react-query": "^5.0.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.21.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.0.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "autoprefixer": "^10.0.0",
+    "postcss": "^8.0.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^3.0.0"
+  }
+}

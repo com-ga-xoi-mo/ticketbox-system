@@ -35,6 +35,11 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         description: data.description ?? null,
         status: ConcertStatus.DRAFT,
       },
+      include: {
+        _count: {
+          select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
+        },
+      },
     });
 
     return this.mapToDomainConcert(record);
@@ -54,6 +59,7 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       status?: string;
       publishedAt?: Date | null;
       cancelledAt?: Date | null;
+      slug?: string;
     },
   ): Promise<Concert> {
     const record = await this.prisma.concert.update({
@@ -70,6 +76,12 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         status: data.status as ConcertStatus | undefined,
         publishedAt: data.publishedAt,
         cancelledAt: data.cancelledAt,
+        slug: data.slug,
+      },
+      include: {
+        _count: {
+          select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
+        },
       },
     });
 
@@ -79,9 +91,39 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
   async findConcertById(id: string): Promise<Concert | null> {
     const record = await this.prisma.concert.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
+        },
+      },
     });
     if (!record) return null;
     return this.mapToDomainConcert(record);
+  }
+
+  async findConcertsByOwner(createdById: string): Promise<Concert[]> {
+    const records = await this.prisma.concert.findMany({
+      where: { createdById },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        _count: {
+          select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
+        },
+      },
+    });
+    return records.map((record) => this.mapToDomainConcert(record));
+  }
+
+  async findAllConcerts(): Promise<Concert[]> {
+    const records = await this.prisma.concert.findMany({
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        _count: {
+          select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
+        },
+      },
+    });
+    return records.map((record) => this.mapToDomainConcert(record));
   }
 
   async createTicketType(data: {
@@ -187,6 +229,10 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       cancelledAt: record.cancelledAt,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      ticketTypesCount: record._count?.ticketTypes ?? 0,
+      seatingZonesCount: record._count?.seatingZones ?? 0,
+      checkinStaffCount: record._count?.checkinStaff ?? 0,
+      seatingMapConfigured: !!record.seatingMapAssetId,
     };
   }
 

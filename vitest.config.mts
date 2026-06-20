@@ -15,7 +15,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['apps/**/*.spec.ts', 'packages/**/*.spec.ts', 'test/**/*.spec.ts', 'test/**/*.e2e-spec.ts'],
+    include: [
+      'apps/**/*.spec.ts',
+      'packages/**/*.spec.ts',
+      'test/**/*.spec.ts',
+      'test/**/*.e2e-spec.ts',
+    ],
     passWithNoTests: true,
     coverage: {
       provider: 'v8',

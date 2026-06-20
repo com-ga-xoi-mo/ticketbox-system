@@ -17,6 +17,10 @@ export interface Concert {
   cancelledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  ticketTypesCount?: number;
+  seatingZonesCount?: number;
+  checkinStaffCount?: number;
+  seatingMapConfigured?: boolean;
 }
 
 export interface TicketType {
