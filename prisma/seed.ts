@@ -11,8 +11,7 @@ import {
 
 const prisma = new PrismaClient();
 
-const demoPasswordHash =
-  '$2b$10$8c.VgqzGzMFgwfEpq2K5XOct3iK5I.THdHvnyrIX.MIlCBJ7PTPNe'; // hashes to 'demoPassword'
+const demoPasswordHash = '$2b$10$8c.VgqzGzMFgwfEpq2K5XOct3iK5I.THdHvnyrIX.MIlCBJ7PTPNe'; // hashes to 'demoPassword'
 
 type SeedZone = {
   svgElementId: string;
@@ -244,8 +243,16 @@ function daysFromNow(days: number): Date {
 async function seedRoles(): Promise<Map<RoleCode, string>> {
   const roles = [
     { code: RoleCode.AUDIENCE, name: 'Audience', description: 'Browse concerts and buy tickets.' },
-    { code: RoleCode.ORGANIZER, name: 'Organizer', description: 'Manage concerts and ticket types.' },
-    { code: RoleCode.CHECKIN_STAFF, name: 'Check-in Staff', description: 'Scan tickets at assigned gates.' },
+    {
+      code: RoleCode.ORGANIZER,
+      name: 'Organizer',
+      description: 'Manage concerts and ticket types.',
+    },
+    {
+      code: RoleCode.CHECKIN_STAFF,
+      name: 'Check-in Staff',
+      description: 'Scan tickets at assigned gates.',
+    },
     { code: RoleCode.ADMIN, name: 'Admin', description: 'Operate the TicketBox platform.' },
   ];
 
@@ -262,7 +269,9 @@ async function seedRoles(): Promise<Map<RoleCode, string>> {
   return roleIds;
 }
 
-async function seedUsers(roleIds: Map<RoleCode, string>): Promise<{ organizerId: string; staffId: string }> {
+async function seedUsers(
+  roleIds: Map<RoleCode, string>,
+): Promise<{ organizerId: string; staffId: string }> {
   const users = [
     {
       email: 'audience@ticketbox.test',

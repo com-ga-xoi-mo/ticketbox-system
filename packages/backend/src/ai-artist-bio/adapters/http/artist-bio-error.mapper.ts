@@ -15,9 +15,7 @@ import {
   InvalidPressKitError,
 } from '../../domain/errors';
 
-export async function handleArtistBioHttpErrors<T>(
-  operation: () => Promise<T>,
-): Promise<T> {
+export async function handleArtistBioHttpErrors<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (err: unknown) {
@@ -36,4 +34,3 @@ export async function handleArtistBioHttpErrors<T>(
     throw err;
   }
 }
-

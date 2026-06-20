@@ -1,8 +1,4 @@
-import type {
-  ArtistBioAssetRecord,
-  ArtistBioRecord,
-  ArtistBioStatus,
-} from '../artist-bio.types';
+import type { ArtistBioAssetRecord, ArtistBioRecord, ArtistBioStatus } from '../artist-bio.types';
 
 export const ARTIST_BIO_REPOSITORY = Symbol('ArtistBioRepositoryPort');
 
@@ -59,4 +55,3 @@ export interface ArtistBioRepositoryPort {
   publish(input: PublishArtistBioInput): Promise<ArtistBioRecord>;
   updateStatus(artistBioId: string, status: ArtistBioStatus): Promise<ArtistBioRecord>;
 }
-

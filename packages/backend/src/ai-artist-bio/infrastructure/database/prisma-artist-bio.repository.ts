@@ -7,7 +7,11 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
-import { ArtistBioStatus, type ArtistBioAssetRecord, type ArtistBioRecord } from '../../domain/artist-bio.types';
+import {
+  ArtistBioStatus,
+  type ArtistBioAssetRecord,
+  type ArtistBioRecord,
+} from '../../domain/artist-bio.types';
 import type {
   ArtistBioRepositoryPort,
   CreateArtistBioWorkflowInput,
@@ -159,10 +163,7 @@ export class PrismaArtistBioRepository implements ArtistBioRepositoryPort {
     return this.toRecord(artistBio);
   }
 
-  async updateStatus(
-    artistBioId: string,
-    status: ArtistBioStatus,
-  ): Promise<ArtistBioRecord> {
+  async updateStatus(artistBioId: string, status: ArtistBioStatus): Promise<ArtistBioRecord> {
     const artistBio = await this.prisma.artistBio.update({
       where: { id: artistBioId },
       data: {
@@ -193,9 +194,7 @@ export class PrismaArtistBioRepository implements ArtistBioRepositoryPort {
       createdAt: artistBio.createdAt,
       updatedAt: artistBio.updatedAt,
       publishedAt: artistBio.publishedAt,
-      pressKitAsset: artistBio.pressKitAsset
-        ? this.toAssetRecord(artistBio.pressKitAsset)
-        : null,
+      pressKitAsset: artistBio.pressKitAsset ? this.toAssetRecord(artistBio.pressKitAsset) : null,
     };
   }
 
@@ -217,4 +216,3 @@ export class PrismaArtistBioRepository implements ArtistBioRepositoryPort {
     };
   }
 }
-

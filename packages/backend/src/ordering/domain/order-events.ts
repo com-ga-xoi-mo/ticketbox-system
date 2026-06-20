@@ -1,4 +1,4 @@
-import { OrderStatus } from './order-status.enum';
+import type { OrderStatus } from './order-status.enum';
 
 export interface BaseOrderDomainEvent {
   orderId: string;

@@ -16,4 +16,3 @@ export class ArtistBioProcessor extends WorkerHost {
     return { status: result.status };
   }
 }
-

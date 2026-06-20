@@ -42,4 +42,3 @@ export function validatePressKitUpload(
 export function buildPressKitStorageKey(concertId: string, checksum: string): string {
   return `artist-bio/${concertId}/${checksum}.pdf`;
 }
-

@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Role } from '../../../identity/domain/role.enum';
 import { ArtistBioStatus } from '../../domain/artist-bio.types';
 import { ArtistBioStatusTransitionError } from '../../domain/errors';
-import {
-  InMemoryArtistBioQueue,
-  InMemoryArtistBioRepository,
-} from '../../testing/fakes';
+import { InMemoryArtistBioQueue, InMemoryArtistBioRepository } from '../../testing/fakes';
 import { PublishArtistBioUseCase } from './publish-artist-bio.use-case';
 import { RejectArtistBioUseCase } from './reject-artist-bio.use-case';
 import { RetryArtistBioJobUseCase } from './retry-artist-bio-job.use-case';

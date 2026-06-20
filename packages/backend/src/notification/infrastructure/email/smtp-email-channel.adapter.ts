@@ -56,12 +56,10 @@ export class SmtpEmailChannelAdapter implements NotificationChannelPort {
 class SimpleSmtpClient {
   private socket: Socket | null = null;
   private buffer = '';
-  private pending:
-    | {
-        resolve: (line: string) => void;
-        reject: (error: Error) => void;
-      }
-    | null = null;
+  private pending: {
+    resolve: (line: string) => void;
+    reject: (error: Error) => void;
+  } | null = null;
 
   constructor(
     private readonly host: string,

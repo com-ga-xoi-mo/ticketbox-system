@@ -54,9 +54,7 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
     return notification ? this.toNotificationRecord(notification) : null;
   }
 
-  async recordDeliveryAttempt(
-    input: RecordDeliveryAttemptInput,
-  ): Promise<DeliveryAttemptRecord> {
+  async recordDeliveryAttempt(input: RecordDeliveryAttemptInput): Promise<DeliveryAttemptRecord> {
     const attempt = await this.prisma.notificationAttempt.create({
       data: {
         notificationId: input.notificationId,

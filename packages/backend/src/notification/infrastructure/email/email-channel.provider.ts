@@ -1,14 +1,9 @@
 import type { PlatformConfigService } from '../../../platform/config/platform-config.service';
 import type { NotificationChannelPort } from '../../domain/ports/notification-channel.port';
 import { LocalEmailChannelAdapter } from './local-email-channel.adapter';
-import {
-  SmtpEmailChannelAdapter,
-  SmtpSocketTransport,
-} from './smtp-email-channel.adapter';
+import { SmtpEmailChannelAdapter, SmtpSocketTransport } from './smtp-email-channel.adapter';
 
-export function createEmailChannelAdapter(
-  config: PlatformConfigService,
-): NotificationChannelPort {
+export function createEmailChannelAdapter(config: PlatformConfigService): NotificationChannelPort {
   if (config.emailProvider === 'local') {
     return new LocalEmailChannelAdapter();
   }

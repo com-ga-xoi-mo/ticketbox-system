@@ -64,7 +64,12 @@ export class DeliverNotificationUseCase {
         notificationId: notification.id,
         status: NotificationStatus.FAILED,
       });
-      return { notificationId: notification.id, status: failed.status, attempt, shouldRetry: false };
+      return {
+        notificationId: notification.id,
+        status: failed.status,
+        attempt,
+        shouldRetry: false,
+      };
     }
 
     if (notification.failedAttemptCount >= this.maxAttempts) {

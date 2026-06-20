@@ -1,7 +1,4 @@
-import {
-  ConcertNotFoundError,
-  ForbiddenConcertOwnershipError,
-} from '../../domain/errors';
+import { ConcertNotFoundError, ForbiddenConcertOwnershipError } from '../../domain/errors';
 import type { ConcertOwnershipRepositoryPort } from '../../domain/ports/concert-ownership.port';
 import { Role } from '../../domain/role.enum';
 import type { ConcertAuthorizationCommand } from './authorization.types';

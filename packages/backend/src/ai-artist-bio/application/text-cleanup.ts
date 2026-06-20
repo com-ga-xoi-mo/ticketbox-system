@@ -12,4 +12,3 @@ export function cleanExtractedPdfText(rawText: string, maxChars: number): string
 
   return cleaned.length > maxChars ? cleaned.slice(0, maxChars).trim() : cleaned;
 }
-

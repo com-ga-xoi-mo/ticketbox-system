@@ -44,7 +44,9 @@ describe('LocalObjectStorageAdapter', () => {
   });
 
   it('throws StorageObjectNotFoundError when reading a missing object', async () => {
-    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(StorageObjectNotFoundError);
+    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(
+      StorageObjectNotFoundError,
+    );
   });
 
   it('deletes objects, checks existence, and ignores missing deletes', async () => {
@@ -61,6 +63,8 @@ describe('LocalObjectStorageAdapter', () => {
   });
 
   it('returns public urls without duplicate slashes', () => {
-    expect(storage.getPublicUrl('/maps/main.svg')).toBe('http://localhost:3000/storage/maps/main.svg');
+    expect(storage.getPublicUrl('/maps/main.svg')).toBe(
+      'http://localhost:3000/storage/maps/main.svg',
+    );
   });
 });

@@ -60,4 +60,3 @@ export interface GeneratedArtistBio {
   provider: string;
   bio: string;
 }
-

@@ -4,7 +4,7 @@ import {
   TicketIssuanceOrderNotPaidError,
   TicketPartialIssuanceConflictError,
 } from '../../domain/errors';
-import { QrTicketTokenService } from '../../domain/qr-ticket-token.service';
+import type { QrTicketTokenService } from '../../domain/qr-ticket-token.service';
 import type { Ticket } from '../../domain/ticket.entity';
 import { OrderStatus } from '../../domain/order-status.enum';
 import type {

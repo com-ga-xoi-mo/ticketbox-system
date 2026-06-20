@@ -1,5 +1,5 @@
 import { TicketNotFoundError } from '../../domain/errors';
-import { QrTicketTokenService } from '../../domain/qr-ticket-token.service';
+import type { QrTicketTokenService } from '../../domain/qr-ticket-token.service';
 import type { TicketDetail } from '../../domain/ticket-read.model';
 import type { TicketRepositoryPort } from '../../domain/ports/ticket-repository.port';
 

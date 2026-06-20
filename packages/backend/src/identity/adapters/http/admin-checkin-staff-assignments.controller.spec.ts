@@ -10,19 +10,13 @@ import { ROLES_KEY } from './decorators/roles.decorator';
 
 describe('AdminCheckinStaffAssignmentsController route protection', () => {
   it('uses JwtAuthGuard before RolesGuard so unauthenticated requests fail before role checks', () => {
-    const guards = Reflect.getMetadata(
-      GUARDS_METADATA,
-      AdminCheckinStaffAssignmentsController,
-    );
+    const guards = Reflect.getMetadata(GUARDS_METADATA, AdminCheckinStaffAssignmentsController);
 
     expect(guards).toEqual([JwtAuthGuard, RolesGuard]);
   });
 
   it('allows ORGANIZER and ADMIN coarse roles for organizer-admin staff routes', () => {
-    const roles = new Reflector().get<Role[]>(
-      ROLES_KEY,
-      AdminCheckinStaffAssignmentsController,
-    );
+    const roles = new Reflector().get<Role[]>(ROLES_KEY, AdminCheckinStaffAssignmentsController);
 
     expect(roles).toEqual([Role.ORGANIZER, Role.ADMIN]);
   });

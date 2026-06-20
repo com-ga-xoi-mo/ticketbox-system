@@ -23,7 +23,9 @@ describe('InMemoryObjectStorageAdapter', () => {
   it('throws StorageObjectNotFoundError when the object is missing', async () => {
     const storage = new InMemoryObjectStorageAdapter();
 
-    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(StorageObjectNotFoundError);
+    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(
+      StorageObjectNotFoundError,
+    );
   });
 
   it('deletes objects and treats missing deletes as idempotent', async () => {
