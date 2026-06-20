@@ -6,8 +6,9 @@ import { Roles } from '../../../identity/adapters/http/decorators/roles.decorato
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { OnlineCheckinUseCase } from '../../application/use-cases/online-checkin.use-case';
-import type { OnlineScanResult } from '../../domain/checkin-scan.types';
+import type { OnlineScanResponse } from '@ticketbox/api-types';
 import { OnlineCheckinDto } from './dto/online-checkin.dto';
+import { toOnlineScanResponse } from './checkin-contract.mapper';
 
 @Controller('checkin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,8 +20,8 @@ export class CheckinController {
   async scan(
     @Body() dto: OnlineCheckinDto,
     @Request() req: { user: AuthenticatedUser },
-  ): Promise<OnlineScanResult> {
-    return this.onlineCheckin.execute({
+  ): Promise<OnlineScanResponse> {
+    const result = await this.onlineCheckin.execute({
       actor: { userId: req.user.id, roles: req.user.roles },
       assignmentId: dto.assignmentId,
       concertId: dto.concertId,
@@ -29,5 +30,7 @@ export class CheckinController {
       scannedAt: new Date(dto.scannedAt),
       deviceId: dto.deviceId,
     });
+
+    return toOnlineScanResponse(result);
   }
 }

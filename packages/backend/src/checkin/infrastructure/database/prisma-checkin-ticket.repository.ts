@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  CheckinEventResult,
-  CheckinEventSource,
-  Prisma,
-  TicketStatus,
-} from '@prisma/client';
+import { CheckinEventResult, CheckinEventSource, Prisma, TicketStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
 import type {
@@ -50,9 +45,7 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
     return accepted !== null;
   }
 
-  async recordAcceptedScan(
-    input: RecordAcceptedScanInput,
-  ): Promise<AcceptedScanPersistenceResult> {
+  async recordAcceptedScan(input: RecordAcceptedScanInput): Promise<AcceptedScanPersistenceResult> {
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         const ticket = await tx.ticket.findUnique({
@@ -75,7 +68,7 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
             source: CheckinEventSource.ONLINE,
             result: CheckinEventResult.ACCEPTED,
             scannedQrHash: input.scannedQrHash,
-            deviceId: input.deviceId ?? null,
+            deviceId: input.deviceId,
             occurredAt: input.occurredAt,
           },
         });
@@ -109,9 +102,7 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
     }
   }
 
-  async recordRejectedScan(
-    input: RecordRejectedScanInput,
-  ): Promise<{ id: string } | null> {
+  async recordRejectedScan(input: RecordRejectedScanInput): Promise<{ id: string } | null> {
     try {
       const event = await this.prisma.checkinEvent.create({
         data: {
@@ -121,7 +112,7 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
           source: CheckinEventSource.ONLINE,
           result: input.result as CheckinEventResult,
           scannedQrHash: input.scannedQrHash,
-          deviceId: input.deviceId ?? null,
+          deviceId: input.deviceId,
           occurredAt: input.occurredAt,
           rejectionReason: input.rejectionReason ?? null,
         },

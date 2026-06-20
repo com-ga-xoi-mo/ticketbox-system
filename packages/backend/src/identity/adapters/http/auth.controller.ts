@@ -13,6 +13,7 @@ import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { EmailAlreadyRegisteredError, InvalidCredentialsError } from '../../domain/errors';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { toLoginResponse } from './identity-contract.mapper';
 
 /**
  * HTTP adapter for authentication endpoints.
@@ -48,7 +49,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     try {
-      return await this.loginUseCase.execute(dto);
+      return toLoginResponse(await this.loginUseCase.execute(dto));
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {
         throw new UnauthorizedException('Invalid credentials');

@@ -9,7 +9,9 @@ import type {
   OnlineScanCommand,
   OnlineScanReasonCode,
   OnlineScanResult,
+  InvalidScanReasonCode,
   PersistedCheckinResult,
+  UnassignedScanReasonCode,
 } from '../../domain/checkin-scan.types';
 import type { CheckinTicketRepositoryPort } from '../../domain/ports/checkin-ticket-repository.port';
 import type { QrTokenHasherPort } from '../../domain/ports/qr-token-hasher.port';
@@ -147,7 +149,7 @@ export class OnlineCheckinUseCase {
 
   private async getAssignmentFailureReason(
     cmd: OnlineScanCommand,
-  ): Promise<OnlineScanReasonCode | undefined> {
+  ): Promise<UnassignedScanReasonCode | undefined> {
     const assignment = await this.assignmentRepository.findAssignmentById(cmd.assignmentId);
     if (!assignment) {
       return 'ASSIGNMENT_MISMATCH';
@@ -191,27 +193,31 @@ export class OnlineCheckinUseCase {
       rejectionReason: params.reasonCode,
     });
 
+    if (params.result === 'DUPLICATE') {
+      return {
+        status: 'duplicate',
+        message: params.message,
+        ticketId: params.ticket?.id,
+        checkinEventId: event?.id,
+        checkedInAt: params.ticket?.checkedInAt,
+      };
+    }
+
+    if (params.result === 'UNASSIGNED_STAFF') {
+      return {
+        status: 'unassigned',
+        message: params.message,
+        reasonCode: (params.reasonCode ?? 'ASSIGNMENT_MISMATCH') as UnassignedScanReasonCode,
+        checkinEventId: event?.id,
+      };
+    }
+
     return {
-      status: this.mapRejectedStatus(params.result),
+      status: 'invalid',
       message: params.message,
-      reasonCode: params.reasonCode,
+      reasonCode: (params.reasonCode ?? 'INVALID_TICKET') as InvalidScanReasonCode,
       ticketId: params.ticket?.id,
       checkinEventId: event?.id,
-      checkedInAt: params.ticket?.checkedInAt,
     };
-  }
-
-  private mapRejectedStatus(
-    result: Exclude<PersistedCheckinResult, 'ACCEPTED'>,
-  ): OnlineScanResult['status'] {
-    if (result === 'DUPLICATE') {
-      return 'duplicate';
-    }
-
-    if (result === 'UNASSIGNED_STAFF') {
-      return 'unassigned';
-    }
-
-    return 'invalid';
   }
 }

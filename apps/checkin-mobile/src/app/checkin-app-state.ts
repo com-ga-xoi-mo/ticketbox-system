@@ -16,7 +16,7 @@ export function createInitialCheckinAppState(): CheckinAppState {
     route: 'auth',
     auth: { status: 'unauthenticated' },
     assignments: { status: 'idle' },
-    scanner: { status: 'ready' },
+    scanner: { status: 'initializing' },
   };
 }
 

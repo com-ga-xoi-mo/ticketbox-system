@@ -8,21 +8,25 @@ import {
 } from '../identity/domain/ports/checkin-staff-assignment.port';
 import { DatabaseModule } from '../platform/database/database.module';
 import { CheckinController } from './adapters/http/checkin.controller';
+import { CheckinAssignmentsController } from './adapters/http/checkin-assignments.controller';
+import { ListMyCheckinAssignmentsQuery } from './application/queries/list-my-checkin-assignments.query';
+import {
+  STAFF_ASSIGNMENT_QUERY,
+  type StaffAssignmentQueryPort,
+} from './application/ports/staff-assignment-query.port';
 import { OnlineCheckinUseCase } from './application/use-cases/online-checkin.use-case';
 import {
   CHECKIN_TICKET_REPOSITORY,
   type CheckinTicketRepositoryPort,
 } from './domain/ports/checkin-ticket-repository.port';
-import {
-  QR_TOKEN_HASHER,
-  type QrTokenHasherPort,
-} from './domain/ports/qr-token-hasher.port';
+import { QR_TOKEN_HASHER, type QrTokenHasherPort } from './domain/ports/qr-token-hasher.port';
 import { PrismaCheckinTicketRepository } from './infrastructure/database/prisma-checkin-ticket.repository';
+import { PrismaStaffAssignmentQueryAdapter } from './infrastructure/database/prisma-staff-assignment-query.adapter';
 import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher';
 
 @Module({
   imports: [AuthModule, DatabaseModule],
-  controllers: [CheckinController],
+  controllers: [CheckinController, CheckinAssignmentsController],
   providers: [
     {
       provide: CHECKIN_TICKET_REPOSITORY,
@@ -31,6 +35,16 @@ import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher'
     {
       provide: QR_TOKEN_HASHER,
       useClass: Sha256QrTokenHasher,
+    },
+    {
+      provide: STAFF_ASSIGNMENT_QUERY,
+      useClass: PrismaStaffAssignmentQueryAdapter,
+    },
+    {
+      provide: ListMyCheckinAssignmentsQuery,
+      inject: [STAFF_ASSIGNMENT_QUERY],
+      useFactory: (assignments: StaffAssignmentQueryPort) =>
+        new ListMyCheckinAssignmentsQuery(assignments),
     },
     {
       provide: OnlineCheckinUseCase,

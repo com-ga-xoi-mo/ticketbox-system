@@ -1,10 +1,17 @@
+import {
+  LoginResponseSchema,
+  OnlineScanResponseSchema,
+  StaffAssignmentsResponseSchema,
+  StaffProfileResponseSchema,
+  type LoginRequest,
+  type OnlineScanRequest,
+} from '@ticketbox/api-types';
+import type { z } from 'zod';
+
 import type {
   CheckinMobileApiClient,
-  LoginRequest,
   MobileSession,
-  OnlineScanRequest,
   OnlineScanResult,
-  StaffAssignment,
 } from './checkin-mobile-api.types';
 
 export interface FetchResponseLike {
@@ -40,28 +47,67 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
   }
 
   async login(request: LoginRequest): Promise<MobileSession> {
-    return this.request<MobileSession>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  }
-
-  async listStaffAssignments(accessToken: string): Promise<readonly StaffAssignment[]> {
-    return this.request<readonly StaffAssignment[]>('/checkin/assignments', { method: 'GET' }, accessToken);
-  }
-
-  async submitOnlineScan(accessToken: string, request: OnlineScanRequest): Promise<OnlineScanResult> {
-    return this.request<OnlineScanResult>(
-      '/checkin/scan',
+    const login = await this.request(
+      '/auth/login',
       {
         method: 'POST',
         body: JSON.stringify(request),
       },
+      LoginResponseSchema,
+    );
+    const profile = await this.request(
+      '/me/profile',
+      { method: 'GET' },
+      StaffProfileResponseSchema,
+      login.accessToken,
+    );
+
+    return { accessToken: login.accessToken, profile };
+  }
+
+  async listStaffAssignments(accessToken: string) {
+    return this.request(
+      '/checkin/assignments',
+      { method: 'GET' },
+      StaffAssignmentsResponseSchema,
       accessToken,
     );
   }
 
-  private async request<T>(path: string, init: RequestInit, accessToken?: string): Promise<T> {
+  async submitOnlineScan(
+    accessToken: string,
+    request: OnlineScanRequest,
+  ): Promise<OnlineScanResult> {
+    try {
+      return await this.request(
+        '/checkin/scan',
+        { method: 'POST', body: JSON.stringify(request) },
+        OnlineScanResponseSchema,
+        accessToken,
+      );
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        if (error.status === 401 || error.status === 403) {
+          return { status: 'unauthorized', message: error.message };
+        }
+        return { status: 'unavailable', message: error.message };
+      }
+      if (error instanceof ApiResponseValidationError) {
+        return { status: 'unavailable', message: error.message };
+      }
+      return {
+        status: 'network-error',
+        message: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  private async request<TSchema extends z.ZodTypeAny>(
+    path: string,
+    init: RequestInit,
+    schema: TSchema,
+    accessToken?: string,
+  ): Promise<z.infer<TSchema>> {
     const headers = new Headers(init.headers);
     headers.set('content-type', 'application/json');
 
@@ -74,13 +120,32 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       headers,
     });
 
-    const payload = await response.json();
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      if (!response.ok) {
+        throw new ApiRequestError('Request failed', response.status);
+      }
+      throw new ApiResponseValidationError(`Invalid response from ${path}`);
+    }
 
     if (!response.ok) {
       throw new ApiRequestError(readErrorMessage(payload), response.status);
     }
 
-    return payload as T;
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success) {
+      throw new ApiResponseValidationError(`Invalid response from ${path}`);
+    }
+    return parsed.data;
+  }
+}
+
+export class ApiResponseValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiResponseValidationError';
   }
 }
 
@@ -89,6 +154,9 @@ function readErrorMessage(payload: unknown): string {
     const message = (payload as { message?: unknown }).message;
     if (typeof message === 'string') {
       return message;
+    }
+    if (Array.isArray(message) && message.every((item) => typeof item === 'string')) {
+      return message.join(', ');
     }
   }
 
