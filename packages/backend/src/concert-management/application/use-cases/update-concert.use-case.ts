@@ -1,7 +1,11 @@
-import { BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
-
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
+import { ConcertNotFoundError } from '../../../identity/domain/errors';
 import type { Concert } from '../../domain/concert.types';
+import {
+  ConcertNotEditableError,
+  ConcertSlugAlreadyExistsError,
+  InvalidConcertSlugError,
+} from '../../domain/errors';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { UpdateConcertCommand } from './commands';
 
@@ -17,7 +21,6 @@ export class UpdateConcertUseCase {
       roles: [cmd.requesterRole],
     };
 
-    // Enforce ownership/auth first
     await this.authorizeConcertManagement.execute({
       actor,
       concertId: cmd.concertId,
@@ -26,21 +29,20 @@ export class UpdateConcertUseCase {
 
     const concert = await this.concertWriteRepo.findConcertById(cmd.concertId);
     if (!concert) {
-      throw new NotFoundException('Concert not found');
+      throw new ConcertNotFoundError(cmd.concertId);
     }
 
     if (concert.status === 'ENDED' || concert.status === 'CANCELLED') {
-      throw new BadRequestException(`Cannot update concert in ${concert.status} status`);
+      throw new ConcertNotEditableError(concert.status);
     }
 
     if (cmd.slug) {
       const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
       if (!slugPattern.test(cmd.slug)) {
-        throw new BadRequestException('Slug must be URL-safe (lowercase alphanumeric and hyphens)');
+        throw new InvalidConcertSlugError(cmd.slug);
       }
     }
 
-    // Apply partial updates
     try {
       return await this.concertWriteRepo.updateConcert(cmd.concertId, {
         title: cmd.title,
@@ -56,7 +58,7 @@ export class UpdateConcertUseCase {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err.code === 'P2002') {
-        throw new ConflictException('Concert slug already exists');
+        throw new ConcertSlugAlreadyExistsError(cmd.slug ?? '');
       }
       throw err;
     }

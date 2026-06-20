@@ -1,7 +1,12 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { TicketType } from '../../domain/concert.types';
+import {
+  InvalidSalePeriodError,
+  InvalidTicketPriceError,
+  InvalidTicketQuantityError,
+  TicketTypeCodeAlreadyExistsError,
+  TicketTypeNotFoundError,
+} from '../../domain/errors';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { UpdateTicketTypeCommand } from './commands';
 
@@ -26,29 +31,29 @@ export class UpdateTicketTypeUseCase {
     const existingTypes = await this.concertWriteRepo.findTicketTypesByConcertId(cmd.concertId);
     const ticketType = existingTypes.find((t) => t.id === cmd.ticketTypeId);
     if (!ticketType) {
-      throw new NotFoundException('Ticket type not found');
+      throw new TicketTypeNotFoundError(cmd.ticketTypeId);
     }
 
     if (cmd.priceVnd !== undefined && cmd.priceVnd < 0) {
-      throw new BadRequestException('Price must be greater than or equal to 0');
+      throw new InvalidTicketPriceError();
     }
 
     if (cmd.totalQuantity !== undefined && cmd.totalQuantity < 1) {
-      throw new BadRequestException('Total quantity must be greater than or equal to 1');
+      throw new InvalidTicketQuantityError('Total quantity must be greater than or equal to 1');
     }
 
     if (cmd.saleStartsAt !== undefined || cmd.saleEndsAt !== undefined) {
       const saleStarts = new Date(cmd.saleStartsAt ?? ticketType.saleStartsAt).getTime();
       const saleEnds = new Date(cmd.saleEndsAt ?? ticketType.saleEndsAt).getTime();
       if (saleEnds <= saleStarts) {
-        throw new BadRequestException('Sale end time must be after sale start time');
+        throw new InvalidSalePeriodError();
       }
     }
 
     if (cmd.totalQuantity !== undefined) {
       const committedQuantity = ticketType.soldQuantity + ticketType.reservedQuantity;
       if (cmd.totalQuantity < committedQuantity) {
-        throw new BadRequestException(
+        throw new InvalidTicketQuantityError(
           `Cannot decrease total quantity below sold + reserved quantity (${committedQuantity})`,
         );
       }
@@ -62,9 +67,7 @@ export class UpdateTicketTypeUseCase {
           t.status !== 'ARCHIVED',
       );
       if (duplicate) {
-        throw new ConflictException(
-          `Ticket type code "${cmd.code}" already exists for this concert`,
-        );
+        throw new TicketTypeCodeAlreadyExistsError(cmd.code);
       }
     }
 

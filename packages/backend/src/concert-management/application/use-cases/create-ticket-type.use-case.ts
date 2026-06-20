@@ -1,7 +1,11 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
-
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { TicketType } from '../../domain/concert.types';
+import {
+  InvalidSalePeriodError,
+  InvalidTicketPriceError,
+  InvalidTicketQuantityError,
+  TicketTypeCodeAlreadyExistsError,
+} from '../../domain/errors';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { CreateTicketTypeCommand } from './commands';
 
@@ -24,17 +28,17 @@ export class CreateTicketTypeUseCase {
     });
 
     if (cmd.priceVnd < 0) {
-      throw new BadRequestException('Price must be greater than or equal to 0');
+      throw new InvalidTicketPriceError();
     }
 
     if (cmd.totalQuantity < 1) {
-      throw new BadRequestException('Total quantity must be greater than or equal to 1');
+      throw new InvalidTicketQuantityError('Total quantity must be greater than or equal to 1');
     }
 
     const saleStarts = new Date(cmd.saleStartsAt).getTime();
     const saleEnds = new Date(cmd.saleEndsAt).getTime();
     if (saleEnds <= saleStarts) {
-      throw new BadRequestException('Sale end time must be after sale start time');
+      throw new InvalidSalePeriodError();
     }
 
     const existingTypes = await this.concertWriteRepo.findTicketTypesByConcertId(cmd.concertId);
@@ -42,7 +46,7 @@ export class CreateTicketTypeUseCase {
       (t) => t.code.toLowerCase() === cmd.code.toLowerCase() && t.status !== 'ARCHIVED',
     );
     if (duplicate) {
-      throw new ConflictException(`Ticket type code "${cmd.code}" already exists for this concert`);
+      throw new TicketTypeCodeAlreadyExistsError(cmd.code);
     }
 
     return this.concertWriteRepo.createTicketType({

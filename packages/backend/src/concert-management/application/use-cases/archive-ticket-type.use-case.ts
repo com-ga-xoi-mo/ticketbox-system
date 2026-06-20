@@ -1,7 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { TicketType } from '../../domain/concert.types';
+import { TicketTypeHasSoldTicketsError, TicketTypeNotFoundError } from '../../domain/errors';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { ArchiveTicketTypeCommand } from './commands';
 
@@ -26,11 +25,11 @@ export class ArchiveTicketTypeUseCase {
     const existingTypes = await this.concertWriteRepo.findTicketTypesByConcertId(cmd.concertId);
     const ticketType = existingTypes.find((t) => t.id === cmd.ticketTypeId);
     if (!ticketType) {
-      throw new NotFoundException('Ticket type not found');
+      throw new TicketTypeNotFoundError(cmd.ticketTypeId);
     }
 
     if (ticketType.soldQuantity + ticketType.reservedQuantity > 0) {
-      throw new BadRequestException('Cannot archive a ticket type with sold or reserved tickets');
+      throw new TicketTypeHasSoldTicketsError();
     }
 
     return this.concertWriteRepo.archiveTicketType(cmd.ticketTypeId);
