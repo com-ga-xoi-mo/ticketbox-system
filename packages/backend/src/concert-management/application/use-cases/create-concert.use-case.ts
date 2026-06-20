@@ -8,7 +8,16 @@ export class CreateConcertUseCase {
   constructor(private readonly concertWriteRepo: ConcertWriteRepositoryPort) {}
 
   async execute(cmd: CreateConcertCommand): Promise<Concert> {
-    if (!cmd.createdById || !cmd.slug || !cmd.title || !cmd.artistName || !cmd.venueName || !cmd.city || !cmd.startsAt || !cmd.endsAt) {
+    if (
+      !cmd.createdById ||
+      !cmd.slug ||
+      !cmd.title ||
+      !cmd.artistName ||
+      !cmd.venueName ||
+      !cmd.city ||
+      !cmd.startsAt ||
+      !cmd.endsAt
+    ) {
       throw new BadRequestException('Missing required fields');
     }
 

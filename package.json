@@ -20,6 +20,7 @@
     "dev:api": "npm run build:api-types && nest start api --watch",
     "dev:worker": "nest start worker --watch",
     "dev:checkin-mobile": "npm run build:api-types && npm --workspace @ticketbox/checkin-mobile run start",
+    "dev:web": "npm --workspace @ticketbox/web run dev",
     "build": "npm run build:api-types && nest build api && nest build worker",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -38,7 +39,8 @@
     "verify:prisma": "prisma validate && prisma generate",
     "verify:database": "node tools/verify-database-seed.mjs",
     "verify:checkin-mobile": "npm run build:api-types && npm --workspace @ticketbox/checkin-mobile run verify",
-    "verify:api-boundaries": "node tools/verify-api-types-boundaries.mjs"
+    "verify:api-boundaries": "node tools/verify-api-types-boundaries.mjs",
+    "verify:web": "npm --workspace @ticketbox/web run verify"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   NotFoundException,
   Param,
   Patch,
@@ -23,6 +24,8 @@ import { CancelConcertUseCase } from '../../application/use-cases/cancel-concert
 import { CreateConcertUseCase } from '../../application/use-cases/create-concert.use-case';
 import { PublishConcertUseCase } from '../../application/use-cases/publish-concert.use-case';
 import { UpdateConcertUseCase } from '../../application/use-cases/update-concert.use-case';
+import { ListOrganizerConcertsUseCase } from '../../application/use-cases/list-organizer-concerts.use-case';
+import { GetOrganizerConcertUseCase } from '../../application/use-cases/get-organizer-concert.use-case';
 import { CreateConcertDto } from './dto/create-concert.dto';
 import { UpdateConcertDto } from './dto/update-concert.dto';
 
@@ -35,13 +38,27 @@ export class OrganizerConcertController {
     private readonly updateConcertUseCase: UpdateConcertUseCase,
     private readonly publishConcertUseCase: PublishConcertUseCase,
     private readonly cancelConcertUseCase: CancelConcertUseCase,
+    private readonly listOrganizerConcertsUseCase: ListOrganizerConcertsUseCase,
+    private readonly getOrganizerConcertUseCase: GetOrganizerConcertUseCase,
   ) {}
 
+  @Get()
+  async list(@Request() req: { user: AuthenticatedUser }) {
+    return this.handleErrors(() => this.listOrganizerConcertsUseCase.execute(req.user.id));
+  }
+
+  @Get(':id')
+  async get(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
+    return this.handleErrors(() =>
+      this.getOrganizerConcertUseCase.execute({
+        concertId: id,
+        organizerId: req.user.id,
+      }),
+    );
+  }
+
   @Post()
-  async create(
-    @Body() dto: CreateConcertDto,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.createConcertUseCase.execute({
         createdById: req.user.id,
@@ -78,15 +95,13 @@ export class OrganizerConcertController {
         startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
         description: dto.description,
+        slug: dto.slug,
       }),
     );
   }
 
   @Post(':id/publish')
-  async publish(
-    @Param('id') id: string,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.publishConcertUseCase.execute({
         concertId: id,
@@ -98,10 +113,7 @@ export class OrganizerConcertController {
   }
 
   @Post(':id/cancel')
-  async cancel(
-    @Param('id') id: string,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.cancelConcertUseCase.execute({
         concertId: id,
