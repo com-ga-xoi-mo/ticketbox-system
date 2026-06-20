@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth
 import { OrderNotFoundError } from '../../../ordering/domain/errors';
 import { Payment } from '../../domain/payment.entity';
 import { PaymentOrderNotPendingError } from '../../domain/errors';
+import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import { PaymentController } from './payment.controller';
@@ -17,7 +18,7 @@ function buildPayment(status = PaymentStatus.PENDING): Payment {
     id: 'payment-1',
     orderId: 'order-1',
     userId: 'user-1',
-    provider: 'SIMULATOR',
+    provider: PaymentProvider.SIMULATOR,
     providerTransactionId: 'sim-payment-1',
     status,
     amountVnd: 2400000,
@@ -33,12 +34,18 @@ function buildPayment(status = PaymentStatus.PENDING): Payment {
 describe('PaymentController', () => {
   let initiatePaymentUseCase: { execute: ReturnType<typeof vi.fn> };
   let callbackUseCase: { execute: ReturnType<typeof vi.fn> };
+  let momoIpnUseCase: { execute: ReturnType<typeof vi.fn> };
   let controller: PaymentController;
 
   beforeEach(() => {
     initiatePaymentUseCase = { execute: vi.fn() };
     callbackUseCase = { execute: vi.fn() };
-    controller = new PaymentController(initiatePaymentUseCase as never, callbackUseCase as never);
+    momoIpnUseCase = { execute: vi.fn() };
+    controller = new PaymentController(
+      initiatePaymentUseCase as never,
+      callbackUseCase as never,
+      momoIpnUseCase as never,
+    );
   });
 
   it('uses auth and role guards on payment initiation', () => {
@@ -59,13 +66,14 @@ describe('PaymentController', () => {
 
     const result = await controller.initiatePayment(
       'order-1',
-      {},
+      { provider: PaymentProvider.MOMO },
       { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
     );
 
     expect(initiatePaymentUseCase.execute).toHaveBeenCalledWith({
       orderId: 'order-1',
       userId: 'user-1',
+      provider: PaymentProvider.MOMO,
     });
     expect(result).toMatchObject({
       payment: { id: 'payment-1', status: PaymentStatus.PENDING },
@@ -111,6 +119,51 @@ describe('PaymentController', () => {
     });
     expect(result).toMatchObject({
       payment: { status: PaymentStatus.SUCCEEDED },
+      orderTransitioned: true,
+    });
+  });
+
+  it('processes MoMo IPN callbacks', async () => {
+    const payment = buildPayment(PaymentStatus.SUCCEEDED);
+    momoIpnUseCase.execute.mockResolvedValue({
+      payment,
+      momo: {
+        partnerCode: 'MOMOUDLU20220629',
+        orderId: 'payment-1',
+        requestId: 'payment-1',
+        amount: 2400000,
+        resultCode: 0,
+        message: 'Successful.',
+        responseTime: 1780000000000,
+        signature: 'signature',
+        providerTransactionId: 'payment-1',
+        providerEventId: 'momo:payment-1:payment-1:123:0',
+        success: true,
+        failureCode: null,
+        failureMessage: null,
+      },
+      duplicate: false,
+      orderTransitioned: true,
+    });
+
+    const result = await controller.momoIpn({
+      partnerCode: 'MOMOUDLU20220629',
+      orderId: 'payment-1',
+      requestId: 'payment-1',
+      amount: 2400000,
+      resultCode: 0,
+      message: 'Successful.',
+      responseTime: 1780000000000,
+      signature: 'signature',
+    });
+
+    expect(momoIpnUseCase.execute).toHaveBeenCalledWith({
+      payload: expect.objectContaining({ orderId: 'payment-1', resultCode: 0 }),
+    });
+    expect(result).toMatchObject({
+      orderId: 'payment-1',
+      resultCode: 0,
+      duplicate: false,
       orderTransitioned: true,
     });
   });

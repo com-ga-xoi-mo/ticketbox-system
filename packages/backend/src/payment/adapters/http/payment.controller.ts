@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -23,19 +22,26 @@ import {
   OrderNotFoundError,
 } from '../../../ordering/domain/errors';
 import { InitiatePaymentUseCase } from '../../application/use-cases/initiate-payment.use-case';
+import { ProcessMomoIpnUseCase } from '../../application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from '../../application/use-cases/process-simulator-payment-callback.use-case';
 import {
+  InvalidMomoIpnSignatureError,
   InvalidPaymentSimulatorTokenError,
   PaymentCallbackMismatchError,
+  PaymentGatewayRequestError,
   PaymentNotFoundError,
   PaymentOrderNotPendingError,
+  UnsupportedPaymentProviderError,
   UnsupportedPaymentSimulatorOutcomeError,
 } from '../../domain/errors';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
+import type { MomoIpnPayload } from '../../domain/ports/payment-gateway.port';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
+import { MomoIpnDto } from './dto/momo-ipn.dto';
 import { SimulatorCallbackDto } from './dto/simulator-callback.dto';
 import {
   serializeInitiatedPayment,
+  serializeMomoIpnResult,
   serializeSimulatorCallbackResult,
 } from './payment-response.presenter';
 
@@ -44,6 +50,7 @@ export class PaymentController {
   constructor(
     private readonly initiatePaymentUseCase: InitiatePaymentUseCase,
     private readonly processSimulatorPaymentCallbackUseCase: ProcessSimulatorPaymentCallbackUseCase,
+    private readonly processMomoIpnUseCase: ProcessMomoIpnUseCase,
   ) {}
 
   @Post('orders/:id/payment')
@@ -51,13 +58,14 @@ export class PaymentController {
   @Roles(Role.AUDIENCE)
   async initiatePayment(
     @Param('id') orderId: string,
-    @Body() _dto: InitiatePaymentDto,
+    @Body() dto: InitiatePaymentDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
     try {
       const result = await this.initiatePaymentUseCase.execute({
         orderId,
         userId: req.user.id,
+        provider: dto.provider,
       });
 
       return serializeInitiatedPayment(result);
@@ -87,6 +95,18 @@ export class PaymentController {
     return serializeSimulatorCallbackResult(result);
   }
 
+  @Post('payments/momo/ipn')
+  async momoIpn(@Body() dto: MomoIpnDto) {
+    try {
+      const payload: MomoIpnPayload = { ...dto };
+      const result = await this.processMomoIpnUseCase.execute({ payload });
+
+      return serializeMomoIpnResult(result);
+    } catch (err: unknown) {
+      this.mapPaymentError(err);
+    }
+  }
+
   private async handleSimulatorOutcome(token: string, outcome: string, providerEventId?: string) {
     try {
       if (outcome === PaymentSimulatorOutcome.DUPLICATE_SUCCESS) {
@@ -112,7 +132,10 @@ export class PaymentController {
       err instanceof InvalidPaymentSimulatorTokenError ||
       err instanceof PaymentCallbackMismatchError ||
       err instanceof UnsupportedPaymentSimulatorOutcomeError ||
+      err instanceof UnsupportedPaymentProviderError ||
       err instanceof PaymentOrderNotPendingError ||
+      err instanceof PaymentGatewayRequestError ||
+      err instanceof InvalidMomoIpnSignatureError ||
       err instanceof InvalidOrderTransitionError
     ) {
       throw new BadRequestException(err.message);

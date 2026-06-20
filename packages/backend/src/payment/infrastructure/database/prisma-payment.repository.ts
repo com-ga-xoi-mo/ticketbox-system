@@ -68,6 +68,14 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
     return payment ? this.toDomain(payment) : null;
   }
 
+  async findByProviderTransactionId(providerTransactionId: string): Promise<Payment | null> {
+    const payment = await this.prisma.payment.findUnique({
+      where: { providerTransactionId },
+    });
+
+    return payment ? this.toDomain(payment) : null;
+  }
+
   async recordEvent(data: RecordPaymentEventData): Promise<RecordPaymentEventResult> {
     try {
       await this.prisma.paymentEvent.create({

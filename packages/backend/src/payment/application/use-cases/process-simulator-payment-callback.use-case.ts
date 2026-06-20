@@ -1,12 +1,12 @@
-import { OrderStatus, TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import { OrderStatus } from '../../../ordering/order.module';
+import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
 import { OrderConflictError } from '../../../ordering/domain/errors';
 import {
-  InvalidPaymentSimulatorTokenError,
   PaymentCallbackMismatchError,
   PaymentNotFoundError,
   UnsupportedPaymentSimulatorOutcomeError,
 } from '../../domain/errors';
-import { Payment } from '../../domain/payment.entity';
+import type { Payment } from '../../domain/payment.entity';
 import { PaymentEventType } from '../../domain/payment-event-type.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';

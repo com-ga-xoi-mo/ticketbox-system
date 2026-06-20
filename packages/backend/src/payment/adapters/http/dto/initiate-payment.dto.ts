@@ -1,7 +1,9 @@
 import { IsIn, IsOptional } from 'class-validator';
 
+import { PaymentProvider } from '../../../domain/payment-provider.enum';
+
 export class InitiatePaymentDto {
   @IsOptional()
-  @IsIn(['SIMULATOR'])
-  provider?: 'SIMULATOR';
+  @IsIn([PaymentProvider.SIMULATOR, PaymentProvider.MOMO])
+  provider?: PaymentProvider;
 }

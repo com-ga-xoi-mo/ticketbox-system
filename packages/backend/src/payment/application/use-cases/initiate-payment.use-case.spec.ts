@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Order, OrderStatus } from '../../../ordering/order.module';
 import { Payment } from '../../domain/payment.entity';
 import { PaymentOrderNotPendingError } from '../../domain/errors';
+import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
@@ -26,7 +27,7 @@ function buildPayment(overrides: Partial<ConstructorParameters<typeof Payment>[0
     id: 'payment-1',
     orderId: 'order-1',
     userId: 'user-1',
-    provider: 'SIMULATOR',
+    provider: PaymentProvider.SIMULATOR,
     providerTransactionId: 'sim-payment-1',
     status: PaymentStatus.PENDING,
     amountVnd: 2400000,
@@ -51,17 +52,19 @@ describe('InitiatePaymentUseCase', () => {
     paymentRepository = {
       create: vi.fn(async () => buildPayment()),
       findById: vi.fn(),
+      findByProviderTransactionId: vi.fn(),
       recordEvent: vi.fn(),
       updateStatus: vi.fn(),
     };
     paymentGateway = {
       createRedirectSession: vi.fn(() => ({
-        provider: 'SIMULATOR',
+        provider: PaymentProvider.SIMULATOR,
         providerTransactionId: 'sim-payment-1',
         redirectUrl: 'http://localhost:3000/payment-simulator/redirect?token=token',
         simulatorToken: 'token',
       })),
       verifySimulatorToken: vi.fn(),
+      verifyMomoIpnPayload: vi.fn(),
     };
     useCase = new InitiatePaymentUseCase(
       getOrderUseCase as never,
@@ -83,6 +86,7 @@ describe('InitiatePaymentUseCase', () => {
       expect.objectContaining({
         orderId: 'order-1',
         userId: 'user-1',
+        provider: PaymentProvider.SIMULATOR,
         amountVnd: 2400000,
       }),
     );
@@ -90,7 +94,7 @@ describe('InitiatePaymentUseCase', () => {
       expect.objectContaining({
         orderId: 'order-1',
         userId: 'user-1',
-        provider: 'SIMULATOR',
+        provider: PaymentProvider.SIMULATOR,
         providerTransactionId: 'sim-payment-1',
         status: PaymentStatus.PENDING,
         amountVnd: 2400000,
@@ -98,6 +102,47 @@ describe('InitiatePaymentUseCase', () => {
     );
     expect(result.redirectUrl).toContain('/payment-simulator/redirect');
     expect(result.simulatorToken).toBe('token');
+  });
+
+  it('creates a MoMo payment when requested', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    vi.mocked(paymentGateway.createRedirectSession).mockResolvedValue({
+      provider: PaymentProvider.MOMO,
+      providerTransactionId: 'payment-1',
+      redirectUrl: 'https://test-payment.momo.vn/pay',
+      providerMetadata: {
+        payUrl: 'https://test-payment.momo.vn/pay',
+        deeplink: 'momo://pay',
+      },
+    });
+    vi.mocked(paymentRepository.create).mockResolvedValue(
+      buildPayment({
+        provider: PaymentProvider.MOMO,
+        providerTransactionId: 'payment-1',
+        redirectUrl: 'https://test-payment.momo.vn/pay',
+      }),
+    );
+
+    const result = await useCase.execute({
+      orderId: 'order-1',
+      userId: 'user-1',
+      provider: PaymentProvider.MOMO,
+    });
+
+    expect(paymentGateway.createRedirectSession).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: PaymentProvider.MOMO }),
+    );
+    expect(paymentRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: PaymentProvider.MOMO,
+        providerTransactionId: 'payment-1',
+        redirectUrl: 'https://test-payment.momo.vn/pay',
+      }),
+    );
+    expect(result.providerMetadata).toMatchObject({
+      payUrl: 'https://test-payment.momo.vn/pay',
+      deeplink: 'momo://pay',
+    });
   });
 
   it('rejects non-pending orders', async () => {

@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
 
-import { Payment } from '../payment.entity';
-import { PaymentEventType } from '../payment-event-type.enum';
-import { PaymentStatus } from '../payment-status.enum';
+import type { Payment } from '../payment.entity';
+import type { PaymentEventType } from '../payment-event-type.enum';
+import type { PaymentStatus } from '../payment-status.enum';
 
 export const PAYMENT_REPOSITORY = Symbol('PAYMENT_REPOSITORY');
 
@@ -41,6 +41,7 @@ export interface UpdatePaymentStatusData {
 export interface PaymentRepositoryPort {
   create(data: CreatePaymentData): Promise<Payment>;
   findById(paymentId: string): Promise<Payment | null>;
+  findByProviderTransactionId(providerTransactionId: string): Promise<Payment | null>;
   recordEvent(data: RecordPaymentEventData): Promise<RecordPaymentEventResult>;
   updateStatus(data: UpdatePaymentStatusData): Promise<Payment>;
 }

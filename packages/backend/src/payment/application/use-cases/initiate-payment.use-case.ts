@@ -1,21 +1,28 @@
 import { randomUUID } from 'crypto';
 
-import { GetOrderUseCase, OrderStatus } from '../../../ordering/order.module';
-import { Payment } from '../../domain/payment.entity';
+import { OrderStatus } from '../../../ordering/order.module';
+import type { GetOrderUseCase } from '../../../ordering/order.module';
+import type { Payment } from '../../domain/payment.entity';
 import { PaymentOrderNotPendingError } from '../../domain/errors';
+import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
-import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
+import type {
+  PaymentGatewayPort,
+  PaymentProviderMetadata,
+} from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
 
 export interface InitiatePaymentCommand {
   orderId: string;
   userId: string;
+  provider?: PaymentProvider;
 }
 
 export interface InitiatePaymentResult {
   payment: Payment;
   redirectUrl: string;
-  simulatorToken: string;
+  simulatorToken?: string;
+  providerMetadata?: PaymentProviderMetadata;
 }
 
 export class InitiatePaymentUseCase {
@@ -37,7 +44,9 @@ export class InitiatePaymentUseCase {
 
     const createdAt = new Date();
     const paymentId = randomUUID();
-    const session = this.paymentGateway.createRedirectSession({
+    const provider = command.provider ?? PaymentProvider.SIMULATOR;
+    const session = await this.paymentGateway.createRedirectSession({
+      provider,
       paymentId,
       orderId: order.id,
       userId: order.userId,
@@ -60,6 +69,7 @@ export class InitiatePaymentUseCase {
       payment,
       redirectUrl: session.redirectUrl,
       simulatorToken: session.simulatorToken,
+      providerMetadata: session.providerMetadata,
     };
   }
 }

@@ -14,6 +14,13 @@ export const envSchema = z.object({
   QR_TOKEN_SECRET: z.string().min(1).default('ticketbox-qr-token-dev-secret'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
   ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  MOMO_PARTNER_CODE: z.string().min(1).default('MOMOUDLU20220629'),
+  MOMO_ACCESS_KEY: z.string().min(1).default('ggoaaJa1ECRzBRYC'),
+  MOMO_SECRET_KEY: z.string().min(1).default('nI4o1MBg53oY5MWP3IHnYcxoUD2x2dm8'),
+  MOMO_ENDPOINT: z.string().url().default('https://test-payment.momo.vn/v2/gateway/api/create'),
+  MOMO_REQUEST_TYPE: z.string().min(1).default('captureWallet'),
+  MOMO_RETURN_URL: z.string().url().default('http://localhost:3000/payment-return'),
+  MOMO_IPN_URL: z.string().url().default('http://localhost:3000/payments/momo/ipn'),
 });
 
 export type PlatformEnv = z.infer<typeof envSchema>;

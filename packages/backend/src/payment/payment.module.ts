@@ -10,6 +10,7 @@ import { PlatformConfigModule } from '../platform/config/platform-config.module'
 import { DatabaseModule } from '../platform/database/database.module';
 import { PaymentController } from './adapters/http/payment.controller';
 import { InitiatePaymentUseCase } from './application/use-cases/initiate-payment.use-case';
+import { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';
 import { PAYMENT_GATEWAY, type PaymentGatewayPort } from './domain/ports/payment-gateway.port';
 import {
@@ -17,6 +18,8 @@ import {
   type PaymentRepositoryPort,
 } from './domain/ports/payment-repository.port';
 import { PrismaPaymentRepository } from './infrastructure/database/prisma-payment.repository';
+import { MomoPaymentGateway } from './infrastructure/momo/momo-payment-gateway';
+import { PaymentGatewayRegistry } from './infrastructure/payment-gateway-registry';
 import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-payment-gateway';
 
 @Module({
@@ -47,17 +50,30 @@ import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-pa
         ),
     },
     {
+      provide: ProcessMomoIpnUseCase,
+      inject: [PAYMENT_REPOSITORY, PAYMENT_GATEWAY, TransitionOrderStatusUseCase],
+      useFactory: (
+        paymentRepository: PaymentRepositoryPort,
+        paymentGateway: PaymentGatewayPort,
+        transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
+      ) =>
+        new ProcessMomoIpnUseCase(paymentRepository, paymentGateway, transitionOrderStatusUseCase),
+    },
+    {
       provide: PAYMENT_REPOSITORY,
       useClass: PrismaPaymentRepository,
     },
+    SimulatorPaymentGateway,
+    MomoPaymentGateway,
     {
       provide: PAYMENT_GATEWAY,
-      useClass: SimulatorPaymentGateway,
+      useClass: PaymentGatewayRegistry,
     },
   ],
-  exports: [InitiatePaymentUseCase, ProcessSimulatorPaymentCallbackUseCase],
+  exports: [InitiatePaymentUseCase, ProcessSimulatorPaymentCallbackUseCase, ProcessMomoIpnUseCase],
 })
 export class PaymentModule {}
 
 export { InitiatePaymentUseCase } from './application/use-cases/initiate-payment.use-case';
+export { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.use-case';
 export { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';

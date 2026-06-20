@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OrderStatus, TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import { OrderStatus } from '../../../ordering/order.module';
+import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
 import { Payment } from '../../domain/payment.entity';
 import { PaymentEventType } from '../../domain/payment-event-type.enum';
+import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
@@ -14,7 +16,7 @@ function buildPayment(status = PaymentStatus.PENDING): Payment {
     id: 'payment-1',
     orderId: 'order-1',
     userId: 'user-1',
-    provider: 'SIMULATOR',
+    provider: PaymentProvider.SIMULATOR,
     providerTransactionId: 'sim-payment-1',
     status,
     amountVnd: 2400000,
@@ -37,6 +39,7 @@ describe('ProcessSimulatorPaymentCallbackUseCase', () => {
     paymentRepository = {
       create: vi.fn(),
       findById: vi.fn(async () => buildPayment()),
+      findByProviderTransactionId: vi.fn(),
       recordEvent: vi.fn(async () => ({ duplicate: false })),
       updateStatus: vi.fn(async ({ status }) => buildPayment(status)),
     };
@@ -48,6 +51,7 @@ describe('ProcessSimulatorPaymentCallbackUseCase', () => {
         userId: 'user-1',
         providerTransactionId: 'sim-payment-1',
       })),
+      verifyMomoIpnPayload: vi.fn(),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
     useCase = new ProcessSimulatorPaymentCallbackUseCase(

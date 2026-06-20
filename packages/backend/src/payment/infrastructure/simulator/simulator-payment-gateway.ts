@@ -6,12 +6,15 @@ import { PlatformConfigService } from '../../../platform/config/platform-config.
 import { InvalidPaymentSimulatorTokenError } from '../../domain/errors';
 import type {
   CreatePaymentRedirectSessionData,
+  MomoIpnPayload,
   PaymentGatewayPort,
   PaymentRedirectSession,
   PaymentSimulatorTokenPayload,
+  VerifiedMomoIpnPayload,
 } from '../../domain/ports/payment-gateway.port';
+import { PaymentProvider } from '../../domain/payment-provider.enum';
 
-const PROVIDER = 'SIMULATOR';
+const PROVIDER = PaymentProvider.SIMULATOR;
 
 interface SignedSimulatorTokenPayload extends PaymentSimulatorTokenPayload {
   iat: number;
@@ -22,6 +25,10 @@ export class SimulatorPaymentGateway implements PaymentGatewayPort {
   constructor(private readonly config: PlatformConfigService) {}
 
   createRedirectSession(data: CreatePaymentRedirectSessionData): PaymentRedirectSession {
+    if (data.provider !== PaymentProvider.SIMULATOR) {
+      throw new Error(`Simulator gateway cannot handle provider: ${data.provider}`);
+    }
+
     const providerTransactionId = `sim-${data.paymentId}`;
     const simulatorToken = this.sign({
       paymentId: data.paymentId,
@@ -36,6 +43,7 @@ export class SimulatorPaymentGateway implements PaymentGatewayPort {
       providerTransactionId,
       simulatorToken,
       redirectUrl: `http://localhost:${this.config.port}/payment-simulator/redirect?token=${simulatorToken}`,
+      providerMetadata: { simulatorToken },
     };
   }
 
@@ -76,6 +84,11 @@ export class SimulatorPaymentGateway implements PaymentGatewayPort {
       }
       throw new InvalidPaymentSimulatorTokenError();
     }
+  }
+
+  verifyMomoIpnPayload(_payload: MomoIpnPayload): VerifiedMomoIpnPayload {
+    void _payload;
+    throw new Error('Simulator gateway cannot verify MoMo IPN payloads');
   }
 
   private sign(payload: SignedSimulatorTokenPayload): string {

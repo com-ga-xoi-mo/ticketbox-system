@@ -59,4 +59,32 @@ export class PlatformConfigService {
   get orderReservationTtlMinutes(): number {
     return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
   }
+
+  get momoPartnerCode(): string {
+    return this.configService.get('MOMO_PARTNER_CODE');
+  }
+
+  get momoAccessKey(): string {
+    return this.configService.get('MOMO_ACCESS_KEY');
+  }
+
+  get momoSecretKey(): string {
+    return this.configService.get('MOMO_SECRET_KEY');
+  }
+
+  get momoEndpoint(): string {
+    return this.configService.get('MOMO_ENDPOINT');
+  }
+
+  get momoRequestType(): string {
+    return this.configService.get('MOMO_REQUEST_TYPE');
+  }
+
+  get momoReturnUrl(): string {
+    return this.configService.get('MOMO_RETURN_URL');
+  }
+
+  get momoIpnUrl(): string {
+    return this.configService.get('MOMO_IPN_URL');
+  }
 }

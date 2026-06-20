@@ -38,6 +38,30 @@ export class PaymentCallbackMismatchError extends Error {
   }
 }
 
+export class UnsupportedPaymentProviderError extends Error {
+  constructor(public readonly provider: string) {
+    super(`Unsupported payment provider: ${provider}`);
+    this.name = 'UnsupportedPaymentProviderError';
+  }
+}
+
+export class PaymentGatewayRequestError extends Error {
+  constructor(
+    public readonly provider: string,
+    message: string,
+  ) {
+    super(`${provider} payment gateway request failed: ${message}`);
+    this.name = 'PaymentGatewayRequestError';
+  }
+}
+
+export class InvalidMomoIpnSignatureError extends Error {
+  constructor() {
+    super('Invalid MoMo IPN signature');
+    this.name = 'InvalidMomoIpnSignatureError';
+  }
+}
+
 export function isFinalSimulatorOutcome(outcome: PaymentSimulatorOutcome): boolean {
   return [PaymentSimulatorOutcome.SUCCESS, PaymentSimulatorOutcome.FAILURE].includes(outcome);
 }

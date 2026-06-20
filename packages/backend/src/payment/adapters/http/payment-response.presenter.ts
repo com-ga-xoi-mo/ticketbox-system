@@ -1,5 +1,9 @@
 import type { Payment } from '../../domain/payment.entity';
 import type { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
+import type {
+  PaymentProviderMetadata,
+  VerifiedMomoIpnPayload,
+} from '../../domain/ports/payment-gateway.port';
 
 export function serializePayment(payment: Payment) {
   return {
@@ -22,12 +26,14 @@ export function serializePayment(payment: Payment) {
 export function serializeInitiatedPayment(params: {
   payment: Payment;
   redirectUrl: string;
-  simulatorToken: string;
+  simulatorToken?: string;
+  providerMetadata?: PaymentProviderMetadata;
 }) {
   return {
     payment: serializePayment(params.payment),
     redirectUrl: params.redirectUrl,
-    simulatorToken: params.simulatorToken,
+    simulatorToken: params.simulatorToken ?? null,
+    providerMetadata: params.providerMetadata ?? null,
   };
 }
 
@@ -40,6 +46,24 @@ export function serializeSimulatorCallbackResult(params: {
   return {
     payment: serializePayment(params.payment),
     outcome: params.outcome,
+    duplicate: params.duplicate,
+    orderTransitioned: params.orderTransitioned,
+  };
+}
+
+export function serializeMomoIpnResult(params: {
+  payment: Payment;
+  momo: VerifiedMomoIpnPayload;
+  duplicate: boolean;
+  orderTransitioned: boolean;
+}) {
+  return {
+    partnerCode: params.momo.partnerCode,
+    orderId: params.momo.orderId,
+    requestId: params.momo.requestId,
+    resultCode: 0,
+    message: params.duplicate ? 'Duplicate callback ignored' : 'Callback processed',
+    payment: serializePayment(params.payment),
     duplicate: params.duplicate,
     orderTransitioned: params.orderTransitioned,
   };
