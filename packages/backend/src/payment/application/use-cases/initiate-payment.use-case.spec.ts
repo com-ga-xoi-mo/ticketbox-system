@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Order, OrderStatus } from '../../../ordering/order.module';
 import { Payment } from '../../domain/payment.entity';
-import { PaymentOrderNotPendingError } from '../../domain/errors';
+import {
+  PaymentIdempotencyKeyMismatchError,
+  PaymentInitiationInProgressError,
+  PaymentOrderNotPendingError,
+} from '../../domain/errors';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
+import type { PaymentIdempotencyPort } from '../../domain/ports/payment-idempotency.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
 import { InitiatePaymentUseCase } from './initiate-payment.use-case';
 
@@ -45,6 +50,7 @@ describe('InitiatePaymentUseCase', () => {
   let getOrderUseCase: { execute: ReturnType<typeof vi.fn> };
   let paymentRepository: PaymentRepositoryPort;
   let paymentGateway: PaymentGatewayPort;
+  let paymentIdempotency: PaymentIdempotencyPort;
   let useCase: InitiatePaymentUseCase;
 
   beforeEach(() => {
@@ -66,18 +72,38 @@ describe('InitiatePaymentUseCase', () => {
       verifySimulatorToken: vi.fn(),
       verifyMomoIpnPayload: vi.fn(),
     };
+    paymentIdempotency = {
+      claimPaymentInitiation: vi.fn(async () => ({ status: 'CLAIMED' as const })),
+      completePaymentInitiation: vi.fn(),
+      failPaymentInitiation: vi.fn(),
+      releasePaymentInitiation: vi.fn(),
+    };
     useCase = new InitiatePaymentUseCase(
       getOrderUseCase as never,
       paymentRepository,
       paymentGateway,
+      paymentIdempotency,
     );
   });
 
   it('creates a simulator payment for an owned pending order', async () => {
     getOrderUseCase.execute.mockResolvedValue(buildOrder());
 
-    const result = await useCase.execute({ orderId: 'order-1', userId: 'user-1' });
+    const result = await useCase.execute({
+      orderId: 'order-1',
+      userId: 'user-1',
+      idempotencyKey: 'pay-key-1',
+    });
 
+    expect(paymentIdempotency.claimPaymentInitiation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        orderId: 'order-1',
+        provider: PaymentProvider.SIMULATOR,
+        idempotencyKey: 'pay-key-1',
+        requestHash: expect.any(String),
+      }),
+    );
     expect(getOrderUseCase.execute).toHaveBeenCalledWith({
       orderId: 'order-1',
       userId: 'user-1',
@@ -98,6 +124,15 @@ describe('InitiatePaymentUseCase', () => {
         providerTransactionId: 'sim-payment-1',
         status: PaymentStatus.PENDING,
         amountVnd: 2400000,
+      }),
+    );
+    expect(paymentIdempotency.completePaymentInitiation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: 'pay-key-1',
+        response: expect.objectContaining({
+          payment: expect.any(Payment),
+          redirectUrl: expect.stringContaining('/payment-simulator/redirect'),
+        }),
       }),
     );
     expect(result.redirectUrl).toContain('/payment-simulator/redirect');
@@ -126,6 +161,7 @@ describe('InitiatePaymentUseCase', () => {
     const result = await useCase.execute({
       orderId: 'order-1',
       userId: 'user-1',
+      idempotencyKey: 'pay-key-1',
       provider: PaymentProvider.MOMO,
     });
 
@@ -148,10 +184,71 @@ describe('InitiatePaymentUseCase', () => {
   it('rejects non-pending orders', async () => {
     getOrderUseCase.execute.mockResolvedValue(buildOrder(OrderStatus.PAID));
 
-    await expect(useCase.execute({ orderId: 'order-1', userId: 'user-1' })).rejects.toThrow(
-      PaymentOrderNotPendingError,
-    );
+    await expect(
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow(PaymentOrderNotPendingError);
 
     expect(paymentRepository.create).not.toHaveBeenCalled();
+    expect(paymentIdempotency.releasePaymentInitiation).toHaveBeenCalled();
+  });
+
+  it('replays completed idempotent payment initiation without calling gateway', async () => {
+    const payment = buildPayment({ id: 'payment-replay' });
+    vi.mocked(paymentIdempotency.claimPaymentInitiation).mockResolvedValue({
+      status: 'REPLAY',
+      response: {
+        payment,
+        redirectUrl: payment.redirectUrl ?? '',
+        simulatorToken: 'token',
+      },
+    });
+
+    const result = await useCase.execute({
+      orderId: 'order-1',
+      userId: 'user-1',
+      idempotencyKey: 'pay-key-1',
+    });
+
+    expect(result.payment.id).toBe('payment-replay');
+    expect(getOrderUseCase.execute).not.toHaveBeenCalled();
+    expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
+    expect(paymentRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects same idempotency key with a different request fingerprint', async () => {
+    vi.mocked(paymentIdempotency.claimPaymentInitiation).mockResolvedValue({ status: 'MISMATCH' });
+
+    await expect(
+      useCase.execute({ orderId: 'order-2', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow(PaymentIdempotencyKeyMismatchError);
+
+    expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
+    expect(paymentRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate in-progress initiation without calling gateway', async () => {
+    vi.mocked(paymentIdempotency.claimPaymentInitiation).mockResolvedValue({
+      status: 'IN_PROGRESS',
+    });
+
+    await expect(
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow(PaymentInitiationInProgressError);
+
+    expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
+    expect(paymentRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('marks the idempotency record failed when provider initiation fails', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    vi.mocked(paymentGateway.createRedirectSession).mockRejectedValue(new Error('provider down'));
+
+    await expect(
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow('provider down');
+
+    expect(paymentIdempotency.failPaymentInitiation).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: 'pay-key-1' }),
+    );
   });
 });
