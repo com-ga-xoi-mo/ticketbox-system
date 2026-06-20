@@ -1,9 +1,6 @@
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { Role } from '../../../identity/domain/role.enum';
-import {
-  buildPressKitStorageKey,
-  validatePressKitUpload,
-} from '../pdf-validation';
+import { buildPressKitStorageKey, validatePressKitUpload } from '../pdf-validation';
 import type {
   ArtistBioActor,
   ArtistBioRecord,

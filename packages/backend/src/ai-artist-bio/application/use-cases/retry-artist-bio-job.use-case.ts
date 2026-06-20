@@ -1,6 +1,10 @@
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import { ArtistBioNotFoundError, ArtistBioStatusTransitionError } from '../../domain/errors';
-import { ArtistBioStatus, type ArtistBioActor, type ArtistBioRecord } from '../../domain/artist-bio.types';
+import {
+  ArtistBioStatus,
+  type ArtistBioActor,
+  type ArtistBioRecord,
+} from '../../domain/artist-bio.types';
 import type { ArtistBioQueuePort } from '../../domain/ports/artist-bio-queue.port';
 import type { ArtistBioRepositoryPort } from '../../domain/ports/artist-bio-repository.port';
 
@@ -36,9 +40,7 @@ export class RetryArtistBioJobUseCase {
       throw new ArtistBioStatusTransitionError('Artist bio job has exhausted retry attempts.');
     }
     if (existing.nextRetryAt && existing.nextRetryAt.getTime() > Date.now()) {
-      throw new ArtistBioStatusTransitionError(
-        'Artist bio job is not ready to retry yet.',
-      );
+      throw new ArtistBioStatusTransitionError('Artist bio job is not ready to retry yet.');
     }
 
     const reset = await this.repository.resetFailedForRetry(cmd.artistBioId);

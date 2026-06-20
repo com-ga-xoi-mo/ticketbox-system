@@ -15,9 +15,7 @@ export interface PurchaseConfirmationNotifications {
 export class CreatePurchaseConfirmationNotificationsUseCase {
   constructor(private readonly notificationRepository: NotificationRepositoryPort) {}
 
-  async execute(
-    event: OrderPaidForNotification,
-  ): Promise<PurchaseConfirmationNotifications> {
+  async execute(event: OrderPaidForNotification): Promise<PurchaseConfirmationNotifications> {
     const subject = `TicketBox confirmation: ${event.concertTitle}`;
     const body = this.buildBody(event);
     const sentAt = new Date(event.paidAt);

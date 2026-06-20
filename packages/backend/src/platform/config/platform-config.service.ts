@@ -135,6 +135,10 @@ export class PlatformConfigService {
     return this.configService.get('SEATING_MAP_SVG_MAX_BYTES');
   }
 
+  get posterImageMaxBytes(): number {
+    return this.configService.get('POSTER_IMAGE_MAX_BYTES');
+  }
+
   get aiArtistBioProvider(): PlatformEnv['AI_ARTIST_BIO_PROVIDER'] {
     return this.configService.get('AI_ARTIST_BIO_PROVIDER');
   }

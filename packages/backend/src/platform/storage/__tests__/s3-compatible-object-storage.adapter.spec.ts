@@ -88,7 +88,9 @@ describe('S3CompatibleObjectStorageAdapter', () => {
   it('maps missing downloads to StorageObjectNotFoundError', async () => {
     send.mockRejectedValueOnce(notFoundError());
 
-    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(StorageObjectNotFoundError);
+    await expect(storage.getObject('missing.svg')).rejects.toBeInstanceOf(
+      StorageObjectNotFoundError,
+    );
   });
 
   it('deletes objects and treats missing keys as idempotent', async () => {
@@ -112,7 +114,9 @@ describe('S3CompatibleObjectStorageAdapter', () => {
   it('wraps connectivity errors as StorageUnavailableError', async () => {
     send.mockRejectedValueOnce(Object.assign(new Error('network'), { code: 'ENOTFOUND' }));
 
-    await expect(storage.objectExists('maps/main.svg')).rejects.toBeInstanceOf(StorageUnavailableError);
+    await expect(storage.objectExists('maps/main.svg')).rejects.toBeInstanceOf(
+      StorageUnavailableError,
+    );
   });
 
   it('returns public urls from configured base url', () => {

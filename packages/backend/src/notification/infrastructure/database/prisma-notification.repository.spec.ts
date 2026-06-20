@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { NotificationAttemptStatus, NotificationChannel, NotificationStatus } from '../../domain/notification.types';
+import {
+  NotificationAttemptStatus,
+  NotificationChannel,
+  NotificationStatus,
+} from '../../domain/notification.types';
 import { PrismaNotificationRepository } from './prisma-notification.repository';
 
 function notificationRow(overrides = {}) {

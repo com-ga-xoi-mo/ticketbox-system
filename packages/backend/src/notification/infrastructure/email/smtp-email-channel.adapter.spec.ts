@@ -15,10 +15,7 @@ describe('SmtpEmailChannelAdapter', () => {
         sentMessages.push(message);
       }),
     };
-    const adapter = new SmtpEmailChannelAdapter(
-      'no-reply@ticketbox.test',
-      transport,
-    );
+    const adapter = new SmtpEmailChannelAdapter('no-reply@ticketbox.test', transport);
 
     const result = await adapter.send({
       notificationId: 'notification-1',
@@ -44,10 +41,7 @@ describe('SmtpEmailChannelAdapter', () => {
 
   it('rejects requests without recipient email', async () => {
     const transport: SmtpEmailTransport = { send: vi.fn() };
-    const adapter = new SmtpEmailChannelAdapter(
-      'no-reply@ticketbox.test',
-      transport,
-    );
+    const adapter = new SmtpEmailChannelAdapter('no-reply@ticketbox.test', transport);
 
     await expect(
       adapter.send({

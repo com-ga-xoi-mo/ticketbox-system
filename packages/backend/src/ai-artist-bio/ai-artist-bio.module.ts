@@ -15,14 +15,8 @@ import { RequestArtistBioUseCase } from './application/use-cases/request-artist-
 import { RetryArtistBioJobUseCase } from './application/use-cases/retry-artist-bio-job.use-case';
 import { AdminArtistBioController } from './adapters/http/admin-artist-bio.controller';
 import { OrganizerArtistBioController } from './adapters/http/organizer-artist-bio.controller';
-import {
-  AI_BIO_GENERATOR,
-  type AiBioGeneratorPort,
-} from './domain/ports/ai-bio-generator.port';
-import {
-  ARTIST_BIO_QUEUE,
-  type ArtistBioQueuePort,
-} from './domain/ports/artist-bio-queue.port';
+import { AI_BIO_GENERATOR, type AiBioGeneratorPort } from './domain/ports/ai-bio-generator.port';
+import { ARTIST_BIO_QUEUE, type ArtistBioQueuePort } from './domain/ports/artist-bio-queue.port';
 import {
   ARTIST_BIO_REPOSITORY,
   type ArtistBioRepositoryPort,

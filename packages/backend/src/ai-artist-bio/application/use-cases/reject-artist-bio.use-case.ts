@@ -1,6 +1,10 @@
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import { ArtistBioNotFoundError, ArtistBioStatusTransitionError } from '../../domain/errors';
-import { ArtistBioStatus, type ArtistBioActor, type ArtistBioRecord } from '../../domain/artist-bio.types';
+import {
+  ArtistBioStatus,
+  type ArtistBioActor,
+  type ArtistBioRecord,
+} from '../../domain/artist-bio.types';
 import type { ArtistBioRepositoryPort } from '../../domain/ports/artist-bio-repository.port';
 
 export interface RejectArtistBioCommand {
@@ -28,10 +32,11 @@ export class RejectArtistBioUseCase {
       throw new ArtistBioNotFoundError(cmd.artistBioId);
     }
     if (existing.status !== ArtistBioStatus.READY_FOR_REVIEW) {
-      throw new ArtistBioStatusTransitionError('Only ready-for-review artist bios can be rejected.');
+      throw new ArtistBioStatusTransitionError(
+        'Only ready-for-review artist bios can be rejected.',
+      );
     }
 
     return this.repository.updateStatus(cmd.artistBioId, ArtistBioStatus.DRAFT);
   }
 }
-

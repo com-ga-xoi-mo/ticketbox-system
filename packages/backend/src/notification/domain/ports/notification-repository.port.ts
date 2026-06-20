@@ -38,8 +38,6 @@ export interface UpdateNotificationStatusInput {
 export interface NotificationRepositoryPort {
   upsertByDedupeKey(input: UpsertNotificationInput): Promise<NotificationRecord>;
   findById(notificationId: string): Promise<NotificationRecord | null>;
-  recordDeliveryAttempt(
-    input: RecordDeliveryAttemptInput,
-  ): Promise<DeliveryAttemptRecord>;
+  recordDeliveryAttempt(input: RecordDeliveryAttemptInput): Promise<DeliveryAttemptRecord>;
   updateStatus(input: UpdateNotificationStatusInput): Promise<NotificationRecord>;
 }

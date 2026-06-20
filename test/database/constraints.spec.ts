@@ -16,8 +16,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const skipIfNoDB =
-  process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
+const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 const REQUIRED_CONSTRAINTS = [
   'concerts_time_window_chk',
@@ -84,16 +83,19 @@ describe('Database constraint verification', () => {
     expect(rows.length, 'tickets_qr_token_hash_key must exist').toBe(1);
   });
 
-  skipIfNoDB('payments table has a unique index on provider_transaction_id when present', async () => {
-    const rows: Array<{ indexname: string }> = await prisma.$queryRaw`
+  skipIfNoDB(
+    'payments table has a unique index on provider_transaction_id when present',
+    async () => {
+      const rows: Array<{ indexname: string }> = await prisma.$queryRaw`
       SELECT indexname
       FROM pg_indexes
       WHERE schemaname = 'public'
         AND tablename = 'payments'
         AND indexname = 'payments_provider_transaction_id_key'
     `;
-    expect(rows.length, 'payments_provider_transaction_id_key must exist').toBe(1);
-  });
+      expect(rows.length, 'payments_provider_transaction_id_key must exist').toBe(1);
+    },
+  );
 
   skipIfNoDB('users table has a unique index on email', async () => {
     const rows: Array<{ indexname: string }> = await prisma.$queryRaw`
@@ -117,16 +119,19 @@ describe('Database constraint verification', () => {
     expect(rows.length, 'concerts_slug_key must exist').toBe(1);
   });
 
-  skipIfNoDB('ticket_type_zones composite primary key enforces uniqueness per (ticket_type_id, seating_zone_id)', async () => {
-    // ticket_type_zones uses a composite @@id([ticketTypeId, seatingZoneId]) which
-    // generates a primary key constraint — there is no separate unique index.
-    const rows: Array<{ indexname: string }> = await prisma.$queryRaw`
+  skipIfNoDB(
+    'ticket_type_zones composite primary key enforces uniqueness per (ticket_type_id, seating_zone_id)',
+    async () => {
+      // ticket_type_zones uses a composite @@id([ticketTypeId, seatingZoneId]) which
+      // generates a primary key constraint — there is no separate unique index.
+      const rows: Array<{ indexname: string }> = await prisma.$queryRaw`
       SELECT indexname
       FROM pg_indexes
       WHERE schemaname = 'public'
         AND tablename = 'ticket_type_zones'
         AND indexname = 'ticket_type_zones_pkey'
     `;
-    expect(rows.length, 'ticket_type_zones_pkey must exist').toBe(1);
-  });
+      expect(rows.length, 'ticket_type_zones_pkey must exist').toBe(1);
+    },
+  );
 });

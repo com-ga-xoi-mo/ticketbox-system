@@ -16,9 +16,7 @@ import {
 import { FailingEmailChannelAdapter } from '../../testing/failing-email-channel.adapter';
 import { DeliverNotificationUseCase } from './deliver-notification.use-case';
 
-function emailNotification(
-  overrides: Partial<NotificationRecord> = {},
-): NotificationRecord {
+function emailNotification(overrides: Partial<NotificationRecord> = {}): NotificationRecord {
   return {
     id: 'notification-1',
     userId: 'user-1',
@@ -48,9 +46,7 @@ class FakeNotificationRepository implements NotificationRepositoryPort {
     return this.notification;
   }
 
-  async recordDeliveryAttempt(
-    input: RecordDeliveryAttemptInput,
-  ): Promise<DeliveryAttemptRecord> {
+  async recordDeliveryAttempt(input: RecordDeliveryAttemptInput): Promise<DeliveryAttemptRecord> {
     const attempt: DeliveryAttemptRecord = {
       id: `attempt-${this.attempts.length + 1}`,
       notificationId: input.notificationId,

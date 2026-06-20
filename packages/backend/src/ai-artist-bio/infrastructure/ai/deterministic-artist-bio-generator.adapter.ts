@@ -8,7 +8,8 @@ export class DeterministicArtistBioGeneratorAdapter implements AiBioGeneratorPor
     const normalized = cleanedText.replace(/\s+/g, ' ').trim();
     const seed = createHash('sha256').update(normalized).digest('hex').slice(0, 8);
     const firstSentence = normalized.split(/[.!?]/)[0]?.trim() || normalized.slice(0, 160);
-    const excerpt = firstSentence.length > 180 ? `${firstSentence.slice(0, 177)}...` : firstSentence;
+    const excerpt =
+      firstSentence.length > 180 ? `${firstSentence.slice(0, 177)}...` : firstSentence;
 
     return {
       provider: 'local-deterministic',
@@ -16,4 +17,3 @@ export class DeterministicArtistBioGeneratorAdapter implements AiBioGeneratorPor
     };
   }
 }
-

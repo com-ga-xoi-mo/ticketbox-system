@@ -1,6 +1,6 @@
 import { InvalidOrderTransitionError } from './errors';
 import type { OrderDomainEvent } from './order-events';
-import { OrderItem } from './order-item.entity';
+import type { OrderItem } from './order-item.entity';
 import { OrderStatus } from './order-status.enum';
 
 export interface OrderProps {

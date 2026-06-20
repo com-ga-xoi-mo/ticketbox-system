@@ -3,9 +3,7 @@ import type { AiBioGeneratorPort } from '../../domain/ports/ai-bio-generator.por
 import { DeterministicArtistBioGeneratorAdapter } from './deterministic-artist-bio-generator.adapter';
 import { GeminiArtistBioGeneratorAdapter } from './gemini-artist-bio-generator.adapter';
 
-export function createArtistBioGenerator(
-  config: PlatformConfigService,
-): AiBioGeneratorPort {
+export function createArtistBioGenerator(config: PlatformConfigService): AiBioGeneratorPort {
   if (config.aiArtistBioProvider === 'gemini' && config.geminiApiKey) {
     return new GeminiArtistBioGeneratorAdapter({
       apiKey: config.geminiApiKey,

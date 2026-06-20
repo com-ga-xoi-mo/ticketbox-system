@@ -1,4 +1,4 @@
-import { TicketStatus } from './ticket-status.enum';
+import type { TicketStatus } from './ticket-status.enum';
 
 export interface TicketSummary {
   id: string;

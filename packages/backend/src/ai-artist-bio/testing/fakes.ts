@@ -156,7 +156,10 @@ export class InMemoryArtistBioRepository implements ArtistBioRepositoryPort {
   }
 }
 
-export class InMemoryObjectStorage extends InMemoryObjectStorageAdapter implements ObjectStoragePort {
+export class InMemoryObjectStorage
+  extends InMemoryObjectStorageAdapter
+  implements ObjectStoragePort
+{
   failPut = false;
 
   override async putObject(input: PutObjectInput): Promise<void> {

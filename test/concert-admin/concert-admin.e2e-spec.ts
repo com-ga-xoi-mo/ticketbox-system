@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'http';
 
-const skipIfNoDB =
-  process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
+const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 describe('Concert Admin Management E2E', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,65 +98,71 @@ describe('Concert Admin Management E2E', () => {
     createdConcertId = body.id;
   });
 
-  skipIfNoDB('8.5 POST /organizer/concerts/:id/ticket-types — invalid price returns 400', async () => {
-    const res = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${organizerToken}`,
-      },
-      body: JSON.stringify({
-        code: 'VIP',
-        name: 'VIP Class',
-        priceVnd: -100, // Invalid
-        totalQuantity: 100,
-        saleStartsAt: new Date().toISOString(),
-        saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
-        maxPerUser: 4,
-      }),
-    });
-    expect(res.status).toBe(400);
-  });
+  skipIfNoDB(
+    '8.5 POST /organizer/concerts/:id/ticket-types — invalid price returns 400',
+    async () => {
+      const res = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${organizerToken}`,
+        },
+        body: JSON.stringify({
+          code: 'VIP',
+          name: 'VIP Class',
+          priceVnd: -100, // Invalid
+          totalQuantity: 100,
+          saleStartsAt: new Date().toISOString(),
+          saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
+          maxPerUser: 4,
+        }),
+      });
+      expect(res.status).toBe(400);
+    },
+  );
 
-  skipIfNoDB('8.5 POST /organizer/concerts/:id/ticket-types — duplicate code returns 409', async () => {
-    // Create first ticket type (success)
-    const res1 = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${organizerToken}`,
-      },
-      body: JSON.stringify({
-        code: 'VIP',
-        name: 'VIP Class',
-        priceVnd: 500000,
-        totalQuantity: 100,
-        saleStartsAt: new Date().toISOString(),
-        saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
-        maxPerUser: 4,
-      }),
-    });
-    expect(res1.status).toBe(201);
+  skipIfNoDB(
+    '8.5 POST /organizer/concerts/:id/ticket-types — duplicate code returns 409',
+    async () => {
+      // Create first ticket type (success)
+      const res1 = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${organizerToken}`,
+        },
+        body: JSON.stringify({
+          code: 'VIP',
+          name: 'VIP Class',
+          priceVnd: 500000,
+          totalQuantity: 100,
+          saleStartsAt: new Date().toISOString(),
+          saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
+          maxPerUser: 4,
+        }),
+      });
+      expect(res1.status).toBe(201);
 
-    // Attempt second with same code
-    const res2 = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${organizerToken}`,
-      },
-      body: JSON.stringify({
-        code: 'VIP',
-        name: 'VIP Second Attempt',
-        priceVnd: 600000,
-        totalQuantity: 50,
-        saleStartsAt: new Date().toISOString(),
-        saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
-        maxPerUser: 4,
-      }),
-    });
-    expect(res2.status).toBe(409);
-  });
+      // Attempt second with same code
+      const res2 = await fetch(`${baseUrl}/organizer/concerts/${createdConcertId}/ticket-types`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${organizerToken}`,
+        },
+        body: JSON.stringify({
+          code: 'VIP',
+          name: 'VIP Second Attempt',
+          priceVnd: 600000,
+          totalQuantity: 50,
+          saleStartsAt: new Date().toISOString(),
+          saleEndsAt: new Date(Date.now() + 86400000).toISOString(),
+          maxPerUser: 4,
+        }),
+      });
+      expect(res2.status).toBe(409);
+    },
+  );
 
   skipIfNoDB('admin can update concert regardless of ownership', async () => {
     const res = await fetch(`${baseUrl}/admin/concerts/${createdConcertId}`, {

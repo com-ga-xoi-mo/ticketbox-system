@@ -1,6 +1,4 @@
-export const CHECKIN_STAFF_ASSIGNMENT_REPOSITORY = Symbol(
-  'CheckinStaffAssignmentRepository',
-);
+export const CHECKIN_STAFF_ASSIGNMENT_REPOSITORY = Symbol('CheckinStaffAssignmentRepository');
 
 export type CheckinAssignmentStatus = 'ACTIVE' | 'REVOKED';
 

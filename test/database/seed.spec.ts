@@ -11,8 +11,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const skipIfNoDB =
-  process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
+const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 const REQUIRED_CONCERT_TITLES = [
   'Anh Trai Say Hi Live Concert',
@@ -105,10 +104,9 @@ describe('Database seed verification', () => {
       },
     });
     for (const concert of concerts) {
-      expect(
-        concert.ticketTypes.length,
-        `${concert.title} must have ticket types`,
-      ).toBeGreaterThan(0);
+      expect(concert.ticketTypes.length, `${concert.title} must have ticket types`).toBeGreaterThan(
+        0,
+      );
       for (const tt of concert.ticketTypes) {
         expect(tt.totalQuantity, `${tt.code} total quantity must be positive`).toBeGreaterThan(0);
         expect(tt.reservedQuantity, `${tt.code} reserved must start at 0`).toBe(0);
@@ -135,10 +133,9 @@ describe('Database seed verification', () => {
       for (const tt of concert.ticketTypes) {
         expect(tt.zones.length, `${tt.code} must map to at least one zone`).toBeGreaterThan(0);
         for (const mapping of tt.zones) {
-          expect(
-            mapping.concertId,
-            `${tt.code} zone mapping must be for the same concert`,
-          ).toBe(concert.id);
+          expect(mapping.concertId, `${tt.code} zone mapping must be for the same concert`).toBe(
+            concert.id,
+          );
         }
       }
     }

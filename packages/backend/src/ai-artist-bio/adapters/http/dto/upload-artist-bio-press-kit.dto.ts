@@ -12,4 +12,3 @@ export class UploadArtistBioPressKitDto {
   @IsString()
   contentBase64!: string;
 }
-

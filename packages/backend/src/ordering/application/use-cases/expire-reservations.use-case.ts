@@ -1,6 +1,6 @@
 import { OrderStatus } from '../../domain/order-status.enum';
 import type { IExpiredOrderRepository } from '../../domain/ports/expired-order-repository.port';
-import { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
+import type { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
 
 export interface ExpireReservationsCommand {
   now?: Date;

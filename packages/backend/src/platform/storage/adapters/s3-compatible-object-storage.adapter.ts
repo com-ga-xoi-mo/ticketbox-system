@@ -165,7 +165,9 @@ function trimTrailingSlash(value: string): string {
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return error instanceof NoSuchKey || error instanceof NotFound || getErrorName(error) === 'NotFound';
+  return (
+    error instanceof NoSuchKey || error instanceof NotFound || getErrorName(error) === 'NotFound'
+  );
 }
 
 function isConnectivityError(error: unknown): boolean {
