@@ -1,0 +1,439 @@
+{
+  "info": {
+    "_postman_id": "ef5389b4-7d26-4b38-9f39-3f7f1c4aafaf",
+    "name": "TicketBox Payment Simulator",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Manual test collection for the TicketBox payment simulator flow."
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "1.1 Register Audience User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('email')) {",
+                  "  pm.environment.set('email', `pay-aud-${Date.now()}@example.com`);",
+                  "}",
+                  "if (!pm.environment.get('password')) {",
+                  "  pm.environment.set('password', '12345678');",
+                  "}",
+                  "if (!pm.environment.get('displayName')) {",
+                  "  pm.environment.set('displayName', 'Payment Simulator Audience');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201 or 409', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.environment.set('accessToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"displayName\": \"{{displayName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('accessToken', body.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Create Pending Order",
+      "item": [
+        {
+          "name": "2.1 Create Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('idempotencyKey', `pay-order-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 201', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('orderId', body.id);",
+                  "pm.test('order is pending payment', function () {",
+                  "  pm.expect(body.status).to.eql('PENDING_PAYMENT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concertId\": \"{{concertId}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"items\": [\n    {\n      \"ticketTypeId\": \"{{ticketTypeId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/checkout/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout",
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Initiate Payment",
+      "item": [
+        {
+          "name": "3.1 Initiate Simulator Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('paymentId', body.payment.id);",
+                  "pm.environment.set('simulatorToken', body.simulatorToken);",
+                  "pm.environment.set('redirectUrl', body.redirectUrl);",
+                  "pm.test('payment is pending', function () {",
+                  "  pm.expect(body.payment.status).to.eql('PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"SIMULATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/payment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "payment"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Simulator Outcomes",
+      "item": [
+        {
+          "name": "4.1 Callback Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('payment succeeded and order transitioned', function () {",
+                  "  pm.expect(body.payment.status).to.eql('SUCCEEDED');",
+                  "  pm.expect(body.orderTransitioned).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{simulatorToken}}\",\n  \"outcome\": \"success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/simulator/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "simulator",
+                "callback"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Callback Success Again - Duplicate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('duplicate callback is ignored', function () {",
+                  "  pm.expect(body.duplicate).to.eql(true);",
+                  "  pm.expect(body.orderTransitioned).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{simulatorToken}}\",\n  \"outcome\": \"success\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/simulator/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "simulator",
+                "callback"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Callback Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{simulatorToken}}\",\n  \"outcome\": \"failure\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/simulator/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "simulator",
+                "callback"
+              ]
+            },
+            "description": "Use this after creating and initiating a fresh pending order. It will fail if the current order was already paid by a success callback."
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Callback Timeout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{simulatorToken}}\",\n  \"outcome\": \"timeout\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/simulator/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "simulator",
+                "callback"
+              ]
+            },
+            "description": "Use this after creating and initiating a fresh pending order. It leaves payment/order pending."
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Redirect Endpoint - Delayed Success",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/payment-simulator/redirect?token={{simulatorToken}}&outcome=delayed-success",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payment-simulator",
+                "redirect"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{simulatorToken}}"
+                },
+                {
+                  "key": "outcome",
+                  "value": "delayed-success"
+                }
+              ]
+            },
+            "description": "This keeps the payment pending. Send Callback Success later to complete it."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ]
+}

@@ -1,8 +1,5 @@
-# payment-reliability Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change define-ticketbox-blueprint. Update Purpose after archive.
-## Requirements
 ### Requirement: Payment gateway abstraction
 The system SHALL interact with payment providers through an adapter interface that supports VNPAY/MoMo-like redirect, callback, timeout, delayed callback, duplicate callback, and failure behavior. The default local implementation SHALL be a payment simulator suitable for deterministic backend and Postman testing.
 
@@ -45,33 +42,3 @@ The system SHALL interact with payment providers through an adapter interface th
 - **WHEN** the simulator sends the same successful callback for a payment attempt more than once
 - **THEN** the system SHALL keep the payment/order outcome consistent
 - **AND** the system SHALL NOT issue duplicate tickets
-
-### Requirement: Idempotent checkout and payment
-The system SHALL use idempotency keys and provider event identifiers to prevent duplicate orders, payment attempts, and ticket issuance.
-
-#### Scenario: Duplicate payment initiation returns original result
-- **WHEN** the same user retries payment initiation with the same idempotency key
-- **THEN** the system SHALL return the original payment initiation result
-
-#### Scenario: Duplicate callback is ignored
-- **WHEN** the provider sends the same successful callback more than once
-- **THEN** the system SHALL fulfill the order only once and SHALL not issue duplicate tickets
-
-### Requirement: Circuit breaker for payment provider
-The system SHALL open a circuit breaker after repeated payment provider failures and SHALL allow limited half-open recovery attempts.
-
-#### Scenario: Circuit opens after repeated failures
-- **WHEN** payment provider calls fail beyond the configured threshold
-- **THEN** the system SHALL stop calling the provider temporarily and return a controlled checkout error
-
-#### Scenario: Circuit recovers
-- **WHEN** the circuit breaker is half-open and a trial payment provider call succeeds
-- **THEN** the system SHALL close the circuit and resume normal payment initiation
-
-### Requirement: Payment reconciliation
-The system SHALL reconcile payment attempts that remain pending after timeout.
-
-#### Scenario: Pending payment is reconciled
-- **WHEN** a payment remains pending beyond the configured timeout
-- **THEN** a worker SHALL query or simulate provider status and update the order consistently
-

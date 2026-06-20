@@ -31,3 +31,8 @@ export * from './ordering/domain/ports/inventory-reservation.port';
 export * from './ordering/domain/ports/ticket-repository.port';
 export * from './ordering/domain/ports/ticket-type-pricing.port';
 export * from './ordering/infrastructure/queue/order-expiration-queue.constants';
+export * from './payment/payment.module';
+export * from './payment/domain/payment.entity';
+export * from './payment/domain/payment-event-type.enum';
+export * from './payment/domain/payment-simulator-outcome.enum';
+export * from './payment/domain/payment-status.enum';
