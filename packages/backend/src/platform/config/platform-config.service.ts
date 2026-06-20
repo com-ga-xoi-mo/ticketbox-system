@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RedisOptions } from 'ioredis';
 
@@ -6,7 +6,10 @@ import type { PlatformEnv } from './env.schema';
 
 @Injectable()
 export class PlatformConfigService {
-  constructor(private readonly configService: ConfigService<PlatformEnv, true>) {}
+  constructor(
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<PlatformEnv, true>,
+  ) {}
 
   get nodeEnv(): PlatformEnv['NODE_ENV'] {
     return this.configService.get('NODE_ENV');
@@ -86,5 +89,106 @@ export class PlatformConfigService {
 
   get momoIpnUrl(): string {
     return this.configService.get('MOMO_IPN_URL');
+  }
+
+  get emailProvider(): PlatformEnv['EMAIL_PROVIDER'] {
+    return this.configService.get('EMAIL_PROVIDER');
+  }
+
+  get emailFrom(): string {
+    return this.configService.get('EMAIL_FROM');
+  }
+
+  get emailMaxAttempts(): number {
+    return this.configService.get('EMAIL_MAX_ATTEMPTS');
+  }
+
+  get emailRetryBackoffMs(): number {
+    return this.configService.get('EMAIL_RETRY_BACKOFF_MS');
+  }
+
+  get emailSmtpHost(): string {
+    return this.configService.get('EMAIL_SMTP_HOST');
+  }
+
+  get emailSmtpPort(): number {
+    return this.configService.get('EMAIL_SMTP_PORT');
+  }
+
+  get maildevWebUrl(): string | undefined {
+    return this.configService.get('MAILDEV_WEB_URL', { infer: true });
+  }
+
+  get artistBioPdfMaxBytes(): number {
+    return this.configService.get('ARTIST_BIO_PDF_MAX_BYTES');
+  }
+
+  get artistBioInputMaxChars(): number {
+    return this.configService.get('ARTIST_BIO_INPUT_MAX_CHARS');
+  }
+
+  get artistBioMaxAttempts(): number {
+    return this.configService.get('ARTIST_BIO_MAX_ATTEMPTS');
+  }
+
+  get seatingMapSvgMaxBytes(): number {
+    return this.configService.get('SEATING_MAP_SVG_MAX_BYTES');
+  }
+
+  get aiArtistBioProvider(): PlatformEnv['AI_ARTIST_BIO_PROVIDER'] {
+    return this.configService.get('AI_ARTIST_BIO_PROVIDER');
+  }
+
+  get geminiApiKey(): string | undefined {
+    const value = this.configService.get('GEMINI_API_KEY', { infer: true });
+    return value === '' ? undefined : value;
+  }
+
+  get geminiApiUrl(): string {
+    return this.configService.get('GEMINI_API_URL');
+  }
+
+  get geminiModel(): string {
+    return this.configService.get('GEMINI_MODEL');
+  }
+
+  get geminiTimeoutMs(): number {
+    return this.configService.get('GEMINI_TIMEOUT_MS');
+  }
+
+  get storageDriver(): PlatformEnv['STORAGE_DRIVER'] {
+    return this.configService.get('STORAGE_DRIVER');
+  }
+
+  get localStorageRootDir(): string {
+    return this.configService.get('LOCAL_STORAGE_ROOT_DIR');
+  }
+
+  get localStoragePublicBaseUrl(): string {
+    return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
+  }
+
+  get s3Endpoint(): string | undefined {
+    return this.configService.get('S3_ENDPOINT', { infer: true });
+  }
+
+  get s3Region(): string | undefined {
+    return this.configService.get('S3_REGION', { infer: true });
+  }
+
+  get s3Bucket(): string | undefined {
+    return this.configService.get('S3_BUCKET', { infer: true });
+  }
+
+  get s3AccessKeyId(): string | undefined {
+    return this.configService.get('S3_ACCESS_KEY_ID', { infer: true });
+  }
+
+  get s3SecretAccessKey(): string | undefined {
+    return this.configService.get('S3_SECRET_ACCESS_KEY', { infer: true });
+  }
+
+  get s3PublicBaseUrl(): string | undefined {
+    return this.configService.get('S3_PUBLIC_BASE_URL', { infer: true });
   }
 }

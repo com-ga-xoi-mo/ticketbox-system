@@ -65,6 +65,20 @@ describe('PrismaCheckinStaffAssignmentRepository', () => {
     });
   });
 
+  it('finds an assignment by id', async () => {
+    prisma.checkinStaffAssignment.findUnique.mockResolvedValue(makeAssignment());
+
+    await expect(repository.findAssignmentById('assignment-1')).resolves.toMatchObject({
+      id: 'assignment-1',
+      staffUserId: 'staff-1',
+      status: 'ACTIVE',
+    });
+
+    expect(prisma.checkinStaffAssignment.findUnique).toHaveBeenCalledWith({
+      where: { id: 'assignment-1' },
+    });
+  });
+
   it('prefers exact gate assignment when a gate is required', async () => {
     prisma.checkinStaffAssignment.findMany.mockResolvedValue([
       makeAssignment({ id: 'assignment-a', gateName: 'Gate A' }),

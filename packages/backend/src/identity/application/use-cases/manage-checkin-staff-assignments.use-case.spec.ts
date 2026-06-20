@@ -18,6 +18,7 @@ describe('ManageCheckinStaffAssignmentsUseCase', () => {
 
   beforeEach(() => {
     assignmentRepo = {
+      findAssignmentById: vi.fn(),
       findActiveAssignment: vi.fn(),
       listActiveAssignments: vi.fn(),
       createActiveAssignment: vi.fn(),
