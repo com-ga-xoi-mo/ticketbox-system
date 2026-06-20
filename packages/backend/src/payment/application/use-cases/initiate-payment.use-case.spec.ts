@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Order, OrderStatus } from '../../../ordering/order.module';
 import { Payment } from '../../domain/payment.entity';
 import {
+  PaymentGatewayRequestError,
   PaymentIdempotencyKeyMismatchError,
   PaymentInitiationInProgressError,
+  PaymentProviderCircuitOpenError,
   PaymentOrderNotPendingError,
 } from '../../domain/errors';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
+import {
+  PaymentCircuitBreakerState,
+  type PaymentCircuitBreakerPort,
+} from '../../domain/ports/payment-circuit-breaker.port';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
 import type { PaymentIdempotencyPort } from '../../domain/ports/payment-idempotency.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
@@ -51,6 +57,7 @@ describe('InitiatePaymentUseCase', () => {
   let paymentRepository: PaymentRepositoryPort;
   let paymentGateway: PaymentGatewayPort;
   let paymentIdempotency: PaymentIdempotencyPort;
+  let paymentCircuitBreaker: PaymentCircuitBreakerPort;
   let useCase: InitiatePaymentUseCase;
 
   beforeEach(() => {
@@ -78,11 +85,20 @@ describe('InitiatePaymentUseCase', () => {
       failPaymentInitiation: vi.fn(),
       releasePaymentInitiation: vi.fn(),
     };
+    paymentCircuitBreaker = {
+      acquireProviderCall: vi.fn(async ({ provider }: { provider: PaymentProvider }) => ({
+        provider,
+        state: PaymentCircuitBreakerState.CLOSED as const,
+      })),
+      recordProviderCallSuccess: vi.fn(),
+      recordProviderCallFailure: vi.fn(),
+    };
     useCase = new InitiatePaymentUseCase(
       getOrderUseCase as never,
       paymentRepository,
       paymentGateway,
       paymentIdempotency,
+      paymentCircuitBreaker,
     );
   });
 
@@ -114,6 +130,15 @@ describe('InitiatePaymentUseCase', () => {
         userId: 'user-1',
         provider: PaymentProvider.SIMULATOR,
         amountVnd: 2400000,
+      }),
+    );
+    expect(paymentCircuitBreaker.acquireProviderCall).toHaveBeenCalledWith({
+      provider: PaymentProvider.SIMULATOR,
+    });
+    expect(paymentCircuitBreaker.recordProviderCallSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: PaymentProvider.SIMULATOR,
+        permit: expect.objectContaining({ state: PaymentCircuitBreakerState.CLOSED }),
       }),
     );
     expect(paymentRepository.create).toHaveBeenCalledWith(
@@ -190,6 +215,8 @@ describe('InitiatePaymentUseCase', () => {
 
     expect(paymentRepository.create).not.toHaveBeenCalled();
     expect(paymentIdempotency.releasePaymentInitiation).toHaveBeenCalled();
+    expect(paymentCircuitBreaker.acquireProviderCall).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.recordProviderCallFailure).not.toHaveBeenCalled();
   });
 
   it('replays completed idempotent payment initiation without calling gateway', async () => {
@@ -211,6 +238,7 @@ describe('InitiatePaymentUseCase', () => {
 
     expect(result.payment.id).toBe('payment-replay');
     expect(getOrderUseCase.execute).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.acquireProviderCall).not.toHaveBeenCalled();
     expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
     expect(paymentRepository.create).not.toHaveBeenCalled();
   });
@@ -224,6 +252,8 @@ describe('InitiatePaymentUseCase', () => {
 
     expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
     expect(paymentRepository.create).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.acquireProviderCall).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.recordProviderCallFailure).not.toHaveBeenCalled();
   });
 
   it('rejects duplicate in-progress initiation without calling gateway', async () => {
@@ -237,17 +267,56 @@ describe('InitiatePaymentUseCase', () => {
 
     expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
     expect(paymentRepository.create).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.acquireProviderCall).not.toHaveBeenCalled();
+    expect(paymentCircuitBreaker.recordProviderCallFailure).not.toHaveBeenCalled();
   });
 
-  it('marks the idempotency record failed when provider initiation fails', async () => {
+  it('marks the idempotency record failed and records circuit failure when provider initiation fails', async () => {
     getOrderUseCase.execute.mockResolvedValue(buildOrder());
-    vi.mocked(paymentGateway.createRedirectSession).mockRejectedValue(new Error('provider down'));
+    vi.mocked(paymentGateway.createRedirectSession).mockRejectedValue(
+      new PaymentGatewayRequestError(PaymentProvider.SIMULATOR, 'provider down'),
+    );
 
     await expect(
       useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
-    ).rejects.toThrow('provider down');
+    ).rejects.toThrow(PaymentGatewayRequestError);
 
     expect(paymentIdempotency.failPaymentInitiation).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: 'pay-key-1' }),
+    );
+    expect(paymentCircuitBreaker.recordProviderCallFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: PaymentProvider.SIMULATOR,
+        permit: expect.objectContaining({ state: PaymentCircuitBreakerState.CLOSED }),
+      }),
+    );
+  });
+
+  it('does not record circuit failure for non-provider initiation errors', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    vi.mocked(paymentGateway.createRedirectSession).mockRejectedValue(new Error('database down'));
+
+    await expect(
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow('database down');
+
+    expect(paymentIdempotency.failPaymentInitiation).toHaveBeenCalled();
+    expect(paymentCircuitBreaker.recordProviderCallFailure).not.toHaveBeenCalled();
+  });
+
+  it('blocks new provider calls when the circuit is open', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    vi.mocked(paymentCircuitBreaker.acquireProviderCall).mockRejectedValue(
+      new PaymentProviderCircuitOpenError(PaymentProvider.SIMULATOR, 30000),
+    );
+
+    await expect(
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ).rejects.toThrow(PaymentProviderCircuitOpenError);
+
+    expect(paymentGateway.createRedirectSession).not.toHaveBeenCalled();
+    expect(paymentRepository.create).not.toHaveBeenCalled();
+    expect(paymentIdempotency.releasePaymentInitiation).toHaveBeenCalledWith(
       expect.objectContaining({ idempotencyKey: 'pay-key-1' }),
     );
   });

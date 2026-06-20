@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +16,8 @@ import {
   PaymentIdempotencyKeyMismatchError,
   PaymentInitiationInProgressError,
   PaymentOrderNotPendingError,
+  PaymentProviderCircuitOpenError,
+  PaymentProviderHalfOpenTrialRejectedError,
 } from '../../domain/errors';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
@@ -132,6 +139,32 @@ describe('PaymentController', () => {
         { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
       ),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('maps payment circuit degradation to 503', async () => {
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderCircuitOpenError(PaymentProvider.MOMO, 30000),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderHalfOpenTrialRejectedError(PaymentProvider.MOMO),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
   });
 
   it('processes simulator callback', async () => {

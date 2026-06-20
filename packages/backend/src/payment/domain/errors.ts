@@ -55,6 +55,34 @@ export class PaymentGatewayRequestError extends Error {
   }
 }
 
+export class PaymentProviderCircuitOpenError extends Error {
+  constructor(
+    public readonly provider: string,
+    public readonly retryAfterMs?: number,
+  ) {
+    super(
+      retryAfterMs === undefined
+        ? `${provider} payment provider circuit is open`
+        : `${provider} payment provider circuit is open; retry after ${retryAfterMs}ms`,
+    );
+    this.name = 'PaymentProviderCircuitOpenError';
+  }
+}
+
+export class PaymentProviderHalfOpenTrialRejectedError extends Error {
+  constructor(public readonly provider: string) {
+    super(`${provider} payment provider circuit is half-open; trial limit reached`);
+    this.name = 'PaymentProviderHalfOpenTrialRejectedError';
+  }
+}
+
+export class PaymentCircuitBreakerStoreUnavailableError extends Error {
+  constructor(message = 'Payment circuit breaker store is unavailable') {
+    super(message);
+    this.name = 'PaymentCircuitBreakerStoreUnavailableError';
+  }
+}
+
 export class InvalidMomoIpnSignatureError extends Error {
   constructor() {
     super('Invalid MoMo IPN signature');

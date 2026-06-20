@@ -13,6 +13,10 @@ import { PaymentController } from './adapters/http/payment.controller';
 import { InitiatePaymentUseCase } from './application/use-cases/initiate-payment.use-case';
 import { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';
+import {
+  PAYMENT_CIRCUIT_BREAKER,
+  type PaymentCircuitBreakerPort,
+} from './domain/ports/payment-circuit-breaker.port';
 import { PAYMENT_GATEWAY, type PaymentGatewayPort } from './domain/ports/payment-gateway.port';
 import {
   PAYMENT_IDEMPOTENCY,
@@ -25,6 +29,7 @@ import {
 import { PrismaPaymentRepository } from './infrastructure/database/prisma-payment.repository';
 import { MomoPaymentGateway } from './infrastructure/momo/momo-payment-gateway';
 import { PaymentGatewayRegistry } from './infrastructure/payment-gateway-registry';
+import { RedisPaymentCircuitBreaker } from './infrastructure/redis/redis-payment-circuit-breaker';
 import { RedisPaymentIdempotencyStore } from './infrastructure/redis/redis-payment-idempotency.store';
 import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-payment-gateway';
 
@@ -34,18 +39,26 @@ import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-pa
   providers: [
     {
       provide: InitiatePaymentUseCase,
-      inject: [GetOrderUseCase, PAYMENT_REPOSITORY, PAYMENT_GATEWAY, PAYMENT_IDEMPOTENCY],
+      inject: [
+        GetOrderUseCase,
+        PAYMENT_REPOSITORY,
+        PAYMENT_GATEWAY,
+        PAYMENT_IDEMPOTENCY,
+        PAYMENT_CIRCUIT_BREAKER,
+      ],
       useFactory: (
         getOrderUseCase: GetOrderUseCase,
         paymentRepository: PaymentRepositoryPort,
         paymentGateway: PaymentGatewayPort,
         paymentIdempotency: PaymentIdempotencyPort,
+        paymentCircuitBreaker: PaymentCircuitBreakerPort,
       ) =>
         new InitiatePaymentUseCase(
           getOrderUseCase,
           paymentRepository,
           paymentGateway,
           paymentIdempotency,
+          paymentCircuitBreaker,
         ),
     },
     {
@@ -79,6 +92,10 @@ import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-pa
     {
       provide: PAYMENT_IDEMPOTENCY,
       useClass: RedisPaymentIdempotencyStore,
+    },
+    {
+      provide: PAYMENT_CIRCUIT_BREAKER,
+      useClass: RedisPaymentCircuitBreaker,
     },
     SimulatorPaymentGateway,
     MomoPaymentGateway,

@@ -4,6 +4,7 @@ import { OrderStatus } from '../../../ordering/order.module';
 import type { GetOrderUseCase } from '../../../ordering/order.module';
 import type { Payment } from '../../domain/payment.entity';
 import {
+  PaymentGatewayRequestError,
   PaymentIdempotencyKeyMismatchError,
   PaymentInitiationInProgressError,
   PaymentInitiationPreviouslyFailedError,
@@ -19,6 +20,10 @@ import type {
   PaymentGatewayPort,
   PaymentProviderMetadata,
 } from '../../domain/ports/payment-gateway.port';
+import type {
+  PaymentCircuitBreakerPermit,
+  PaymentCircuitBreakerPort,
+} from '../../domain/ports/payment-circuit-breaker.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
 import { createPaymentInitiationRequestHash } from '../payment-initiation-fingerprint';
 
@@ -42,6 +47,7 @@ export class InitiatePaymentUseCase {
     private readonly paymentRepository: PaymentRepositoryPort,
     private readonly paymentGateway: PaymentGatewayPort,
     private readonly paymentIdempotency: PaymentIdempotencyPort,
+    private readonly paymentCircuitBreaker: PaymentCircuitBreakerPort,
   ) {}
 
   async execute(command: InitiatePaymentCommand): Promise<InitiatePaymentResult> {
@@ -81,6 +87,7 @@ export class InitiatePaymentUseCase {
     }
 
     let providerCallStarted = false;
+    let circuitPermit: PaymentCircuitBreakerPermit | null = null;
 
     try {
       const order = await this.getOrderUseCase.execute({
@@ -94,6 +101,7 @@ export class InitiatePaymentUseCase {
 
       const createdAt = new Date();
       const paymentId = randomUUID();
+      circuitPermit = await this.paymentCircuitBreaker.acquireProviderCall({ provider });
       providerCallStarted = true;
       const session = await this.paymentGateway.createRedirectSession({
         provider,
@@ -102,6 +110,7 @@ export class InitiatePaymentUseCase {
         userId: order.userId,
         amountVnd: order.totalAmountVnd,
       });
+      await this.recordCircuitSuccess(circuitPermit);
 
       const payment = await this.paymentRepository.create({
         id: paymentId,
@@ -130,6 +139,10 @@ export class InitiatePaymentUseCase {
 
       return result;
     } catch (err: unknown) {
+      if (circuitPermit && this.isProviderCircuitFailure(err)) {
+        await this.recordCircuitFailure(circuitPermit);
+      }
+
       if (providerCallStarted) {
         await this.paymentIdempotency.failPaymentInitiation({
           ...idempotencyData,
@@ -140,6 +153,40 @@ export class InitiatePaymentUseCase {
       }
 
       throw err;
+    }
+  }
+
+  private isProviderCircuitFailure(err: unknown): boolean {
+    if (err instanceof PaymentGatewayRequestError) {
+      return true;
+    }
+
+    if (!(err instanceof Error)) {
+      return false;
+    }
+
+    return err.name === 'AbortError' || err.name === 'TimeoutError' || /timeout/i.test(err.message);
+  }
+
+  private async recordCircuitSuccess(permit: PaymentCircuitBreakerPermit): Promise<void> {
+    try {
+      await this.paymentCircuitBreaker.recordProviderCallSuccess({
+        provider: permit.provider,
+        permit,
+      });
+    } catch {
+      // Provider call already succeeded; do not turn circuit telemetry failure into payment failure.
+    }
+  }
+
+  private async recordCircuitFailure(permit: PaymentCircuitBreakerPermit): Promise<void> {
+    try {
+      await this.paymentCircuitBreaker.recordProviderCallFailure({
+        provider: permit.provider,
+        permit,
+      });
+    } catch {
+      // Preserve the original provider error so callers get the real payment failure.
     }
   }
 }

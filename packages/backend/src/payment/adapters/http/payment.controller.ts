@@ -30,6 +30,7 @@ import {
   InvalidMomoIpnSignatureError,
   InvalidPaymentSimulatorTokenError,
   PaymentCallbackMismatchError,
+  PaymentCircuitBreakerStoreUnavailableError,
   PaymentGatewayRequestError,
   PaymentIdempotencyKeyMismatchError,
   PaymentIdempotencyStoreUnavailableError,
@@ -37,6 +38,8 @@ import {
   PaymentInitiationPreviouslyFailedError,
   PaymentNotFoundError,
   PaymentOrderNotPendingError,
+  PaymentProviderCircuitOpenError,
+  PaymentProviderHalfOpenTrialRejectedError,
   UnsupportedPaymentProviderError,
   UnsupportedPaymentSimulatorOutcomeError,
 } from '../../domain/errors';
@@ -143,6 +146,13 @@ export class PaymentController {
       throw new ConflictException(err.message);
     }
     if (err instanceof PaymentIdempotencyStoreUnavailableError) {
+      throw new ServiceUnavailableException(err.message);
+    }
+    if (
+      err instanceof PaymentProviderCircuitOpenError ||
+      err instanceof PaymentProviderHalfOpenTrialRejectedError ||
+      err instanceof PaymentCircuitBreakerStoreUnavailableError
+    ) {
       throw new ServiceUnavailableException(err.message);
     }
     if (
