@@ -23,6 +23,8 @@ import {
   UserIsNotCheckinStaffError,
 } from '../../domain/errors';
 import { Role } from '../../domain/role.enum';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 import { ManageCheckinStaffAssignmentsUseCase } from '../../application/use-cases/manage-checkin-staff-assignments.use-case';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -51,6 +53,7 @@ export class AdminCheckinStaffAssignmentsController {
   }
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async assign(
     @Param('concertId') concertId: string,
     @Body() dto: AssignCheckinStaffDto,
@@ -67,6 +70,7 @@ export class AdminCheckinStaffAssignmentsController {
   }
 
   @Delete(':assignmentId')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async revoke(
     @Param('concertId') concertId: string,
     @Param('assignmentId') assignmentId: string,

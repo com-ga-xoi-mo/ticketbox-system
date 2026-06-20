@@ -23,6 +23,8 @@ import {
   OrderAccessDeniedError,
   OrderNotFoundError,
 } from '../../../ordering/domain/errors';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 import { InitiatePaymentUseCase } from '../../application/use-cases/initiate-payment.use-case';
 import { ProcessMomoIpnUseCase } from '../../application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from '../../application/use-cases/process-simulator-payment-callback.use-case';
@@ -65,6 +67,7 @@ export class PaymentController {
   @Post('orders/:id/payment')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
+  @RateLimited(RateLimitPolicy.PAYMENT_INITIATION)
   async initiatePayment(
     @Param('id') orderId: string,
     @Body() dto: InitiatePaymentDto,
