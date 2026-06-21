@@ -6,6 +6,7 @@ import { CheckinModule } from '../checkin/checkin.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PlatformConfigModule } from './config/platform-config.module';
 import { DatabaseModule } from './database/database.module';
+import { CacheModule } from './cache/cache.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
@@ -16,6 +17,7 @@ import { StorageModule } from './storage/storage.module';
     StorageModule.forRoot(),
     DatabaseModule,
     RedisModule,
+    CacheModule,
     RateLimitingModule,
     AuthModule,
     AiArtistBioModule,
@@ -27,6 +29,7 @@ import { StorageModule } from './storage/storage.module';
     StorageModule,
     DatabaseModule,
     RedisModule,
+    CacheModule,
     RateLimitingModule,
     AuthModule,
     AiArtistBioModule,
