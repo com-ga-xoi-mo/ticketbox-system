@@ -90,7 +90,7 @@ describe('Check-in API E2E', () => {
       },
     });
     ticketId = ticket.id;
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await app?.close();
