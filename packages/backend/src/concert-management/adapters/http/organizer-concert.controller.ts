@@ -1,9 +1,7 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -11,10 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import {
-  ConcertNotFoundError,
-  ForbiddenConcertOwnershipError,
-} from '../../../identity/domain/errors';
 import { Role } from '../../../identity/domain/role.enum';
 import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
@@ -26,6 +20,7 @@ import { PublishConcertUseCase } from '../../application/use-cases/publish-conce
 import { UpdateConcertUseCase } from '../../application/use-cases/update-concert.use-case';
 import { ListOrganizerConcertsUseCase } from '../../application/use-cases/list-organizer-concerts.use-case';
 import { GetOrganizerConcertUseCase } from '../../application/use-cases/get-organizer-concert.use-case';
+import { mapConcertErrors } from './concert-error.mapper';
 import { CreateConcertDto } from './dto/create-concert.dto';
 import { UpdateConcertDto } from './dto/update-concert.dto';
 
@@ -44,12 +39,12 @@ export class OrganizerConcertController {
 
   @Get()
   async list(@Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() => this.listOrganizerConcertsUseCase.execute(req.user.id));
+    return mapConcertErrors(() => this.listOrganizerConcertsUseCase.execute(req.user.id));
   }
 
   @Get(':id')
   async get(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.getOrganizerConcertUseCase.execute({
         concertId: id,
         organizerId: req.user.id,
@@ -59,7 +54,7 @@ export class OrganizerConcertController {
 
   @Post()
   async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.createConcertUseCase.execute({
         createdById: req.user.id,
         slug: dto.slug,
@@ -81,7 +76,7 @@ export class OrganizerConcertController {
     @Body() dto: UpdateConcertDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.updateConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -102,7 +97,7 @@ export class OrganizerConcertController {
 
   @Post(':id/publish')
   async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.publishConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -114,7 +109,7 @@ export class OrganizerConcertController {
 
   @Post(':id/cancel')
   async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.cancelConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -122,19 +117,5 @@ export class OrganizerConcertController {
         allowAdminOverride: false,
       }),
     );
-  }
-
-  private async handleErrors<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (err: unknown) {
-      if (err instanceof ForbiddenConcertOwnershipError) {
-        throw new ForbiddenException(err.message);
-      }
-      if (err instanceof ConcertNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      throw err;
-    }
   }
 }

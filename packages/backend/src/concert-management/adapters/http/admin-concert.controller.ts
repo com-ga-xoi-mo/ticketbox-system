@@ -1,9 +1,7 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -14,11 +12,6 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-
-import {
-  ConcertNotFoundError,
-  ForbiddenConcertOwnershipError,
-} from '../../../identity/domain/errors';
 import { Role } from '../../../identity/domain/role.enum';
 import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
@@ -43,6 +36,7 @@ import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { UpdateTicketTypeDto } from './dto/update-ticket-type.dto';
 import { UpdateZoneMappingsDto } from './dto/update-zone-mappings.dto';
 import { UpsertSeatingZonesDto } from './dto/upsert-seating-zones.dto';
+import { mapConcertErrors } from './concert-error.mapper';
 import { mapPosterErrors } from './poster-error.mapper';
 import { mapSeatingMapErrors } from './seating-map-error.mapper';
 import type { UploadedMemoryFile } from './upload-file.type';
@@ -69,12 +63,12 @@ export class AdminConcertController {
 
   @Get('concerts')
   async list() {
-    return this.handleErrors(() => this.listAdminConcertsUseCase.execute());
+    return mapConcertErrors(() => this.listAdminConcertsUseCase.execute());
   }
 
   @Get('concerts/:id')
   async get(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.getAdminConcertUseCase.execute({
         concertId: id,
         adminId: req.user.id,
@@ -84,7 +78,7 @@ export class AdminConcertController {
 
   @Post('concerts')
   async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.createConcertUseCase.execute({
         createdById: req.user.id,
         slug: dto.slug,
@@ -106,7 +100,7 @@ export class AdminConcertController {
     @Body() dto: UpdateConcertDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.updateConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -127,7 +121,7 @@ export class AdminConcertController {
 
   @Post('concerts/:id/publish')
   async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.publishConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -139,7 +133,7 @@ export class AdminConcertController {
 
   @Post('concerts/:id/cancel')
   async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.cancelConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -155,7 +149,7 @@ export class AdminConcertController {
     @Body() dto: CreateTicketTypeDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.createTicketTypeUseCase.execute({
         concertId,
         requesterId: req.user.id,
@@ -180,7 +174,7 @@ export class AdminConcertController {
     @Body() dto: UpdateTicketTypeDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.updateTicketTypeUseCase.execute({
         concertId,
         ticketTypeId: typeId,
@@ -206,7 +200,7 @@ export class AdminConcertController {
     @Param('typeId') typeId: string,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.archiveTicketTypeUseCase.execute({
         concertId,
         ticketTypeId: typeId,
@@ -299,17 +293,4 @@ export class AdminConcertController {
     );
   }
 
-  private async handleErrors<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (err: unknown) {
-      if (err instanceof ForbiddenConcertOwnershipError) {
-        throw new ForbiddenException(err.message);
-      }
-      if (err instanceof ConcertNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      throw err;
-    }
-  }
 }

@@ -1,16 +1,16 @@
-import { BadRequestException } from '@nestjs/common';
+import { InvalidConcertStatusTransitionError } from '../../domain/errors';
 
 export function checkConcertStatusTransition(from: string, to: 'PUBLISHED' | 'CANCELLED'): void {
   if (from === 'ENDED') {
-    throw new BadRequestException(`Cannot transition concert from ENDED to ${to}`);
+    throw new InvalidConcertStatusTransitionError(from, to);
   }
   if (from === 'CANCELLED') {
-    throw new BadRequestException(`Cannot transition concert from CANCELLED to ${to}`);
+    throw new InvalidConcertStatusTransitionError(from, to);
   }
   if (to === 'PUBLISHED' && from === 'PUBLISHED') {
-    throw new BadRequestException('Concert is already published');
+    throw new InvalidConcertStatusTransitionError(from, to);
   }
   if (to === 'CANCELLED' && from === 'CANCELLED') {
-    throw new BadRequestException('Concert is already cancelled');
+    throw new InvalidConcertStatusTransitionError(from, to);
   }
 }

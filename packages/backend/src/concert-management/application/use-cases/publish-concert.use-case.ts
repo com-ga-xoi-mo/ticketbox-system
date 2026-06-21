@@ -1,6 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
-
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
+import { ConcertNotFoundError } from '../../../identity/domain/errors';
 import type { Concert } from '../../domain/concert.types';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { PublishConcertCommand } from './commands';
@@ -26,7 +25,7 @@ export class PublishConcertUseCase {
 
     const concert = await this.concertWriteRepo.findConcertById(cmd.concertId);
     if (!concert) {
-      throw new NotFoundException('Concert not found');
+      throw new ConcertNotFoundError(cmd.concertId);
     }
 
     checkConcertStatusTransition(concert.status, 'PUBLISHED');
