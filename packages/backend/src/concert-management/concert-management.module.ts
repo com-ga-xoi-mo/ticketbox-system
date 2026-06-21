@@ -5,6 +5,27 @@ import { AuthModule } from '../identity/auth.module';
 import { AuthorizeConcertManagementUseCase } from '../identity/application/use-cases/authorize-concert-management.use-case';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { OBJECT_STORAGE, type ObjectStoragePort } from '../platform/storage';
+import { CACHE_SERVICE, type CacheServicePort } from '../platform/cache/cache.tokens';
+
+// Cache decorators — read
+import { CachingListPublicConcertsUseCase } from './application/cache/caching-list-public-concerts.use-case';
+import { CachingGetPublicConcertDetailUseCase } from './application/cache/caching-get-public-concert-detail.use-case';
+import { CachingGetConcertAvailabilityUseCase } from './application/cache/caching-get-concert-availability.use-case';
+
+// Cache decorators — concert writes (invalidating)
+import {
+  InvalidatingCreateConcertUseCase,
+  InvalidatingUpdateConcertUseCase,
+  InvalidatingPublishConcertUseCase,
+  InvalidatingCancelConcertUseCase,
+} from './application/cache/invalidating-concert-write.use-cases';
+
+// Cache decorators — ticket-type writes (invalidating)
+import {
+  InvalidatingCreateTicketTypeUseCase,
+  InvalidatingUpdateTicketTypeUseCase,
+  InvalidatingArchiveTicketTypeUseCase,
+} from './application/cache/invalidating-ticket-type-write.use-cases';
 
 // Ports
 import {
@@ -133,71 +154,93 @@ import { AssetController } from './adapters/http/asset.controller';
     },
     {
       provide: ListPublicConcertsUseCase,
-      inject: [PUBLIC_CONCERT_CATALOG],
-      useFactory: (catalog: PublicConcertCatalogPort) => new ListPublicConcertsUseCase(catalog),
+      inject: [PUBLIC_CONCERT_CATALOG, CACHE_SERVICE],
+      useFactory: (catalog: PublicConcertCatalogPort, cache: CacheServicePort) =>
+        new CachingListPublicConcertsUseCase(new ListPublicConcertsUseCase(catalog), cache),
     },
     {
       provide: GetPublicConcertDetailUseCase,
-      inject: [PUBLIC_CONCERT_CATALOG],
-      useFactory: (catalog: PublicConcertCatalogPort) => new GetPublicConcertDetailUseCase(catalog),
+      inject: [PUBLIC_CONCERT_CATALOG, CACHE_SERVICE],
+      useFactory: (catalog: PublicConcertCatalogPort, cache: CacheServicePort) =>
+        new CachingGetPublicConcertDetailUseCase(new GetPublicConcertDetailUseCase(catalog), cache),
     },
     {
       provide: GetConcertAvailabilityUseCase,
-      inject: [PUBLIC_CONCERT_CATALOG],
-      useFactory: (catalog: PublicConcertCatalogPort) => new GetConcertAvailabilityUseCase(catalog),
+      inject: [PUBLIC_CONCERT_CATALOG, CACHE_SERVICE],
+      useFactory: (catalog: PublicConcertCatalogPort, cache: CacheServicePort) =>
+        new CachingGetConcertAvailabilityUseCase(new GetConcertAvailabilityUseCase(catalog), cache),
     },
     {
       provide: CreateConcertUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY],
-      useFactory: (repo: ConcertWriteRepositoryPort) => new CreateConcertUseCase(repo),
+      inject: [CONCERT_WRITE_REPOSITORY, CACHE_SERVICE],
+      useFactory: (repo: ConcertWriteRepositoryPort, cache: CacheServicePort) =>
+        new InvalidatingCreateConcertUseCase(new CreateConcertUseCase(repo), cache),
     },
     {
       provide: UpdateConcertUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new UpdateConcertUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) => new InvalidatingUpdateConcertUseCase(new UpdateConcertUseCase(repo, authUseCase), cache),
     },
     {
       provide: PublishConcertUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new PublishConcertUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) => new InvalidatingPublishConcertUseCase(new PublishConcertUseCase(repo, authUseCase), cache),
     },
     {
       provide: CancelConcertUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new CancelConcertUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) => new InvalidatingCancelConcertUseCase(new CancelConcertUseCase(repo, authUseCase), cache),
     },
     {
       provide: CreateTicketTypeUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new CreateTicketTypeUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) =>
+        new InvalidatingCreateTicketTypeUseCase(
+          new CreateTicketTypeUseCase(repo, authUseCase),
+          cache,
+        ),
     },
     {
       provide: UpdateTicketTypeUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new UpdateTicketTypeUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) =>
+        new InvalidatingUpdateTicketTypeUseCase(
+          new UpdateTicketTypeUseCase(repo, authUseCase),
+          cache,
+        ),
     },
     {
       provide: ArchiveTicketTypeUseCase,
-      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase],
+      inject: [CONCERT_WRITE_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
       useFactory: (
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
-      ) => new ArchiveTicketTypeUseCase(repo, authUseCase),
+        cache: CacheServicePort,
+      ) =>
+        new InvalidatingArchiveTicketTypeUseCase(
+          new ArchiveTicketTypeUseCase(repo, authUseCase),
+          cache,
+        ),
     },
     {
       provide: UploadSeatingMapUseCase,
