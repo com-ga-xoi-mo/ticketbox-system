@@ -38,11 +38,7 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
     },
     {
       provide: DeliverNotificationUseCase,
-      inject: [
-        NOTIFICATION_REPOSITORY,
-        EMAIL_NOTIFICATION_CHANNEL,
-        PlatformConfigService,
-      ],
+      inject: [NOTIFICATION_REPOSITORY, EMAIL_NOTIFICATION_CHANNEL, PlatformConfigService],
       useFactory: (
         notificationRepository: NotificationRepositoryPort,
         emailChannel: NotificationChannelPort,

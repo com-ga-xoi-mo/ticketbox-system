@@ -21,4 +21,3 @@ export function toArtistBioResponse(record: ArtistBioRecord) {
     updatedAt: record.updatedAt,
   };
 }
-

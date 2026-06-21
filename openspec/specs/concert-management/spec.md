@@ -35,43 +35,122 @@ The system SHALL show upcoming concerts with artist, venue, schedule, poster, se
 - **THEN** every mapped ticket type and seating zone SHALL belong to the requested concert
 
 ### Requirement: Organizer concert administration
-The system SHALL allow authorized organizers to create, update, publish, and cancel concerts, including assigning poster and seating map assets.
+
+The system SHALL allow authorized organizers to list, read, create, update, publish, and cancel concerts, including assigning poster and seating map assets. Read endpoints scoped to the organizer SHALL include concerts in every status (DRAFT, PUBLISHED, CANCELLED, ENDED), unlike the public catalog which only exposes published, available concerts. Concert slug SHALL be editable through the update endpoint and use the same URL-safe validation as creation.
+
+#### Scenario: Organizer lists their concerts across all statuses
+
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts`
+- **THEN** the system SHALL return the concerts created by that organizer, including DRAFT, PUBLISHED, CANCELLED, and ENDED concerts
+
+#### Scenario: Organizer concert list excludes other organizers' concerts
+
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts`
+- **THEN** the system SHALL NOT include concerts owned by a different organizer
+
+#### Scenario: Organizer reads a single concert they own
+
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id` for a concert they own
+- **THEN** the system SHALL return that concert regardless of its status
+
+#### Scenario: Organizer cannot read a concert they do not own
+
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id` for a concert owned by another organizer
+- **THEN** the system SHALL reject the request as forbidden
+
+#### Scenario: Reading a non-existent concert returns not found
+
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id` for an id that does not exist
+- **THEN** the system SHALL respond with a not-found error
 
 #### Scenario: Organizer creates concert
+
 - **WHEN** an organizer submits valid concert information
 - **THEN** the system SHALL create a draft concert associated with that organizer
 
 #### Scenario: Organizer updates concert details
-- **WHEN** an organizer submits updated information for a concert they own (DRAFT or PUBLISHED status)
+
+- **WHEN** an organizer submits updated information, including slug when changed, for a concert they own (DRAFT or PUBLISHED status)
 - **THEN** the system SHALL apply the update and return the updated concert
 
+#### Scenario: Organizer cannot update concert to an invalid slug
+
+- **WHEN** an organizer submits a slug that is not URL-safe while updating a concert
+- **THEN** the system SHALL reject the update with a validation error
+
+#### Scenario: Organizer cannot update concert to a duplicate slug
+
+- **WHEN** an organizer submits a slug that already belongs to another concert
+- **THEN** the system SHALL reject the update with a conflict error
+
 #### Scenario: Organizer publishes a draft concert
+
 - **WHEN** an organizer requests to publish a draft concert they own
 - **THEN** the system SHALL transition the concert status from DRAFT to PUBLISHED
 
 #### Scenario: Organizer cannot publish an already-published concert
+
 - **WHEN** an organizer requests to publish a concert that is already PUBLISHED
 - **THEN** the system SHALL reject the request with a status transition error
 
 #### Scenario: Organizer cancels a published concert
+
 - **WHEN** an organizer cancels a published concert they own
 - **THEN** the system SHALL mark the concert as CANCELLED and prevent new ticket purchases
 
 #### Scenario: Organizer cancels a draft concert
+
 - **WHEN** an organizer cancels a draft concert they own
 - **THEN** the system SHALL mark the concert as CANCELLED
 
 #### Scenario: Organizer cannot cancel an already-cancelled concert
+
 - **WHEN** an organizer attempts to cancel a concert already in CANCELLED status
 - **THEN** the system SHALL reject the request with a status transition error
 
 #### Scenario: Organizer cannot modify an ENDED concert
+
 - **WHEN** an organizer attempts to update, publish, or cancel a concert in ENDED status
 - **THEN** the system SHALL reject the request with a status transition error
 
 #### Scenario: Organizer uploads seating map asset
+
 - **WHEN** an organizer uploads a valid SVG seating map for a concert they manage
 - **THEN** the system SHALL store the SVG as an asset and associate it with the concert as its seating map asset
+
+### Requirement: Admin concert administration
+
+The system SHALL allow authorized admins to list, read, and edit all concerts and to moderate them by publishing or cancelling, through admin endpoints. Admin read endpoints SHALL include all concerts in every status (DRAFT, PUBLISHED, CANCELLED, ENDED), regardless of owner. Admins SHALL NOT create concerts; concert creation is reserved for organizers.
+
+#### Scenario: Admin lists all concerts across all statuses
+
+- **WHEN** an authenticated admin requests `GET /admin/concerts`
+- **THEN** the system SHALL return all concerts, including DRAFT, PUBLISHED, CANCELLED, and ENDED concerts
+
+#### Scenario: Admin reads any concert
+
+- **WHEN** an authenticated admin requests `GET /admin/concerts/:id` for an existing concert
+- **THEN** the system SHALL return that concert regardless of owner or status
+
+#### Scenario: Admin reading a non-existent concert returns not found
+
+- **WHEN** an authenticated admin requests `GET /admin/concerts/:id` for an id that does not exist
+- **THEN** the system SHALL respond with a not-found error
+
+#### Scenario: Admin edits a concert
+
+- **WHEN** an authenticated admin submits updated concert metadata (including slug when changed) via the admin update endpoint
+- **THEN** the system SHALL apply the update and return the updated concert
+
+#### Scenario: Admin publishes a draft concert
+
+- **WHEN** an authenticated admin publishes a DRAFT concert through the admin endpoint
+- **THEN** the system SHALL transition the concert status from DRAFT to PUBLISHED
+
+#### Scenario: Admin cancels a concert
+
+- **WHEN** an authenticated admin cancels a concert through the admin endpoint
+- **THEN** the system SHALL mark the concert as CANCELLED
 
 ### Requirement: Ticket type configuration
 The system SHALL allow organizers to configure ticket type code, name, description, price, quantity, sale window, maximum quantity per user, status, and seating-zone mappings per concert.
@@ -139,6 +218,191 @@ The system SHALL allow organizers to define seating zones from uploaded SVG elem
 - **WHEN** an organizer attempts to map a ticket type from one concert to a seating zone from another concert
 - **THEN** the system SHALL reject the mapping
 
+### Requirement: Poster image multipart upload
+The system SHALL allow organizers and admins to upload a raster poster image for a concert via `multipart/form-data` using the field name `file`, validate the file before storage, store it through the shared `ObjectStoragePort`, persist asset metadata, and associate it with the concert.
+
+#### Scenario: Organizer uploads valid poster image
+- **WHEN** an organizer uploads a valid PNG, JPEG, or WebP poster via `POST /organizer/concerts/:concertId/poster` with `multipart/form-data` for a concert they own
+- **THEN** the system SHALL validate the image, store the file via `ObjectStoragePort`, create an `Asset` record with kind `POSTER`, and update `concert.posterAssetId` to the new asset
+
+#### Scenario: Admin uploads poster for any concert
+- **WHEN** an admin uploads a valid PNG, JPEG, or WebP poster via `POST /admin/concerts/:concertId/poster` with `multipart/form-data`
+- **THEN** the system SHALL authorize the admin, validate the image, store the file, create the poster asset, and associate it with the concert regardless of ownership
+
+#### Scenario: Missing file is rejected
+- **WHEN** a request to upload a poster is sent without a file
+- **THEN** the system SHALL reject the request with a validation error before storing an object or creating an asset
+
+#### Scenario: Organizer cannot upload to non-owned concert
+- **WHEN** an organizer attempts to upload a poster for a concert they do not own via the organizer route
+- **THEN** the system SHALL reject the request with a forbidden error
+
+#### Scenario: Re-upload replaces previous poster asset
+- **WHEN** an organizer or admin uploads a new valid poster for a concert that already has a poster asset
+- **THEN** the system SHALL store the new file, create a new asset record, update `concert.posterAssetId`, and mark the old poster asset as archived
+
+### Requirement: Poster image validation
+The system SHALL only accept raster poster uploads whose declared content type, filename extension, size, and magic bytes match an allowed poster image format.
+
+#### Scenario: PNG poster is accepted
+- **WHEN** a poster upload has content type `image/png`, a `.png` filename extension, and PNG magic bytes
+- **THEN** the system SHALL accept the file type validation
+
+#### Scenario: JPEG poster is accepted
+- **WHEN** a poster upload has content type `image/jpeg` or `image/jpg`, a `.jpg` or `.jpeg` filename extension, and JPEG magic bytes
+- **THEN** the system SHALL accept the file type validation and persist the asset `contentType` as `image/jpeg`
+
+#### Scenario: WebP poster is accepted
+- **WHEN** a poster upload has content type `image/webp`, a `.webp` filename extension, and WebP magic bytes
+- **THEN** the system SHALL accept the file type validation
+
+#### Scenario: Unsupported content type is rejected
+- **WHEN** a poster upload has a content type other than `image/png`, `image/jpeg`, `image/jpg`, or `image/webp`
+- **THEN** the system SHALL reject the upload with a validation error before storing an object or creating an asset
+
+#### Scenario: Extension mismatch is rejected
+- **WHEN** a poster upload filename extension does not match the declared allowed content type
+- **THEN** the system SHALL reject the upload with a validation error before storing an object or creating an asset
+
+#### Scenario: Spoofed image is rejected
+- **WHEN** a poster upload declares an allowed content type and extension but its magic bytes do not match that format
+- **THEN** the system SHALL reject the upload with a validation error before storing an object or creating an asset
+
+#### Scenario: SVG poster is rejected
+- **WHEN** a poster upload is submitted as `image/svg+xml` or with a `.svg` filename extension
+- **THEN** the system SHALL reject the upload because posters MUST be raster images
+
+#### Scenario: Oversized poster is rejected
+- **WHEN** a poster upload exceeds `POSTER_IMAGE_MAX_BYTES`
+- **THEN** the system SHALL reject the upload with a size validation error before creating an asset
+
+### Requirement: Poster asset metadata persistence
+The system SHALL persist poster asset metadata in the `assets` table with sufficient information to serve public catalog responses and manage lifecycle.
+
+#### Scenario: Poster asset contains required metadata
+- **WHEN** a poster image is successfully uploaded and stored
+- **THEN** the system SHALL create an `Asset` record with `kind` set to `POSTER`, `status` set to `ACTIVE`, `storageKey` following the convention `posters/{concertId}/{assetId}.{ext}`, `publicUrl` built from `ObjectStoragePort.getPublicUrl(storageKey)`, `contentType` set to the validated image content type, `sizeBytes` matching the file size, `checksum` as SHA-256 hash of the file content, `originalName` from the uploaded filename, and `uploadedById` as the authenticated user
+
+#### Scenario: Persistence failure cleans up uploaded object
+- **WHEN** the poster object is uploaded successfully but database asset creation or concert association fails
+- **THEN** the system SHALL best-effort delete the newly uploaded object and SHALL NOT leave `concert.posterAssetId` pointing to a missing asset
+
+### Requirement: Poster max size configuration
+The system SHALL provide a configurable environment variable `POSTER_IMAGE_MAX_BYTES` to control the maximum allowed file size for poster image uploads.
+
+#### Scenario: Default poster max size is applied when not configured
+- **WHEN** `POSTER_IMAGE_MAX_BYTES` is not set in the environment
+- **THEN** the system SHALL apply a default maximum size of 5 MB (5242880 bytes) for poster image uploads
+
+#### Scenario: Configured poster max size is applied
+- **WHEN** `POSTER_IMAGE_MAX_BYTES` is set in the environment
+- **THEN** the system SHALL use that value for both HTTP upload limits and application-level poster size validation
+
+### Requirement: Public catalog reflects uploaded poster
+The system SHALL expose uploaded poster metadata through existing public concert detail responses that already include the concert poster asset relation.
+
+#### Scenario: Public detail returns uploaded poster metadata
+- **WHEN** an audience user opens the public detail page for a published concert after a poster has been uploaded
+- **THEN** the system SHALL return the associated poster asset metadata in the existing `posterAsset` field without requiring a new public endpoint
+
+### Requirement: Seating map SVG multipart upload
+The system SHALL allow organizers and admins to upload a seating map SVG file for a concert via `multipart/form-data` using the field name `file`, validate the file for safety before storage, store it through the shared `ObjectStoragePort`, persist asset metadata, and associate it with the concert.
+
+#### Scenario: Organizer uploads valid SVG seating map
+- **WHEN** an organizer uploads a valid SVG file via `POST /organizer/concerts/:concertId/seating-map` with `multipart/form-data` for a concert they own
+- **THEN** the system SHALL validate the SVG for safety, store the file via `ObjectStoragePort`, create an `Asset` record with kind `SEATING_MAP`, and update `concert.seatingMapAssetId` to the new asset
+
+#### Scenario: Admin uploads seating map for any concert
+- **WHEN** an admin uploads a valid SVG file via `POST /admin/concerts/:concertId/seating-map` with `multipart/form-data`
+- **THEN** the system SHALL authorize the admin, validate the SVG, store the file, create the asset, and associate it with the concert regardless of ownership
+
+#### Scenario: Missing file is rejected
+- **WHEN** a request to upload a seating map is sent without a file
+- **THEN** the system SHALL reject the request with a validation error
+
+#### Scenario: Non-SVG content type is rejected
+- **WHEN** a file with a content type other than `image/svg+xml` is uploaded as a seating map
+- **THEN** the system SHALL reject the upload with a validation error before storing
+
+#### Scenario: Non-SVG file extension is rejected
+- **WHEN** a file without the `.svg` extension is uploaded as a seating map
+- **THEN** the system SHALL reject the upload with a validation error before storing
+
+#### Scenario: Oversized SVG is rejected
+- **WHEN** a file exceeding `SEATING_MAP_SVG_MAX_BYTES` is uploaded as a seating map
+- **THEN** the system SHALL reject the upload with a size limit error before storing
+
+#### Scenario: Unsafe SVG is rejected before storage
+- **WHEN** a seating map SVG contains `<script>` tags, event handlers (`onclick`, `onload`, etc.), `javascript:` URLs, `<iframe>`, `<object>`, `<embed>`, `<foreignObject>`, external references (`xlink:href` or `href` pointing to external URLs), or `data:text/html` URIs
+- **THEN** the system SHALL reject the SVG with a safety validation error before storing it
+
+#### Scenario: Organizer cannot upload to non-owned concert
+- **WHEN** an organizer attempts to upload a seating map for a concert they do not own via the organizer route
+- **THEN** the system SHALL reject the request with a forbidden error
+
+#### Scenario: Re-upload replaces previous seating map asset
+- **WHEN** an organizer or admin uploads a new seating map for a concert that already has a seating map asset
+- **THEN** the system SHALL store the new file, create a new asset record, update `concert.seatingMapAssetId`, and mark the old asset as archived
+
+### Requirement: Seating map asset metadata persistence
+The system SHALL persist seating map asset metadata in the `assets` table with sufficient information to serve public catalog responses and manage lifecycle.
+
+#### Scenario: Asset record contains required metadata
+- **WHEN** a seating map SVG is successfully uploaded and stored
+- **THEN** the system SHALL create an `Asset` record with `kind` set to `SEATING_MAP`, `storageKey` following the convention `seating-maps/{concertId}/{assetId}.svg`, `publicUrl` built from `ObjectStoragePort.getPublicUrl(storageKey)`, `contentType` set to `image/svg+xml`, `sizeBytes` matching the file size, `checksum` as SHA-256 hash of the file content, `originalName` from the uploaded filename, and `uploadedById` as the authenticated user
+
+### Requirement: Seating zone management
+The system SHALL allow organizers and admins to create and update seating zones for a concert by specifying SVG element IDs, labels, optional colors, display order, and optional status.
+
+#### Scenario: Seating zones are upserted with svgElementId
+- **WHEN** an organizer or admin submits a list of seating zones with `svgElementId`, `label`, optional `color`, `displayOrder`, and optional `status` for a concert they are authorized to manage
+- **THEN** the system SHALL upsert zones by `(concertId, svgElementId)` — creating new zones and updating existing ones
+
+#### Scenario: Seating zone status defaults to active
+- **WHEN** an organizer or admin upserts a seating zone without specifying `status`
+- **THEN** the system SHALL persist the zone with status `ACTIVE`
+
+#### Scenario: Duplicate svgElementId in same request is rejected
+- **WHEN** a seating zone upsert request contains duplicate `svgElementId` values
+- **THEN** the system SHALL reject the request with a validation error
+
+#### Scenario: Zones not in request payload are preserved
+- **WHEN** an upsert request contains only a subset of existing zones for a concert
+- **THEN** the system SHALL NOT delete zones that are not included in the request — the operation is append/update only
+
+### Requirement: Ticket type to seating zone mapping
+The system SHALL allow organizers and admins to map ticket types to seating zones within the same concert, supporting many-to-many relationships.
+
+#### Scenario: Ticket type maps to one or many zones
+- **WHEN** an organizer sets zone mappings for a ticket type with one or more seating zone IDs from the same concert
+- **THEN** the system SHALL replace existing mappings and persist the new set of zone mappings
+
+#### Scenario: Zone maps to one or many ticket types
+- **WHEN** multiple ticket types from the same concert are each mapped to the same seating zone
+- **THEN** the system SHALL persist all mappings without conflict
+
+#### Scenario: Cross-concert mapping is rejected
+- **WHEN** an organizer or admin attempts to map a ticket type to a seating zone that belongs to a different concert
+- **THEN** the system SHALL reject the mapping with a validation error
+
+#### Scenario: Empty zone list clears mappings
+- **WHEN** an organizer sets zone mappings for a ticket type with an empty list of seating zone IDs
+- **THEN** the system SHALL remove all existing zone mappings for that ticket type
+
+### Requirement: Public catalog reflects seating map data
+The system SHALL include seating map asset metadata, active seating zones, and ticket-type-to-active-zone mappings in public concert detail responses after upload.
+
+#### Scenario: Public catalog detail returns seating map metadata and mappings
+- **WHEN** an audience user opens the public detail page for a published concert that has a seating map asset, seating zones, and ticket-type-to-zone mappings
+- **THEN** the system SHALL return the seating map asset metadata, all active seating zones with `svgElementId`, and ticket-type-to-zone mappings only for active seating zones in the concert detail response
+
+### Requirement: Seating map SVG max size configuration
+The system SHALL provide a configurable environment variable `SEATING_MAP_SVG_MAX_BYTES` to control the maximum allowed file size for seating map SVG uploads.
+
+#### Scenario: Default max size is applied when not configured
+- **WHEN** `SEATING_MAP_SVG_MAX_BYTES` is not set in the environment
+- **THEN** the system SHALL apply a default maximum size of 5 MB (5242880 bytes) for seating map SVG uploads
+
 ### Requirement: Concert administration ownership enforcement
 The system SHALL require organizer ownership or explicit admin authorization for protected concert administration actions, including concert details, ticket types, seating assets, revenue views, and check-in staff assignment management for the concert. Ownership is enforced by reusing the existing `AuthorizeConcertManagementUseCase` from the identity module, which checks `concert.createdById` against the authenticated user and supports `allowAdminOverride` for admin routes.
 
@@ -173,3 +437,40 @@ The system SHALL include an approved artist bio on the public concert detail res
 - **WHEN** an audience user opens the public detail page for a concert without a published artist bio
 - **THEN** the system SHALL return the normal concert detail response with the artist bio field omitted or set to null
 
+### Requirement: Public concert asset serving by id
+The system SHALL expose a public endpoint `GET /assets/:id` that streams the binary content of an active concert poster or seating-map asset, resolving the asset by id and fetching its bytes from the shared `ObjectStoragePort`.
+
+#### Scenario: Active poster asset is served
+- **WHEN** a client requests `GET /assets/:id` for an existing `ACTIVE` asset whose kind is `POSTER`
+- **THEN** the system SHALL stream the asset bytes from `ObjectStoragePort` with the `Content-Type` set to the asset's stored content type
+
+#### Scenario: Active seating-map asset is served
+- **WHEN** a client requests `GET /assets/:id` for an existing `ACTIVE` asset whose kind is `SEATING_MAP`
+- **THEN** the system SHALL stream the asset bytes from `ObjectStoragePort` with the `Content-Type` set to the asset's stored content type
+
+#### Scenario: No authentication is required
+- **WHEN** an unauthenticated client requests `GET /assets/:id` for a servable asset
+- **THEN** the system SHALL serve the asset bytes without requiring a JWT or any role
+
+#### Scenario: Response is cacheable
+- **WHEN** the system serves a servable asset
+- **THEN** the response SHALL include a `Cache-Control` header marking the content as publicly cacheable, because an asset id maps to immutable content
+
+### Requirement: Concert asset serving scope and not-found handling
+The system SHALL only serve assets whose kind is `POSTER` or `SEATING_MAP` and SHALL return a `404` response for any request that cannot be served, without revealing whether an id exists.
+
+#### Scenario: Unknown asset id returns 404
+- **WHEN** a client requests `GET /assets/:id` for an id that has no matching `Asset` row
+- **THEN** the system SHALL respond with `404`
+
+#### Scenario: Archived asset returns 404
+- **WHEN** a client requests `GET /assets/:id` for an asset whose status is `ARCHIVED`
+- **THEN** the system SHALL respond with `404` and SHALL NOT stream any bytes
+
+#### Scenario: Out-of-scope asset kind returns 404
+- **WHEN** a client requests `GET /assets/:id` for an existing asset whose kind is neither `POSTER` nor `SEATING_MAP`
+- **THEN** the system SHALL respond with `404` and SHALL NOT stream any bytes
+
+#### Scenario: Missing storage object returns 404
+- **WHEN** a servable asset row exists but its underlying object is missing from `ObjectStoragePort`
+- **THEN** the system SHALL respond with `404`

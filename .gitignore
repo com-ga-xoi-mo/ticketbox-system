@@ -30,6 +30,7 @@ build/
 coverage/
 .nyc_output/
 .npm/
+data/
 
 # Environment Variables
 .env
@@ -69,3 +70,4 @@ docker-compose.override.yml
 
 .agent/
 .codex/
+.agents/skills

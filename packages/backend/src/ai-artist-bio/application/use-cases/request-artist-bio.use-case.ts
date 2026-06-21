@@ -1,9 +1,6 @@
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { Role } from '../../../identity/domain/role.enum';
-import {
-  buildPressKitStorageKey,
-  validatePressKitUpload,
-} from '../pdf-validation';
+import { buildPressKitStorageKey, validatePressKitUpload } from '../pdf-validation';
 import type {
   ArtistBioActor,
   ArtistBioRecord,
@@ -11,7 +8,7 @@ import type {
 } from '../../domain/artist-bio.types';
 import type { ArtistBioQueuePort } from '../../domain/ports/artist-bio-queue.port';
 import type { ArtistBioRepositoryPort } from '../../domain/ports/artist-bio-repository.port';
-import type { ObjectStoragePort } from '../../domain/ports/object-storage.port';
+import type { ObjectStoragePort } from '../../../platform/storage';
 
 export interface RequestArtistBioCommand {
   concertId: string;
@@ -69,4 +66,3 @@ export class RequestArtistBioUseCase {
     return artistBio;
   }
 }
-

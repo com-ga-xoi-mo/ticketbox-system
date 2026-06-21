@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RedisOptions } from 'ioredis';
 
@@ -6,7 +6,10 @@ import type { PlatformEnv } from './env.schema';
 
 @Injectable()
 export class PlatformConfigService {
-  constructor(private readonly configService: ConfigService<PlatformEnv, true>) {}
+  constructor(
+    @Inject(ConfigService)
+    private readonly configService: ConfigService<PlatformEnv, true>,
+  ) {}
 
   get nodeEnv(): PlatformEnv['NODE_ENV'] {
     return this.configService.get('NODE_ENV');
@@ -22,6 +25,10 @@ export class PlatformConfigService {
 
   get queuePrefix(): string {
     return this.configService.get('QUEUE_PREFIX');
+  }
+
+  get internalApiKey(): string {
+    return this.configService.get('INTERNAL_API_KEY');
   }
 
   get redisOptions(): RedisOptions {
@@ -44,8 +51,44 @@ export class PlatformConfigService {
     return this.configService.get('JWT_EXPIRY');
   }
 
+  get qrTokenSecret(): string {
+    return this.configService.get('QR_TOKEN_SECRET');
+  }
+
   get bcryptRounds(): number {
     return this.configService.get('BCRYPT_ROUNDS');
+  }
+
+  get orderReservationTtlMinutes(): number {
+    return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
+  }
+
+  get momoPartnerCode(): string {
+    return this.configService.get('MOMO_PARTNER_CODE');
+  }
+
+  get momoAccessKey(): string {
+    return this.configService.get('MOMO_ACCESS_KEY');
+  }
+
+  get momoSecretKey(): string {
+    return this.configService.get('MOMO_SECRET_KEY');
+  }
+
+  get momoEndpoint(): string {
+    return this.configService.get('MOMO_ENDPOINT');
+  }
+
+  get momoRequestType(): string {
+    return this.configService.get('MOMO_REQUEST_TYPE');
+  }
+
+  get momoReturnUrl(): string {
+    return this.configService.get('MOMO_RETURN_URL');
+  }
+
+  get momoIpnUrl(): string {
+    return this.configService.get('MOMO_IPN_URL');
   }
 
   get emailProvider(): PlatformEnv['EMAIL_PROVIDER'] {
@@ -86,6 +129,14 @@ export class PlatformConfigService {
 
   get artistBioMaxAttempts(): number {
     return this.configService.get('ARTIST_BIO_MAX_ATTEMPTS');
+  }
+
+  get seatingMapSvgMaxBytes(): number {
+    return this.configService.get('SEATING_MAP_SVG_MAX_BYTES');
+  }
+
+  get posterImageMaxBytes(): number {
+    return this.configService.get('POSTER_IMAGE_MAX_BYTES');
   }
 
   get aiArtistBioProvider(): PlatformEnv['AI_ARTIST_BIO_PROVIDER'] {
@@ -135,5 +186,41 @@ export class PlatformConfigService {
   }
   get guestListProcessingLeaseMs(): number {
     return this.configService.get('GUEST_LIST_PROCESSING_LEASE_MS');
+  }
+
+  get storageDriver(): PlatformEnv['STORAGE_DRIVER'] {
+    return this.configService.get('STORAGE_DRIVER');
+  }
+
+  get localStorageRootDir(): string {
+    return this.configService.get('LOCAL_STORAGE_ROOT_DIR');
+  }
+
+  get localStoragePublicBaseUrl(): string {
+    return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
+  }
+
+  get s3Endpoint(): string | undefined {
+    return this.configService.get('S3_ENDPOINT', { infer: true });
+  }
+
+  get s3Region(): string | undefined {
+    return this.configService.get('S3_REGION', { infer: true });
+  }
+
+  get s3Bucket(): string | undefined {
+    return this.configService.get('S3_BUCKET', { infer: true });
+  }
+
+  get s3AccessKeyId(): string | undefined {
+    return this.configService.get('S3_ACCESS_KEY_ID', { infer: true });
+  }
+
+  get s3SecretAccessKey(): string | undefined {
+    return this.configService.get('S3_SECRET_ACCESS_KEY', { infer: true });
+  }
+
+  get s3PublicBaseUrl(): string | undefined {
+    return this.configService.get('S3_PUBLIC_BASE_URL', { infer: true });
   }
 }

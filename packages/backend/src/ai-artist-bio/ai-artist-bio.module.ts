@@ -6,6 +6,7 @@ import { PlatformConfigModule } from '../platform/config/platform-config.module'
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
 import { QueueModule } from '../platform/queue/queue.module';
+import { OBJECT_STORAGE, type ObjectStoragePort } from '../platform/storage';
 import { GetArtistBioJobUseCase } from './application/use-cases/get-artist-bio-job.use-case';
 import { ProcessArtistBioUseCase } from './application/use-cases/process-artist-bio.use-case';
 import { PublishArtistBioUseCase } from './application/use-cases/publish-artist-bio.use-case';
@@ -14,22 +15,12 @@ import { RequestArtistBioUseCase } from './application/use-cases/request-artist-
 import { RetryArtistBioJobUseCase } from './application/use-cases/retry-artist-bio-job.use-case';
 import { AdminArtistBioController } from './adapters/http/admin-artist-bio.controller';
 import { OrganizerArtistBioController } from './adapters/http/organizer-artist-bio.controller';
-import {
-  AI_BIO_GENERATOR,
-  type AiBioGeneratorPort,
-} from './domain/ports/ai-bio-generator.port';
-import {
-  ARTIST_BIO_QUEUE,
-  type ArtistBioQueuePort,
-} from './domain/ports/artist-bio-queue.port';
+import { AI_BIO_GENERATOR, type AiBioGeneratorPort } from './domain/ports/ai-bio-generator.port';
+import { ARTIST_BIO_QUEUE, type ArtistBioQueuePort } from './domain/ports/artist-bio-queue.port';
 import {
   ARTIST_BIO_REPOSITORY,
   type ArtistBioRepositoryPort,
 } from './domain/ports/artist-bio-repository.port';
-import {
-  OBJECT_STORAGE,
-  type ObjectStoragePort,
-} from './domain/ports/object-storage.port';
 import {
   PDF_TEXT_EXTRACTOR,
   type PdfTextExtractorPort,
@@ -38,7 +29,6 @@ import { createArtistBioGenerator } from './infrastructure/ai/artist-bio-generat
 import { PrismaArtistBioRepository } from './infrastructure/database/prisma-artist-bio.repository';
 import { SimplePdfTextExtractor } from './infrastructure/pdf/simple-pdf-text-extractor';
 import { ArtistBioProducer } from './infrastructure/queue/artist-bio.producer';
-import { LocalObjectStorageAdapter } from './infrastructure/storage/local-object-storage.adapter';
 
 @Module({
   imports: [AuthModule, DatabaseModule, PlatformConfigModule, QueueModule],
@@ -47,10 +37,6 @@ import { LocalObjectStorageAdapter } from './infrastructure/storage/local-object
     {
       provide: ARTIST_BIO_REPOSITORY,
       useClass: PrismaArtistBioRepository,
-    },
-    {
-      provide: OBJECT_STORAGE,
-      useClass: LocalObjectStorageAdapter,
     },
     {
       provide: PDF_TEXT_EXTRACTOR,
@@ -157,7 +143,6 @@ import { LocalObjectStorageAdapter } from './infrastructure/storage/local-object
     RejectArtistBioUseCase,
     ARTIST_BIO_REPOSITORY,
     ARTIST_BIO_QUEUE,
-    OBJECT_STORAGE,
     PDF_TEXT_EXTRACTOR,
     AI_BIO_GENERATOR,
   ],
@@ -166,4 +151,3 @@ export class AiArtistBioModule {}
 
 export { ArtistBioProcessor } from './infrastructure/queue/artist-bio.processor';
 export { ArtistBioStatus } from './domain/artist-bio.types';
-

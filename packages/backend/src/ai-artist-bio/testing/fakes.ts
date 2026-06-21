@@ -15,7 +15,11 @@ import type {
 } from '../domain/ports/artist-bio-repository.port';
 import type { AiBioGeneratorPort } from '../domain/ports/ai-bio-generator.port';
 import type { ArtistBioQueuePort } from '../domain/ports/artist-bio-queue.port';
-import type { ObjectStoragePort, PutObjectInput } from '../domain/ports/object-storage.port';
+import {
+  InMemoryObjectStorageAdapter,
+  type ObjectStoragePort,
+  type PutObjectInput,
+} from '../../platform/storage';
 import type { PdfTextExtractorPort } from '../domain/ports/pdf-text-extractor.port';
 
 const now = () => new Date('2026-06-18T07:00:00.000Z');
@@ -152,19 +156,15 @@ export class InMemoryArtistBioRepository implements ArtistBioRepositoryPort {
   }
 }
 
-export class InMemoryObjectStorage implements ObjectStoragePort {
-  objects = new Map<string, Buffer>();
+export class InMemoryObjectStorage
+  extends InMemoryObjectStorageAdapter
+  implements ObjectStoragePort
+{
   failPut = false;
 
-  async putObject(input: PutObjectInput): Promise<void> {
+  override async putObject(input: PutObjectInput): Promise<void> {
     if (this.failPut) throw new Error('Object storage unavailable');
-    this.objects.set(input.key, Buffer.from(input.content));
-  }
-
-  async getObject(key: string): Promise<Buffer> {
-    const object = this.objects.get(key);
-    if (!object) throw new Error(`Missing object ${key}`);
-    return Buffer.from(object);
+    await super.putObject(input);
   }
 }
 

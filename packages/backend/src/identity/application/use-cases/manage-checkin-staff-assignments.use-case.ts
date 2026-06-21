@@ -1,7 +1,4 @@
-import {
-  CheckinStaffUserNotFoundError,
-  UserIsNotCheckinStaffError,
-} from '../../domain/errors';
+import { CheckinStaffUserNotFoundError, UserIsNotCheckinStaffError } from '../../domain/errors';
 import type {
   CheckinStaffAssignmentRecord,
   CheckinStaffAssignmentRepositoryPort,

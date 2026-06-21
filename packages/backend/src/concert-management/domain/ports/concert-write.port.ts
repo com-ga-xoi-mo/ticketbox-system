@@ -30,10 +30,15 @@ export interface ConcertWriteRepositoryPort {
       status?: string;
       publishedAt?: Date | null;
       cancelledAt?: Date | null;
+      slug?: string;
     },
   ): Promise<Concert>;
 
   findConcertById(id: string): Promise<Concert | null>;
+
+  findConcertsByOwner(createdById: string): Promise<Concert[]>;
+
+  findAllConcerts(): Promise<Concert[]>;
 
   createTicketType(data: {
     concertId: string;

@@ -28,4 +28,3 @@ export class ArtistBioProducer implements ArtistBioQueuePort {
     );
   }
 }
-

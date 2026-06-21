@@ -22,7 +22,12 @@ export function LoginScreen({ state, onSubmit }: LoginScreenProps): React.JSX.El
         placeholder="Email"
         value={email}
       />
-      <TextInput onChangeText={setPassword} placeholder="Password" secureTextEntry value={password} />
+      <TextInput
+        onChangeText={setPassword}
+        placeholder="Password"
+        secureTextEntry
+        value={password}
+      />
       <Button onPress={() => onSubmit(email, password)} title="Log in" />
       {state.status === 'error' ? <Text>{state.message}</Text> : null}
       {state.status === 'blocked' ? <Text>Check-in staff access is required.</Text> : null}

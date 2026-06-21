@@ -25,4 +25,3 @@ export class ArtistBioProcessingError extends Error {
     this.name = 'ArtistBioProcessingError';
   }
 }
-

@@ -1,4 +1,9 @@
-import type { AuthApiClient, LoginRequest, MobileSession, StaffProfile } from '../../api/checkin-mobile-api.types';
+import type {
+  AuthApiClient,
+  LoginRequest,
+  MobileSession,
+  StaffProfile,
+} from '../../api/checkin-mobile-api.types';
 import type { SessionStore } from '../../storage/session-store';
 
 export type AuthState =

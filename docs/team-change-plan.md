@@ -362,6 +362,7 @@ Scope:
 - no-oversell logic
 - reservation TTL
 - expired reservation release worker
+- Does not enforce `max_per_user`; continue with `implement-per-user-ticket-limit` after this change is complete
 
 Branch:
 
@@ -380,6 +381,8 @@ Owner: Member 3
 Scope:
 
 - max tickets per user enforcement
+- depends on completed inventory reservation transaction path
+- count paid orders plus active, unexpired reservations for the same user and ticket type
 - concurrent same-user request protection
 - tests for limit bypass attempts
 
@@ -402,7 +405,8 @@ Scope:
 - ticket issuance after paid order
 - QR token generation
 - QR hash storage
-- customer ticket detail API/page
+- customer ticket detail API
+- frontend ticket QR display as a follow-up change after backend issuance is complete
 
 Branch:
 
@@ -413,6 +417,12 @@ feature/implement-qr-ticket-issuance
 Primary specs:
 
 - `ticket-purchase`
+
+Follow-up after backend issuance:
+
+- `implement-customer-ticket-qr-page`
+- Scope: fetch ticket detail and render QR code in the customer UI using `qrPayload`
+- Start this only after `implement-qr-ticket-issuance` is complete and archived
 
 #### `implement-payment-simulator`
 
@@ -783,7 +793,7 @@ Start after relevant base modules exist:
 
 ### Wave 4: Reliability and offline behavior
 
-Start after main flows exist:
+Start after main flows exist. For Member 3 ticketing work, do `implement-per-user-ticket-limit` immediately after `implement-inventory-reservation` before QR issuance/payment hardening, because it extends the checkout transaction path.
 
 - `implement-per-user-ticket-limit`
 - `implement-qr-ticket-issuance`

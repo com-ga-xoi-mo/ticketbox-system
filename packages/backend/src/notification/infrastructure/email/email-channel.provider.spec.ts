@@ -7,10 +7,9 @@ import { LocalEmailChannelAdapter } from './local-email-channel.adapter';
 import { SmtpEmailChannelAdapter } from './smtp-email-channel.adapter';
 
 function configFixture(
-  overrides: Partial<Pick<
-    PlatformConfigService,
-    'emailProvider' | 'emailFrom' | 'emailSmtpHost' | 'emailSmtpPort'
-  >> = {},
+  overrides: Partial<
+    Pick<PlatformConfigService, 'emailProvider' | 'emailFrom' | 'emailSmtpHost' | 'emailSmtpPort'>
+  > = {},
 ): PlatformConfigService {
   return {
     emailProvider: 'local',
@@ -29,9 +28,7 @@ describe('createEmailChannelAdapter', () => {
   });
 
   it('selects the SMTP adapter for EMAIL_PROVIDER=smtp', () => {
-    const adapter = createEmailChannelAdapter(
-      configFixture({ emailProvider: 'smtp' }),
-    );
+    const adapter = createEmailChannelAdapter(configFixture({ emailProvider: 'smtp' }));
 
     expect(adapter).toBeInstanceOf(SmtpEmailChannelAdapter);
   });
@@ -41,9 +38,7 @@ describe('createEmailChannelAdapter', () => {
       emailProvider: 'sendgrid' as PlatformConfigService['emailProvider'],
     });
 
-    expect(() => createEmailChannelAdapter(config)).toThrow(
-      'Unsupported email provider: sendgrid',
-    );
+    expect(() => createEmailChannelAdapter(config)).toThrow('Unsupported email provider: sendgrid');
   });
 
   it('defaults EMAIL_PROVIDER to local when it is absent', () => {

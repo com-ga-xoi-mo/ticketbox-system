@@ -26,6 +26,7 @@ export interface UpdateConcertCommand {
   startsAt?: Date;
   endsAt?: Date;
   description?: string;
+  slug?: string;
 }
 
 export interface PublishConcertCommand {

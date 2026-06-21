@@ -12,9 +12,7 @@ export interface CheckinTicketRepositoryPort {
 
   hasAcceptedCheckin(ticketId: string): Promise<boolean>;
 
-  recordAcceptedScan(
-    input: RecordAcceptedScanInput,
-  ): Promise<AcceptedScanPersistenceResult>;
+  recordAcceptedScan(input: RecordAcceptedScanInput): Promise<AcceptedScanPersistenceResult>;
 
   recordRejectedScan(input: RecordRejectedScanInput): Promise<{ id: string } | null>;
 }

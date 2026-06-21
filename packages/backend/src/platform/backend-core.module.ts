@@ -7,13 +7,17 @@ import { NotificationModule } from '../notification/notification.module';
 import { GuestListImportModule } from '../guest-list-import/guest-list-import.module';
 import { PlatformConfigModule } from './config/platform-config.module';
 import { DatabaseModule } from './database/database.module';
+import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { RedisModule } from './redis/redis.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
     PlatformConfigModule,
+    StorageModule.forRoot(),
     DatabaseModule,
     RedisModule,
+    RateLimitingModule,
     AuthModule,
     AiArtistBioModule,
     CheckinModule,
@@ -22,8 +26,10 @@ import { RedisModule } from './redis/redis.module';
   ],
   exports: [
     PlatformConfigModule,
+    StorageModule,
     DatabaseModule,
     RedisModule,
+    RateLimitingModule,
     AuthModule,
     AiArtistBioModule,
     CheckinModule,

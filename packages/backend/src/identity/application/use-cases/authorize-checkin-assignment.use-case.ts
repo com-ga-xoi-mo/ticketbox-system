@@ -8,9 +8,7 @@ import { Role } from '../../domain/role.enum';
 import type { CheckinAssignmentAuthorizationCommand } from './authorization.types';
 
 export class AuthorizeCheckinAssignmentUseCase {
-  constructor(
-    private readonly checkinAssignmentRepo: CheckinStaffAssignmentRepositoryPort,
-  ) {}
+  constructor(private readonly checkinAssignmentRepo: CheckinStaffAssignmentRepositoryPort) {}
 
   async execute(cmd: CheckinAssignmentAuthorizationCommand): Promise<void> {
     if (!cmd.actor.roles.includes(Role.CHECKIN_STAFF)) {

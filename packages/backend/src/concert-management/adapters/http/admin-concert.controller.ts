@@ -2,13 +2,18 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   NotFoundException,
   Param,
   Patch,
   Post,
+  Put,
   Request,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import {
   ConcertNotFoundError,
@@ -26,10 +31,21 @@ import { UpdateConcertUseCase } from '../../application/use-cases/update-concert
 import { CreateTicketTypeUseCase } from '../../application/use-cases/create-ticket-type.use-case';
 import { UpdateTicketTypeUseCase } from '../../application/use-cases/update-ticket-type.use-case';
 import { ArchiveTicketTypeUseCase } from '../../application/use-cases/archive-ticket-type.use-case';
+import { UpdateTicketTypeZoneMappingsUseCase } from '../../application/use-cases/update-ticket-type-zone-mappings.use-case';
+import { UploadPosterUseCase } from '../../application/use-cases/upload-poster.use-case';
+import { UploadSeatingMapUseCase } from '../../application/use-cases/upload-seating-map.use-case';
+import { UpsertSeatingZonesUseCase } from '../../application/use-cases/upsert-seating-zones.use-case';
+import { ListAdminConcertsUseCase } from '../../application/use-cases/list-admin-concerts.use-case';
+import { GetAdminConcertUseCase } from '../../application/use-cases/get-admin-concert.use-case';
 import { CreateConcertDto } from './dto/create-concert.dto';
 import { UpdateConcertDto } from './dto/update-concert.dto';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { UpdateTicketTypeDto } from './dto/update-ticket-type.dto';
+import { UpdateZoneMappingsDto } from './dto/update-zone-mappings.dto';
+import { UpsertSeatingZonesDto } from './dto/upsert-seating-zones.dto';
+import { mapPosterErrors } from './poster-error.mapper';
+import { mapSeatingMapErrors } from './seating-map-error.mapper';
+import type { UploadedMemoryFile } from './upload-file.type';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,13 +59,31 @@ export class AdminConcertController {
     private readonly createTicketTypeUseCase: CreateTicketTypeUseCase,
     private readonly updateTicketTypeUseCase: UpdateTicketTypeUseCase,
     private readonly archiveTicketTypeUseCase: ArchiveTicketTypeUseCase,
+    private readonly uploadPosterUseCase: UploadPosterUseCase,
+    private readonly uploadSeatingMapUseCase: UploadSeatingMapUseCase,
+    private readonly upsertSeatingZonesUseCase: UpsertSeatingZonesUseCase,
+    private readonly updateTicketTypeZoneMappingsUseCase: UpdateTicketTypeZoneMappingsUseCase,
+    private readonly listAdminConcertsUseCase: ListAdminConcertsUseCase,
+    private readonly getAdminConcertUseCase: GetAdminConcertUseCase,
   ) {}
 
+  @Get('concerts')
+  async list() {
+    return this.handleErrors(() => this.listAdminConcertsUseCase.execute());
+  }
+
+  @Get('concerts/:id')
+  async get(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
+    return this.handleErrors(() =>
+      this.getAdminConcertUseCase.execute({
+        concertId: id,
+        adminId: req.user.id,
+      }),
+    );
+  }
+
   @Post('concerts')
-  async create(
-    @Body() dto: CreateConcertDto,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.createConcertUseCase.execute({
         createdById: req.user.id,
@@ -86,15 +120,13 @@ export class AdminConcertController {
         startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
         description: dto.description,
+        slug: dto.slug,
       }),
     );
   }
 
   @Post('concerts/:id/publish')
-  async publish(
-    @Param('id') id: string,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.publishConcertUseCase.execute({
         concertId: id,
@@ -106,10 +138,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/cancel')
-  async cancel(
-    @Param('id') id: string,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.cancelConcertUseCase.execute({
         concertId: id,
@@ -184,6 +213,88 @@ export class AdminConcertController {
         requesterId: req.user.id,
         requesterRole: Role.ADMIN,
         allowAdminOverride: true,
+      }),
+    );
+  }
+
+  @Post('concerts/:id/poster')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: Number(process.env.POSTER_IMAGE_MAX_BYTES ?? 5_242_880) },
+    }),
+  )
+  async uploadPoster(
+    @Param('id') concertId: string,
+    @UploadedFile() file: UploadedMemoryFile | undefined,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapPosterErrors(() =>
+      this.uploadPosterUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+        fileBuffer: file?.buffer ?? Buffer.alloc(0),
+        originalName: file?.originalname ?? '',
+        mimeType: file?.mimetype ?? '',
+        sizeBytes: file?.size ?? 0,
+      }),
+    );
+  }
+
+  @Post('concerts/:id/seating-map')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: Number(process.env.SEATING_MAP_SVG_MAX_BYTES ?? 5_242_880) },
+    }),
+  )
+  async uploadSeatingMap(
+    @Param('id') concertId: string,
+    @UploadedFile() file: UploadedMemoryFile | undefined,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapSeatingMapErrors(() =>
+      this.uploadSeatingMapUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+        fileBuffer: file?.buffer ?? Buffer.alloc(0),
+        originalName: file?.originalname ?? '',
+        mimeType: file?.mimetype ?? '',
+        sizeBytes: file?.size ?? 0,
+      }),
+    );
+  }
+
+  @Put('concerts/:id/seating-zones')
+  async upsertZones(
+    @Param('id') concertId: string,
+    @Body() dto: UpsertSeatingZonesDto,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapSeatingMapErrors(() =>
+      this.upsertSeatingZonesUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+        zones: dto.zones,
+      }),
+    );
+  }
+
+  @Put('concerts/:id/ticket-types/:typeId/zone-mappings')
+  async updateZoneMappings(
+    @Param('id') concertId: string,
+    @Param('typeId') ticketTypeId: string,
+    @Body() dto: UpdateZoneMappingsDto,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapSeatingMapErrors(() =>
+      this.updateTicketTypeZoneMappingsUseCase.execute({
+        concertId,
+        ticketTypeId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+        seatingZoneIds: dto.seatingZoneIds,
       }),
     );
   }

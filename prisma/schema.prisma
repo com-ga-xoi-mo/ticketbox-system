@@ -389,6 +389,7 @@ model Order {
   orderNumber          String      @unique @map("order_number") @db.VarChar(80)
   userId               String      @map("user_id") @db.Uuid
   concertId            String      @map("concert_id") @db.Uuid
+  idempotencyKey       String?     @map("idempotency_key") @db.VarChar(80)
   status               OrderStatus @default(PENDING_PAYMENT)
   totalAmountVnd       Int         @map("total_amount_vnd")
   reservationExpiresAt DateTime?   @map("reservation_expires_at") @db.Timestamptz(6)
@@ -407,6 +408,7 @@ model Order {
   @@index([userId, status])
   @@index([concertId, status])
   @@index([status, reservationExpiresAt])
+  @@unique([userId, idempotencyKey])
   @@map("orders")
 }
 

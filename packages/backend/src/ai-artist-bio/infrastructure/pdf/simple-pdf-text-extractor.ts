@@ -10,11 +10,8 @@ export class SimplePdfTextExtractor implements PdfTextExtractorPort {
       .map((match) => match[1])
       .join(' ');
 
-    const printable = content
-      .replace(/[^\x20-\x7E\n\r\t]+/g, ' ')
-      .replace(/[<>{}[\]()/\\%]/g, ' ');
+    const printable = content.replace(/[^\x20-\x7E\n\r\t]+/g, ' ').replace(/[<>{}[\]()/\\%]/g, ' ');
 
     return `${literalStrings} ${printable}`;
   }
 }
-

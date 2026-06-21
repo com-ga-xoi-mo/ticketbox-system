@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
 
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
@@ -121,4 +113,3 @@ export class AdminArtistBioController {
     });
   }
 }
-
