@@ -30,6 +30,13 @@ services:
       timeout: 5s
       retries: 10
 
+  maildev:
+    image: maildev/maildev:2.1.0
+    container_name: ticketbox-maildev
+    ports:
+      - '1025:1025'
+      - '1080:1080'
+
 volumes:
   postgres_data:
   redis_data:

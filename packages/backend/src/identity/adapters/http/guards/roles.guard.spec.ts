@@ -27,22 +27,17 @@ describe('RolesGuard', () => {
   });
 
   it('allows organizer-admin route role checks to pass for ORGANIZER', () => {
-    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([
-      Role.ORGANIZER,
-      Role.ADMIN,
-    ]);
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([Role.ORGANIZER, Role.ADMIN]);
 
-    expect(
-      guard.canActivate(makeContext({ id: 'organizer-1', roles: [Role.ORGANIZER] })),
-    ).toBe(true);
+    expect(guard.canActivate(makeContext({ id: 'organizer-1', roles: [Role.ORGANIZER] }))).toBe(
+      true,
+    );
   });
 
   it('allows platform-admin route role checks for ADMIN', () => {
     vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue([Role.ADMIN]);
 
-    expect(guard.canActivate(makeContext({ id: 'admin-1', roles: [Role.ADMIN] }))).toBe(
-      true,
-    );
+    expect(guard.canActivate(makeContext({ id: 'admin-1', roles: [Role.ADMIN] }))).toBe(true);
   });
 
   it('denies non-admin users on platform-admin routes with 403', () => {

@@ -1,6 +1,4 @@
-export const CHECKIN_STAFF_ASSIGNMENT_REPOSITORY = Symbol(
-  'CheckinStaffAssignmentRepository',
-);
+export const CHECKIN_STAFF_ASSIGNMENT_REPOSITORY = Symbol('CheckinStaffAssignmentRepository');
 
 export type CheckinAssignmentStatus = 'ACTIVE' | 'REVOKED';
 
@@ -21,6 +19,8 @@ export interface CreateCheckinStaffAssignmentData {
 }
 
 export interface CheckinStaffAssignmentRepositoryPort {
+  findAssignmentById(assignmentId: string): Promise<CheckinStaffAssignmentRecord | null>;
+
   findActiveAssignment(params: {
     staffUserId: string;
     concertId: string;

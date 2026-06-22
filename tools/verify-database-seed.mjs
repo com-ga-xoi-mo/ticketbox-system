@@ -65,6 +65,8 @@ async function main() {
       },
     },
     include: {
+      posterAsset: true,
+      seatingMapAsset: true,
       seatingZones: true,
       ticketTypes: {
         include: {
@@ -76,15 +78,27 @@ async function main() {
 
   for (const concert of concerts) {
     assert(concert.status === 'PUBLISHED', `${concert.title} must be published`);
+    assert(concert.startsAt > new Date(), `${concert.title} must be upcoming`);
+    assert(concert.posterAsset, `${concert.title} must have a poster asset`);
+    assert(concert.seatingMapAsset, `${concert.title} must have a seating map asset`);
     assert(concert.seatingZones.length > 0, `${concert.title} must have seating zones`);
     assert(concert.ticketTypes.length > 0, `${concert.title} must have ticket types`);
     for (const ticketType of concert.ticketTypes) {
       assert(ticketType.totalQuantity > 0, `${ticketType.code} must have capacity`);
-      assert(ticketType.reservedQuantity === 0, `${ticketType.code} reserved quantity must start at 0`);
+      assert(
+        ticketType.reservedQuantity === 0,
+        `${ticketType.code} reserved quantity must start at 0`,
+      );
       assert(ticketType.soldQuantity === 0, `${ticketType.code} sold quantity must start at 0`);
       assert(ticketType.maxPerUser > 0, `${ticketType.code} max per user must be positive`);
-      assert(ticketType.saleStartsAt < ticketType.saleEndsAt, `${ticketType.code} sale window is invalid`);
-      assert(ticketType.zones.length > 0, `${ticketType.code} must map to at least one seating zone`);
+      assert(
+        ticketType.saleStartsAt < ticketType.saleEndsAt,
+        `${ticketType.code} sale window is invalid`,
+      );
+      assert(
+        ticketType.zones.length > 0,
+        `${ticketType.code} must map to at least one seating zone`,
+      );
       for (const mapping of ticketType.zones) {
         assert(
           mapping.concertId === concert.id,

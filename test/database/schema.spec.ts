@@ -39,6 +39,30 @@ describe('Prisma schema validation', () => {
     expect(client.CheckinEventResult).toBeDefined();
     expect(client.NotificationStatus).toBeDefined();
     expect(client.ArtistBioStatus).toBeDefined();
+    expect(client.GuestListRowDisposition).toBeDefined();
+    expect(client.GuestListEntryStatus.ACTIVE).toBe('ACTIVE');
+  });
+
+  it('generates durable guest-list import and active projection fields', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const batch = Prisma.dmmf.datamodel.models.find((model) => model.name === 'GuestListBatch');
+    const row = Prisma.dmmf.datamodel.models.find((model) => model.name === 'GuestListImportRow');
+    const guest = Prisma.dmmf.datamodel.models.find((model) => model.name === 'GuestListEntry');
+    expect(batch?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining([
+        'checksum',
+        'importSequence',
+        'leaseOwner',
+        'leaseExpiresAt',
+        'reportStorageKey',
+      ]),
+    );
+    expect(row?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(['batchId', 'rowNumber', 'disposition', 'reasonMessage']),
+    );
+    expect(guest?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(['concertId', 'latestBatchId', 'normalizedPhone', 'cancelledAt']),
+    );
   });
 
   it('exports all required RoleCode values', async () => {
@@ -54,6 +78,21 @@ describe('Prisma schema validation', () => {
     expect(ConcertStatus.DRAFT).toBe('DRAFT');
     expect(ConcertStatus.PUBLISHED).toBe('PUBLISHED');
     expect(ConcertStatus.CANCELLED).toBe('CANCELLED');
+  });
+
+  it('generates ArtistBio retry metadata fields from Prisma schema', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const artistBio = Prisma.dmmf.datamodel.models.find((model) => model.name === 'ArtistBio');
+
+    expect(artistBio?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining([
+        'retryCount',
+        'maxAttempts',
+        'lastAttemptedAt',
+        'nextRetryAt',
+        'metadata',
+      ]),
+    );
   });
 
   it('exports all required UserStatus values', async () => {

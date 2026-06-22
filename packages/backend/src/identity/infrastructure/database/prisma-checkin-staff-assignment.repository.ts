@@ -26,10 +26,16 @@ function isPrismaUniqueError(err: unknown): boolean {
 }
 
 @Injectable()
-export class PrismaCheckinStaffAssignmentRepository
-  implements CheckinStaffAssignmentRepositoryPort
-{
+export class PrismaCheckinStaffAssignmentRepository implements CheckinStaffAssignmentRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findAssignmentById(assignmentId: string): Promise<CheckinStaffAssignmentRecord | null> {
+    const assignment = await this.prisma.checkinStaffAssignment.findUnique({
+      where: { id: assignmentId },
+    });
+
+    return assignment ? this.toAssignmentRecord(assignment) : null;
+  }
 
   async findActiveAssignment(params: {
     staffUserId: string;
@@ -87,11 +93,7 @@ export class PrismaCheckinStaffAssignmentRepository
     });
 
     if (existing) {
-      throw new DuplicateCheckinAssignmentError(
-        data.staffUserId,
-        data.concertId,
-        data.gateName,
-      );
+      throw new DuplicateCheckinAssignmentError(data.staffUserId, data.concertId, data.gateName);
     }
 
     try {
@@ -107,11 +109,7 @@ export class PrismaCheckinStaffAssignmentRepository
       return this.toAssignmentRecord(assignment);
     } catch (err: unknown) {
       if (isPrismaUniqueError(err)) {
-        throw new DuplicateCheckinAssignmentError(
-          data.staffUserId,
-          data.concertId,
-          data.gateName,
-        );
+        throw new DuplicateCheckinAssignmentError(data.staffUserId, data.concertId, data.gateName);
       }
       throw err;
     }

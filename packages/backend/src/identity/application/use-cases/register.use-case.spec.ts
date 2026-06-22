@@ -99,9 +99,7 @@ describe('RegisterUseCase', () => {
   });
 
   it('rethrows unexpected errors from the repository', async () => {
-    vi.mocked(userRepo.createWithAudienceRole).mockRejectedValue(
-      new Error('DB connection lost'),
-    );
+    vi.mocked(userRepo.createWithAudienceRole).mockRejectedValue(new Error('DB connection lost'));
 
     await expect(
       useCase.execute({ email: 'x@x.com', password: 'pw12345678', displayName: 'X' }),

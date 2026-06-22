@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "TicketBox Check-in",
+    "slug": "ticketbox-checkin",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000"
+    }
+  }
+}
