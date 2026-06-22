@@ -8,11 +8,16 @@ import {
 } from '../ordering/order.module';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { DatabaseModule } from '../platform/database/database.module';
+import { RedisModule } from '../platform/redis/redis.module';
 import { PaymentController } from './adapters/http/payment.controller';
 import { InitiatePaymentUseCase } from './application/use-cases/initiate-payment.use-case';
 import { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';
 import { PAYMENT_GATEWAY, type PaymentGatewayPort } from './domain/ports/payment-gateway.port';
+import {
+  PAYMENT_IDEMPOTENCY,
+  type PaymentIdempotencyPort,
+} from './domain/ports/payment-idempotency.port';
 import {
   PAYMENT_REPOSITORY,
   type PaymentRepositoryPort,
@@ -20,20 +25,28 @@ import {
 import { PrismaPaymentRepository } from './infrastructure/database/prisma-payment.repository';
 import { MomoPaymentGateway } from './infrastructure/momo/momo-payment-gateway';
 import { PaymentGatewayRegistry } from './infrastructure/payment-gateway-registry';
+import { RedisPaymentIdempotencyStore } from './infrastructure/redis/redis-payment-idempotency.store';
 import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-payment-gateway';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, AuthModule, OrderModule],
+  imports: [PlatformConfigModule, DatabaseModule, RedisModule, AuthModule, OrderModule],
   controllers: [PaymentController],
   providers: [
     {
       provide: InitiatePaymentUseCase,
-      inject: [GetOrderUseCase, PAYMENT_REPOSITORY, PAYMENT_GATEWAY],
+      inject: [GetOrderUseCase, PAYMENT_REPOSITORY, PAYMENT_GATEWAY, PAYMENT_IDEMPOTENCY],
       useFactory: (
         getOrderUseCase: GetOrderUseCase,
         paymentRepository: PaymentRepositoryPort,
         paymentGateway: PaymentGatewayPort,
-      ) => new InitiatePaymentUseCase(getOrderUseCase, paymentRepository, paymentGateway),
+        paymentIdempotency: PaymentIdempotencyPort,
+      ) =>
+        new InitiatePaymentUseCase(
+          getOrderUseCase,
+          paymentRepository,
+          paymentGateway,
+          paymentIdempotency,
+        ),
     },
     {
       provide: ProcessSimulatorPaymentCallbackUseCase,
@@ -62,6 +75,10 @@ import { SimulatorPaymentGateway } from './infrastructure/simulator/simulator-pa
     {
       provide: PAYMENT_REPOSITORY,
       useClass: PrismaPaymentRepository,
+    },
+    {
+      provide: PAYMENT_IDEMPOTENCY,
+      useClass: RedisPaymentIdempotencyStore,
     },
     SimulatorPaymentGateway,
     MomoPaymentGateway,

@@ -62,6 +62,34 @@ export class InvalidMomoIpnSignatureError extends Error {
   }
 }
 
+export class PaymentIdempotencyKeyMismatchError extends Error {
+  constructor() {
+    super('Payment initiation idempotency key was reused with a different request');
+    this.name = 'PaymentIdempotencyKeyMismatchError';
+  }
+}
+
+export class PaymentInitiationInProgressError extends Error {
+  constructor() {
+    super('Payment initiation is already in progress for this idempotency key');
+    this.name = 'PaymentInitiationInProgressError';
+  }
+}
+
+export class PaymentIdempotencyStoreUnavailableError extends Error {
+  constructor(message = 'Payment idempotency store is unavailable') {
+    super(message);
+    this.name = 'PaymentIdempotencyStoreUnavailableError';
+  }
+}
+
+export class PaymentInitiationPreviouslyFailedError extends Error {
+  constructor() {
+    super('Payment initiation previously failed for this idempotency key; retry with a new key');
+    this.name = 'PaymentInitiationPreviouslyFailedError';
+  }
+}
+
 export function isFinalSimulatorOutcome(outcome: PaymentSimulatorOutcome): boolean {
   return [PaymentSimulatorOutcome.SUCCESS, PaymentSimulatorOutcome.FAILURE].includes(outcome);
 }
