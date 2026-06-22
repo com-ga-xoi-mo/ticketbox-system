@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BadRequestException, ConflictException } from '@nestjs/common';
 
 import { Role } from '../../../identity/domain/role.enum';
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { TicketType } from '../../domain/concert.types';
+import {
+  InvalidSalePeriodError,
+  InvalidTicketPriceError,
+  InvalidTicketQuantityError,
+  TicketTypeCodeAlreadyExistsError,
+  TicketTypeHasSoldTicketsError,
+} from '../../domain/errors';
 import { CreateTicketTypeUseCase } from './create-ticket-type.use-case';
 import { UpdateTicketTypeUseCase } from './update-ticket-type.use-case';
 import { ArchiveTicketTypeUseCase } from './archive-ticket-type.use-case';
@@ -18,6 +24,8 @@ describe('Ticket Type Write Use Cases', () => {
       createConcert: vi.fn(),
       updateConcert: vi.fn(),
       findConcertById: vi.fn(),
+      findConcertsByOwner: vi.fn(),
+      findAllConcerts: vi.fn(),
       createTicketType: vi.fn(),
       updateTicketType: vi.fn(),
       archiveTicketType: vi.fn(),
@@ -46,7 +54,7 @@ describe('Ticket Type Write Use Cases', () => {
           saleEndsAt: new Date('2026-06-20T00:00:00Z'),
           maxPerUser: 4,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidTicketPriceError);
     });
 
     it('throws validation error for zero quantity', async () => {
@@ -65,7 +73,7 @@ describe('Ticket Type Write Use Cases', () => {
           saleEndsAt: new Date('2026-06-20T00:00:00Z'),
           maxPerUser: 4,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidTicketQuantityError);
     });
 
     it('throws validation error for saleEndsAt <= saleStartsAt', async () => {
@@ -84,10 +92,10 @@ describe('Ticket Type Write Use Cases', () => {
           saleEndsAt: new Date('2026-06-15T00:00:00Z'),
           maxPerUser: 4,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidSalePeriodError);
     });
 
-    it('throws ConflictException if ticket type code already exists in concert', async () => {
+    it('throws domain conflict error if ticket type code already exists in concert', async () => {
       const useCase = new CreateTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const existing: TicketType = {
         id: 'tt-1',
@@ -123,12 +131,12 @@ describe('Ticket Type Write Use Cases', () => {
           saleEndsAt: new Date('2026-06-20T00:00:00Z'),
           maxPerUser: 4,
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(TicketTypeCodeAlreadyExistsError);
     });
   });
 
   describe('UpdateTicketTypeUseCase', () => {
-    it('throws ConflictException when updating code to another existing ticket type code in same concert', async () => {
+    it('throws domain conflict error when updating code to another existing ticket type code in same concert', async () => {
       const useCase = new UpdateTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const existing: TicketType[] = [
         {
@@ -178,12 +186,12 @@ describe('Ticket Type Write Use Cases', () => {
           allowAdminOverride: false,
           code: 'vip', // conflict with tt-1
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(TicketTypeCodeAlreadyExistsError);
     });
   });
 
   describe('ArchiveTicketTypeUseCase', () => {
-    it('throws BadRequestException if ticket type has soldQuantity > 0', async () => {
+    it('throws domain validation error if ticket type has soldQuantity > 0', async () => {
       const useCase = new ArchiveTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const ticketType: TicketType = {
         id: 'tt-1',
@@ -213,7 +221,7 @@ describe('Ticket Type Write Use Cases', () => {
           requesterRole: Role.ORGANIZER,
           allowAdminOverride: false,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(TicketTypeHasSoldTicketsError);
     });
 
     it('sets status to ARCHIVED if soldQuantity + reservedQuantity === 0', async () => {
