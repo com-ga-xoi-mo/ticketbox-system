@@ -99,7 +99,12 @@ const sampleSummaries: ConcertSummary[] = [
     startsAt: new Date('2026-07-01T18:00:00.000Z'),
     endsAt: new Date('2026-07-01T22:00:00.000Z'),
     posterAsset: null,
-    availabilitySummary: { totalAvailableQuantity: 100, minPriceVnd: 100000, maxPriceVnd: 200000, ticketTypeCount: 2 },
+    availabilitySummary: {
+      totalAvailableQuantity: 100,
+      minPriceVnd: 100000,
+      maxPriceVnd: 200000,
+      ticketTypeCount: 2,
+    },
   },
 ];
 
@@ -118,7 +123,36 @@ const sampleDetail: ConcertDetail = {
   posterAsset: null,
   seatingMapAsset: null,
   seatingZones: [],
-  ticketTypes: [],
+  ticketTypes: [
+    {
+      id: 'ticket-type-1',
+      code: 'VIP',
+      name: 'VIP',
+      description: null,
+      priceVnd: 100000,
+      totalQuantity: 100,
+      availableQuantity: 100,
+      maxPerUser: 4,
+      saleStartsAt: new Date('2026-06-20T00:00:00.000Z'),
+      saleEndsAt: new Date('2026-07-01T17:00:00.000Z'),
+      status: 'ACTIVE',
+      zoneIds: [],
+    },
+    {
+      id: 'ticket-type-missing-availability',
+      code: 'GA',
+      name: 'General Admission',
+      description: null,
+      priceVnd: 50000,
+      totalQuantity: 50,
+      availableQuantity: 50,
+      maxPerUser: 4,
+      saleStartsAt: new Date('2026-06-20T00:00:00.000Z'),
+      saleEndsAt: new Date('2026-07-01T17:00:00.000Z'),
+      status: 'ACTIVE',
+      zoneIds: [],
+    },
+  ],
   ticketTypeZoneMappings: [],
 };
 
@@ -126,7 +160,19 @@ const sampleAvailability: ConcertAvailabilitySnapshot = {
   concertId: 'c1',
   slug: 'summer-beats',
   generatedAt: new Date('2026-06-15T00:00:00.000Z'),
-  ticketTypes: [],
+  ticketTypes: [
+    {
+      ticketTypeId: 'ticket-type-1',
+      code: 'VIP',
+      name: 'VIP',
+      totalQuantity: 100,
+      availableQuantity: 80,
+      status: 'ACTIVE',
+      saleStartsAt: new Date('2026-06-20T00:00:00.000Z'),
+      saleEndsAt: new Date('2026-07-01T17:00:00.000Z'),
+      zoneIds: [],
+    },
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -152,19 +198,48 @@ describe('5.2 CachingListPublicConcertsUseCase: serves from cache after first lo
 });
 
 describe('5.2 CachingGetPublicConcertDetailUseCase: serves from cache after first load', () => {
-  it('calls the wrapped use-case loader only once for the same slug', async () => {
+  it('calls the static detail loader once while composing short-TTL availability on every read', async () => {
     const innerExecute = vi.fn().mockResolvedValue(sampleDetail);
     const inner = { execute: innerExecute };
+    const availabilityExecute = vi.fn().mockResolvedValue(sampleAvailability);
     const cache = new FakeCacheService();
+    const availability = new CachingGetConcertAvailabilityUseCase(
+      { execute: availabilityExecute } as any,
+      cache,
+    );
 
-    const decorator = new CachingGetPublicConcertDetailUseCase(inner as any, cache);
+    const decorator = new CachingGetPublicConcertDetailUseCase(inner as any, cache, availability);
 
     const result1 = await decorator.execute('summer-beats', now);
+    cache.prime(
+      ConcertCacheKeys.availability('summer-beats'),
+      {
+        ...sampleAvailability,
+        ticketTypes: [
+          {
+            ...sampleAvailability.ticketTypes[0],
+            availableQuantity: 72,
+          },
+        ],
+      },
+      -1,
+    );
+    availabilityExecute.mockResolvedValueOnce({
+      ...sampleAvailability,
+      ticketTypes: [
+        {
+          ...sampleAvailability.ticketTypes[0],
+          availableQuantity: 65,
+        },
+      ],
+    });
     const result2 = await decorator.execute('summer-beats', now);
 
-    expect(result1).toEqual(sampleDetail);
-    expect(result2).toEqual(sampleDetail);
+    expect(result1.ticketTypes[0].availableQuantity).toBe(80);
+    expect(result2.ticketTypes[0].availableQuantity).toBe(65);
+    expect(result2.ticketTypes[1].availableQuantity).toBe(50);
     expect(innerExecute).toHaveBeenCalledTimes(1);
+    expect(availabilityExecute).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -239,16 +314,26 @@ describe('5.4 Exceptions not cached: loader errors propagate and are not stored'
     const inner = { execute: innerExecute };
     const cache = new FakeCacheService();
 
-    const decorator = new CachingGetPublicConcertDetailUseCase(inner as any, cache);
+    const availability = { execute: vi.fn() };
+    const decorator = new CachingGetPublicConcertDetailUseCase(
+      inner as any,
+      cache,
+      availability as any,
+    );
 
-    await expect(decorator.execute('unknown-slug', now)).rejects.toThrow(PublicConcertNotFoundError);
+    await expect(decorator.execute('unknown-slug', now)).rejects.toThrow(
+      PublicConcertNotFoundError,
+    );
 
     // Cache should not have stored anything for this key
     expect(cache.has(ConcertCacheKeys.detail('unknown-slug'))).toBe(false);
 
     // Second call still hits the loader (nothing was cached)
-    await expect(decorator.execute('unknown-slug', now)).rejects.toThrow(PublicConcertNotFoundError);
+    await expect(decorator.execute('unknown-slug', now)).rejects.toThrow(
+      PublicConcertNotFoundError,
+    );
     expect(innerExecute).toHaveBeenCalledTimes(2);
+    expect(availability.execute).not.toHaveBeenCalled();
   });
 });
 
@@ -273,7 +358,16 @@ describe('5.5 Invalidation: writes flush the catalog cache', () => {
     const inner = { execute: innerExecute };
 
     const decorator = new InvalidatingCreateConcertUseCase(inner as any, cache);
-    await decorator.execute({ createdById: 'u1', slug: 'new-concert', title: 'New', artistName: 'Foo', venueName: 'Bar', city: 'HCM', startsAt: new Date(), endsAt: new Date() });
+    await decorator.execute({
+      createdById: 'u1',
+      slug: 'new-concert',
+      title: 'New',
+      artistName: 'Foo',
+      venueName: 'Bar',
+      city: 'HCM',
+      startsAt: new Date(),
+      endsAt: new Date(),
+    });
 
     // All concert keys should now be gone
     expect(cache.has(ConcertCacheKeys.list())).toBe(false);

@@ -162,7 +162,14 @@ import { AssetController } from './adapters/http/asset.controller';
       provide: GetPublicConcertDetailUseCase,
       inject: [PUBLIC_CONCERT_CATALOG, CACHE_SERVICE],
       useFactory: (catalog: PublicConcertCatalogPort, cache: CacheServicePort) =>
-        new CachingGetPublicConcertDetailUseCase(new GetPublicConcertDetailUseCase(catalog), cache),
+        new CachingGetPublicConcertDetailUseCase(
+          new GetPublicConcertDetailUseCase(catalog),
+          cache,
+          new CachingGetConcertAvailabilityUseCase(
+            new GetConcertAvailabilityUseCase(catalog),
+            cache,
+          ),
+        ),
     },
     {
       provide: GetConcertAvailabilityUseCase,
@@ -192,7 +199,8 @@ import { AssetController } from './adapters/http/asset.controller';
         repo: ConcertWriteRepositoryPort,
         authUseCase: AuthorizeConcertManagementUseCase,
         cache: CacheServicePort,
-      ) => new InvalidatingPublishConcertUseCase(new PublishConcertUseCase(repo, authUseCase), cache),
+      ) =>
+        new InvalidatingPublishConcertUseCase(new PublishConcertUseCase(repo, authUseCase), cache),
     },
     {
       provide: CancelConcertUseCase,
