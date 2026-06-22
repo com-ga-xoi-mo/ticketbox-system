@@ -16,7 +16,11 @@ export class PrismaPosterWriteRepository implements PosterWriteRepositoryPort {
     assetData: CreatePosterAssetData,
     concertId: string,
     oldAssetId?: string,
-  ): Promise<{ asset: PosterAsset; concert: { id: string; posterAssetId: string } }> {
+  ): Promise<{
+    asset: PosterAsset;
+    concert: { id: string; posterAssetId: string };
+    replacedStorageKey: string | null;
+  }> {
     return this.prisma.$transaction(async (tx) => {
       const concert = await tx.concert.findUnique({
         where: { id: concertId },
@@ -45,11 +49,14 @@ export class PrismaPosterWriteRepository implements PosterWriteRepositoryPort {
         select: { id: true, posterAssetId: true },
       });
 
+      let replacedStorageKey: string | null = null;
       if (currentAssetId && currentAssetId !== asset.id) {
-        await tx.asset.updateMany({
+        const previousAsset = await tx.asset.findUnique({
           where: { id: currentAssetId },
-          data: { status: AssetStatus.ARCHIVED },
+          select: { storageKey: true },
         });
+        replacedStorageKey = previousAsset?.storageKey ?? null;
+        await tx.asset.delete({ where: { id: currentAssetId } });
       }
 
       return {
@@ -58,6 +65,7 @@ export class PrismaPosterWriteRepository implements PosterWriteRepositoryPort {
           id: updatedConcert.id,
           posterAssetId: updatedConcert.posterAssetId ?? asset.id,
         },
+        replacedStorageKey,
       };
     });
   }

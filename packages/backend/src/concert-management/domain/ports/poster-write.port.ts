@@ -18,7 +18,11 @@ export interface PosterWriteRepositoryPort {
     assetData: CreatePosterAssetData,
     concertId: string,
     oldAssetId?: string,
-  ): Promise<{ asset: PosterAsset; concert: { id: string; posterAssetId: string } }>;
+  ): Promise<{
+    asset: PosterAsset;
+    concert: { id: string; posterAssetId: string };
+    replacedStorageKey: string | null;
+  }>;
 
   findAssetById(id: string): Promise<PosterAsset | null>;
 }

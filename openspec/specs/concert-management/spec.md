@@ -305,9 +305,13 @@ The system SHALL allow organizers and admins to upload a raster poster image for
 - **WHEN** an organizer attempts to upload a poster for a concert they do not own via the organizer route
 - **THEN** the system SHALL reject the request with a forbidden error
 
-#### Scenario: Re-upload replaces previous poster asset
+#### Scenario: Re-upload replaces and deletes previous poster asset
 - **WHEN** an organizer or admin uploads a new valid poster for a concert that already has a poster asset
-- **THEN** the system SHALL store the new file, create a new asset record, update `concert.posterAssetId`, and mark the old poster asset as archived
+- **THEN** the system SHALL store the new file, create a new asset record, update `concert.posterAssetId`, delete the previous poster `Asset` record within the same transaction, and delete the previous poster's stored object from `ObjectStoragePort` after the transaction commits
+
+#### Scenario: Stored-object cleanup failure does not fail the upload
+- **WHEN** the new poster has been persisted and `concert.posterAssetId` updated, but deleting the previous poster's stored object from `ObjectStoragePort` fails
+- **THEN** the system SHALL still return the upload as successful and SHALL NOT roll back the new poster asset
 
 ### Requirement: Poster image validation
 The system SHALL only accept raster poster uploads whose declared content type, filename extension, size, and magic bytes match an allowed poster image format.
@@ -408,9 +412,13 @@ The system SHALL allow organizers and admins to upload a seating map SVG file fo
 - **WHEN** an organizer attempts to upload a seating map for a concert they do not own via the organizer route
 - **THEN** the system SHALL reject the request with a forbidden error
 
-#### Scenario: Re-upload replaces previous seating map asset
-- **WHEN** an organizer or admin uploads a new seating map for a concert that already has a seating map asset
-- **THEN** the system SHALL store the new file, create a new asset record, update `concert.seatingMapAssetId`, and mark the old asset as archived
+#### Scenario: Re-upload replaces and deletes previous seating map asset
+- **WHEN** an organizer uploads a new valid SVG seating map for a concert that already has a seating map asset
+- **THEN** the system SHALL store the new file, create a new asset record, update `concert.seatingMapAssetId`, delete the previous seating map `Asset` record within the same transaction, and delete the previous seating map's stored object from `ObjectStoragePort` after the transaction commits
+
+#### Scenario: Stored-object cleanup failure does not fail the seating map upload
+- **WHEN** the new seating map has been persisted and `concert.seatingMapAssetId` updated, but deleting the previous seating map's stored object from `ObjectStoragePort` fails
+- **THEN** the system SHALL still return the upload as successful and SHALL NOT roll back the new seating map asset
 
 ### Requirement: Seating map asset metadata persistence
 The system SHALL persist seating map asset metadata in the `assets` table with sufficient information to serve public catalog responses and manage lifecycle.

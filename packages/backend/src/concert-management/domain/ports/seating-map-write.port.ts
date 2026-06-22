@@ -18,7 +18,11 @@ export interface SeatingMapWriteRepositoryPort {
     assetData: CreateSeatingMapAssetData,
     concertId: string,
     oldAssetId?: string,
-  ): Promise<{ asset: SeatingMapAsset; concert: { id: string; seatingMapAssetId: string } }>;
+  ): Promise<{
+    asset: SeatingMapAsset;
+    concert: { id: string; seatingMapAssetId: string };
+    replacedStorageKey: string | null;
+  }>;
 
   findAssetById(id: string): Promise<SeatingMapAsset | null>;
 }

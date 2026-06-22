@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  ConcertNotEditableError,
+  ConcertSlugAlreadyExistsError,
+  InvalidConcertSlugError,
+  InvalidConcertStatusTransitionError,
+} from '../../domain/errors';
 
 import {
   ForbiddenConcertOwnershipError,
@@ -71,7 +76,7 @@ describe('Concert Write Use Cases', () => {
         endsAt: new Date('2026-07-01T22:00:00.000Z'),
       };
 
-      await expect(useCase.execute(command)).rejects.toThrow(BadRequestException);
+      await expect(useCase.execute(command)).rejects.toThrow(InvalidConcertSlugError);
     });
   });
 
@@ -211,7 +216,7 @@ describe('Concert Write Use Cases', () => {
           allowAdminOverride: false,
           title: 'New Title',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ConcertNotEditableError);
     });
 
     it('rejects invalid URL slug during update', async () => {
@@ -247,7 +252,7 @@ describe('Concert Write Use Cases', () => {
           allowAdminOverride: false,
           slug: 'invalid slug!',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidConcertSlugError);
     });
 
     it('throws ConflictException if updated slug is duplicate (P2002 conflict)', async () => {
@@ -284,7 +289,7 @@ describe('Concert Write Use Cases', () => {
           allowAdminOverride: false,
           slug: 'duplicate-slug',
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(ConcertSlugAlreadyExistsError);
     });
   });
 
@@ -359,7 +364,7 @@ describe('Concert Write Use Cases', () => {
           requesterRole: Role.ORGANIZER,
           allowAdminOverride: false,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidConcertStatusTransitionError);
     });
   });
 
@@ -434,7 +439,7 @@ describe('Concert Write Use Cases', () => {
           requesterRole: Role.ORGANIZER,
           allowAdminOverride: false,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidConcertStatusTransitionError);
     });
   });
 
