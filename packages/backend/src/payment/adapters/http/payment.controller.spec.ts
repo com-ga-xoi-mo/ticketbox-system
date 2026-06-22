@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +12,13 @@ import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { OrderNotFoundError } from '../../../ordering/domain/errors';
 import { Payment } from '../../domain/payment.entity';
-import { PaymentOrderNotPendingError } from '../../domain/errors';
+import {
+  PaymentIdempotencyKeyMismatchError,
+  PaymentInitiationInProgressError,
+  PaymentOrderNotPendingError,
+  PaymentProviderCircuitOpenError,
+  PaymentProviderHalfOpenTrialRejectedError,
+} from '../../domain/errors';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
@@ -66,13 +77,14 @@ describe('PaymentController', () => {
 
     const result = await controller.initiatePayment(
       'order-1',
-      { provider: PaymentProvider.MOMO },
+      { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
       { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
     );
 
     expect(initiatePaymentUseCase.execute).toHaveBeenCalledWith({
       orderId: 'order-1',
       userId: 'user-1',
+      idempotencyKey: 'pay-key-1',
       provider: PaymentProvider.MOMO,
     });
     expect(result).toMatchObject({
@@ -85,7 +97,11 @@ describe('PaymentController', () => {
     initiatePaymentUseCase.execute.mockRejectedValue(new OrderNotFoundError('order-1'));
 
     await expect(
-      controller.initiatePayment('order-1', {}, { user: { id: 'user-1', roles: [Role.AUDIENCE] } }),
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -95,8 +111,60 @@ describe('PaymentController', () => {
     );
 
     await expect(
-      controller.initiatePayment('order-1', {}, { user: { id: 'user-1', roles: [Role.AUDIENCE] } }),
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('maps payment idempotency conflicts to 409', async () => {
+    initiatePaymentUseCase.execute.mockRejectedValue(new PaymentIdempotencyKeyMismatchError());
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    initiatePaymentUseCase.execute.mockRejectedValue(new PaymentInitiationInProgressError());
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('maps payment circuit degradation to 503', async () => {
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderCircuitOpenError(PaymentProvider.MOMO, 30000),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderHalfOpenTrialRejectedError(PaymentProvider.MOMO),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
   });
 
   it('processes simulator callback', async () => {

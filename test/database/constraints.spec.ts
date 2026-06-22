@@ -24,6 +24,10 @@ const REQUIRED_CONSTRAINTS = [
   'ticket_types_max_per_user_positive_chk',
   'ticket_types_sale_window_chk',
   'order_items_total_matches_quantity_chk',
+  'guest_list_entries_natural_identifier_check',
+  'guest_list_entries_cancelled_at_check',
+  'guest_list_batches_checksum_format_check',
+  'guest_list_batches_processing_lease_check',
 ];
 
 const REQUIRED_INDEXES = [
@@ -32,6 +36,12 @@ const REQUIRED_INDEXES = [
   'ticket_types_concert_id_code_key',
   'seating_zones_concert_id_svg_element_id_key',
   'idempotency_records_user_id_operation_idempotency_key_key',
+  'guest_list_batches_concert_checksum_key',
+  'guest_list_batches_concert_id_import_sequence_key',
+  'guest_list_import_rows_batch_id_row_number_key',
+  'guest_list_entries_concert_email_key',
+  'guest_list_entries_concert_phone_key',
+  'guest_list_entries_concert_external_ref_key',
 ];
 
 describe('Database constraint verification', () => {

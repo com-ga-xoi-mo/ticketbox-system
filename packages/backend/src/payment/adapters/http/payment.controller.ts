@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -8,6 +9,7 @@ import {
   Post,
   Query,
   Request,
+  ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 
@@ -28,9 +30,16 @@ import {
   InvalidMomoIpnSignatureError,
   InvalidPaymentSimulatorTokenError,
   PaymentCallbackMismatchError,
+  PaymentCircuitBreakerStoreUnavailableError,
   PaymentGatewayRequestError,
+  PaymentIdempotencyKeyMismatchError,
+  PaymentIdempotencyStoreUnavailableError,
+  PaymentInitiationInProgressError,
+  PaymentInitiationPreviouslyFailedError,
   PaymentNotFoundError,
   PaymentOrderNotPendingError,
+  PaymentProviderCircuitOpenError,
+  PaymentProviderHalfOpenTrialRejectedError,
   UnsupportedPaymentProviderError,
   UnsupportedPaymentSimulatorOutcomeError,
 } from '../../domain/errors';
@@ -65,6 +74,7 @@ export class PaymentController {
       const result = await this.initiatePaymentUseCase.execute({
         orderId,
         userId: req.user.id,
+        idempotencyKey: dto.idempotencyKey,
         provider: dto.provider,
       });
 
@@ -128,6 +138,23 @@ export class PaymentController {
   }
 
   private mapPaymentError(err: unknown): never {
+    if (
+      err instanceof PaymentIdempotencyKeyMismatchError ||
+      err instanceof PaymentInitiationInProgressError ||
+      err instanceof PaymentInitiationPreviouslyFailedError
+    ) {
+      throw new ConflictException(err.message);
+    }
+    if (err instanceof PaymentIdempotencyStoreUnavailableError) {
+      throw new ServiceUnavailableException(err.message);
+    }
+    if (
+      err instanceof PaymentProviderCircuitOpenError ||
+      err instanceof PaymentProviderHalfOpenTrialRejectedError ||
+      err instanceof PaymentCircuitBreakerStoreUnavailableError
+    ) {
+      throw new ServiceUnavailableException(err.message);
+    }
     if (
       err instanceof InvalidPaymentSimulatorTokenError ||
       err instanceof PaymentCallbackMismatchError ||

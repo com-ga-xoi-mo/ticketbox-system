@@ -8,6 +8,7 @@ import {
   NOTIFICATION_PURCHASE_CONFIRMATION_QUEUE,
   PLATFORM_HEALTH_QUEUE,
   ARTIST_BIO_QUEUE_NAME,
+  GUEST_LIST_IMPORT_QUEUE,
 } from './platform-queue.constants';
 
 @Module({
@@ -33,6 +34,7 @@ import {
     BullModule.registerQueue({
       name: ARTIST_BIO_QUEUE_NAME,
     }),
+    BullModule.registerQueue({ name: GUEST_LIST_IMPORT_QUEUE }),
   ],
   exports: [BullModule],
 })

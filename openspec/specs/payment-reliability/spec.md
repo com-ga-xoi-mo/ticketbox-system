@@ -81,26 +81,68 @@ The system SHALL support MoMo sandbox as a real payment provider adapter alongsi
 - **AND** the duplicate provider event SHALL be treated as an idempotent no-op
 
 ### Requirement: Idempotent checkout and payment
-The system SHALL use idempotency keys and provider event identifiers to prevent duplicate orders, payment attempts, and ticket issuance.
+The system SHALL use idempotency keys and provider event identifiers to prevent duplicate orders, duplicate payment attempts, and duplicate ticket issuance.
 
 #### Scenario: Duplicate payment initiation returns original result
-- **WHEN** the same user retries payment initiation with the same idempotency key
+- **WHEN** the same authenticated user retries payment initiation for the same order, provider, and idempotency key
 - **THEN** the system SHALL return the original payment initiation result
+- **AND** the system SHALL NOT create a second payment attempt
+- **AND** the system SHALL NOT call the payment provider a second time
+
+#### Scenario: Payment initiation key reuse with different request is rejected
+- **WHEN** the same authenticated user reuses a payment initiation idempotency key with a different order or provider
+- **THEN** the system SHALL reject the request with a conflict error
+- **AND** the system SHALL NOT create a new payment attempt
+- **AND** the system SHALL NOT call the payment provider
+
+#### Scenario: Concurrent payment initiation creates one attempt
+- **WHEN** two payment initiation requests with the same user, order, provider, and idempotency key are processed concurrently
+- **THEN** at most one request SHALL create the payment attempt and provider session
+- **AND** the other request SHALL either receive the stored original result or a controlled in-progress conflict
+- **AND** no second provider transaction SHALL be created for that idempotency key
+
+#### Scenario: Idempotency is isolated by provider
+- **WHEN** the same authenticated user initiates payment for the same order with different providers using different idempotency keys
+- **THEN** the system SHALL treat those payment initiation operations as distinct
+- **AND** provider-specific retries SHALL only replay the matching provider response
 
 #### Scenario: Duplicate callback is ignored
 - **WHEN** the provider sends the same successful callback more than once
 - **THEN** the system SHALL fulfill the order only once and SHALL not issue duplicate tickets
 
 ### Requirement: Circuit breaker for payment provider
-The system SHALL open a circuit breaker after repeated payment provider failures and SHALL allow limited half-open recovery attempts.
+The system SHALL open a Redis-backed circuit breaker after repeated payment provider failures or timeouts and SHALL allow limited half-open recovery attempts without affecting non-payment features.
 
 #### Scenario: Circuit opens after repeated failures
-- **WHEN** payment provider calls fail beyond the configured threshold
-- **THEN** the system SHALL stop calling the provider temporarily and return a controlled checkout error
+- **WHEN** payment provider initiation calls fail beyond the configured threshold
+- **THEN** the system SHALL mark that provider circuit as `OPEN`
+- **AND** the system SHALL record an open cooldown window in Redis
+
+#### Scenario: Open circuit blocks provider calls
+- **WHEN** an authenticated customer initiates payment while the selected provider circuit is `OPEN`
+- **THEN** the system SHALL reject the payment initiation with a controlled payment degradation error
+- **AND** the system SHALL NOT call the payment provider
+- **AND** non-payment features SHALL remain available
+
+#### Scenario: Circuit enters half-open after cooldown
+- **WHEN** the provider circuit open cooldown has elapsed
+- **THEN** the system SHALL allow only the configured number of `HALF_OPEN` trial payment initiation calls
+- **AND** additional trial requests SHALL receive a controlled payment degradation error without calling the provider
 
 #### Scenario: Circuit recovers
-- **WHEN** the circuit breaker is half-open and a trial payment provider call succeeds
-- **THEN** the system SHALL close the circuit and resume normal payment initiation
+- **WHEN** the circuit breaker is `HALF_OPEN` and a trial payment provider call succeeds
+- **THEN** the system SHALL close the circuit
+- **AND** normal payment initiation SHALL resume for that provider
+
+#### Scenario: Half-open failure reopens circuit
+- **WHEN** the circuit breaker is `HALF_OPEN` and a trial payment provider call fails or times out
+- **THEN** the system SHALL reopen the circuit
+- **AND** the system SHALL start a new open cooldown window
+
+#### Scenario: Provider circuits are isolated
+- **WHEN** one payment provider circuit is `OPEN`
+- **THEN** payment initiation for a different provider SHALL use that provider's own circuit state
+- **AND** the open provider SHALL NOT block other providers
 
 ### Requirement: Payment reconciliation
 The system SHALL reconcile payment attempts that remain pending after timeout.

@@ -160,6 +160,34 @@ export class PlatformConfigService {
     return this.configService.get('GEMINI_TIMEOUT_MS');
   }
 
+  get guestListDiscoveryCron(): string {
+    return this.configService.get('GUEST_LIST_DISCOVERY_CRON');
+  }
+  get guestListInboxPath(): string {
+    return this.configService.get('GUEST_LIST_INBOX_PATH');
+  }
+  get guestListArchivePath(): string {
+    return this.configService.get('GUEST_LIST_ARCHIVE_PATH');
+  }
+  get guestListStoragePath(): string {
+    return this.configService.get('GUEST_LIST_STORAGE_PATH');
+  }
+  get guestListMaxBytes(): number {
+    return this.configService.get('GUEST_LIST_MAX_BYTES');
+  }
+  get guestListMaxRows(): number {
+    return this.configService.get('GUEST_LIST_MAX_ROWS');
+  }
+  get guestListMaxAttempts(): number {
+    return this.configService.get('GUEST_LIST_MAX_ATTEMPTS');
+  }
+  get guestListRetryBackoffMs(): number {
+    return this.configService.get('GUEST_LIST_RETRY_BACKOFF_MS');
+  }
+  get guestListProcessingLeaseMs(): number {
+    return this.configService.get('GUEST_LIST_PROCESSING_LEASE_MS');
+  }
+
   get storageDriver(): PlatformEnv['STORAGE_DRIVER'] {
     return this.configService.get('STORAGE_DRIVER');
   }

@@ -7,6 +7,8 @@ import {
   OnlineScanResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  VipLookupRequestSchema,
+  VipLookupResponseSchema,
 } from './index';
 
 const assignmentId = '11111111-1111-4111-8111-111111111111';
@@ -45,6 +47,36 @@ describe('auth contracts', () => {
         roles: ['UNKNOWN'],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('VIP lookup contracts', () => {
+  it('validates strict lookup requests and response variants', () => {
+    expect(
+      VipLookupRequestSchema.parse({
+        assignmentId,
+        concertId,
+        gate: ' Main Gate ',
+        lookupType: 'email',
+        value: ' VIP@Example.com ',
+      }),
+    ).toMatchObject({ gate: 'Main Gate', value: 'VIP@Example.com' });
+    expect(
+      VipLookupResponseSchema.safeParse({
+        status: 'found',
+        guest: { id: ticketId, guestName: 'VIP', email: 'vip@example.com' },
+      }).success,
+    ).toBe(true);
+    expect(VipLookupResponseSchema.safeParse({ status: 'not_found' }).success).toBe(true);
+  });
+  it('rejects unknown lookup fields and invalid variants', () => {
+    expect(
+      VipLookupRequestSchema.safeParse({ assignmentId, concertId, lookupType: 'qr', value: 'x' })
+        .success,
+    ).toBe(false);
+    expect(VipLookupResponseSchema.safeParse({ status: 'not_found', guest: {} }).success).toBe(
+      false,
+    );
   });
 });
 

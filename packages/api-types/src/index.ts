@@ -26,6 +26,17 @@ export {
   UNASSIGNED_SCAN_REASON_CODES,
   UnassignedScanReasonCodeSchema,
 } from './checkin/online-scan.contract';
+
+export {
+  VipLookupRequestSchema,
+  VipLookupResponseSchema,
+  VipLookupTypeSchema,
+} from './checkin/vip-lookup.contract';
+export type {
+  VipLookupRequest,
+  VipLookupResponse,
+  VipLookupType,
+} from './checkin/vip-lookup.contract';
 export type {
   InvalidScanReasonCode,
   OnlineScanRequest,

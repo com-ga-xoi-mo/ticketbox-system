@@ -1,4 +1,15 @@
 import { z } from 'zod';
+import { parseExpression } from 'cron-parser';
+
+function isValidFiveFieldCron(value: string): boolean {
+  if (value.trim().split(/\s+/).length !== 5) return false;
+  try {
+    parseExpression(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const optionalUrl = z.preprocess(
   (value) => (value === '' ? undefined : value),
@@ -56,6 +67,22 @@ export const envSchema = z
       .default('https://generativelanguage.googleapis.com/v1beta/models'),
     GEMINI_MODEL: z.string().min(1).default('gemini-1.5-flash'),
     GEMINI_TIMEOUT_MS: z.coerce.number().int().min(100).default(10000),
+    GUEST_LIST_DISCOVERY_CRON: z
+      .string()
+      .refine(isValidFiveFieldCron, 'Must be a valid five-field cron expression')
+      .default('*/5 * * * *'),
+    GUEST_LIST_INBOX_PATH: z.string().min(1).default('data/guest-list-inbox'),
+    GUEST_LIST_ARCHIVE_PATH: z.string().min(1).default('data/guest-list-archive'),
+    GUEST_LIST_STORAGE_PATH: z.string().min(1).default('data/guest-list-storage'),
+    GUEST_LIST_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .default(5 * 1024 * 1024),
+    GUEST_LIST_MAX_ROWS: z.coerce.number().int().min(1).max(100000).default(10000),
+    GUEST_LIST_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+    GUEST_LIST_RETRY_BACKOFF_MS: z.coerce.number().int().min(100).default(5000),
+    GUEST_LIST_PROCESSING_LEASE_MS: z.coerce.number().int().min(1000).default(120000),
     STORAGE_DRIVER: z.enum(['s3', 'local']).default('local'),
     LOCAL_STORAGE_ROOT_DIR: z.string().min(1).default('data/uploads'),
     LOCAL_STORAGE_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000/storage'),

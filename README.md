@@ -168,6 +168,28 @@ npm run dev:worker
 The worker starts a NestJS application context and registers BullMQ processors,
 including platform health checks and notification delivery jobs.
 
+### Sponsor VIP guest-list import
+
+Scheduled discovery is the primary guest-list ingestion path. Place UTF-8 CSV files directly under a concert UUID directory:
+
+```text
+data/guest-list-inbox/<concertId>/*.csv
+```
+
+The worker validates the directory UUID and concert, rejects symlinks/path escapes, hashes each regular file, creates one canonical batch per concert/checksum, and moves a successfully claimed source to:
+
+```text
+data/guest-list-archive/<concertId>/<sha256>.csv
+```
+
+Required headers are `guest_name,email,phone,external_ref`; optional `action` is `UPSERT` (default) or explicit `CANCEL`. Each row needs at least one email, phone, or external reference. Invalid headers fail atomically; invalid rows remain in the batch report while valid rows import.
+
+The queue job is `guest_list.import_requested` with a deterministic batch job ID. Scheduled reconciliation repairs a database-commit/enqueue-failure window. Processing leases allow expired jobs to be reclaimed, and same-concert batches apply in monotonic claim order. Reports are stored under `GUEST_LIST_STORAGE_PATH/reports/`.
+
+Admin fallback endpoints can request imports, trigger discovery, inspect batches, and retrieve reports under `admin/concerts/:concertId/guest-list`. CHECKIN_STAFF VIP lookup is `POST /guest-list/lookup`; it requires the exact active assignment ID for the same concert/gate and does not alter `POST /checkin/scan`.
+
+Configure discovery schedule, inbox/archive/storage paths, file/row limits, retry/backoff, and lease duration through the `GUEST_LIST_*` values in `.env.example`. For recovery, leave a pending batch intact and let reconciliation recreate its deterministic job; expired processing leases are reclaimed automatically.
+
 ## Check-in Mobile App
 
 The React Native check-in staff mobile workspace lives at:
