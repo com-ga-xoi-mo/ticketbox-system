@@ -55,8 +55,11 @@ export class UploadSeatingMapUseCase {
       contentType: SVG_CONTENT_TYPE,
     });
 
+    let result: Awaited<
+      ReturnType<typeof this.seatingMapWriteRepo.createAssetAndAssociateConcertSeatingMap>
+    >;
     try {
-      return await this.seatingMapWriteRepo.createAssetAndAssociateConcertSeatingMap(
+      result = await this.seatingMapWriteRepo.createAssetAndAssociateConcertSeatingMap(
         {
           id: assetId,
           storageKey,
@@ -73,6 +76,12 @@ export class UploadSeatingMapUseCase {
       await this.storage.deleteObject(storageKey).catch(() => undefined);
       throw err;
     }
+
+    if (result.replacedStorageKey) {
+      await this.storage.deleteObject(result.replacedStorageKey).catch(() => undefined);
+    }
+
+    return result;
   }
 
   private validateFileMetadata(input: UploadSeatingMapInput): void {

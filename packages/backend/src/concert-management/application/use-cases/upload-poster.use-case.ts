@@ -39,8 +39,11 @@ export class UploadPosterUseCase {
       contentType: validated.contentType,
     });
 
+    let result: Awaited<
+      ReturnType<typeof this.posterWriteRepo.createAssetAndAssociateConcertPoster>
+    >;
     try {
-      return await this.posterWriteRepo.createAssetAndAssociateConcertPoster(
+      result = await this.posterWriteRepo.createAssetAndAssociateConcertPoster(
         {
           id: assetId,
           storageKey,
@@ -57,5 +60,11 @@ export class UploadPosterUseCase {
       await this.storage.deleteObject(storageKey).catch(() => undefined);
       throw err;
     }
+
+    if (result.replacedStorageKey) {
+      await this.storage.deleteObject(result.replacedStorageKey).catch(() => undefined);
+    }
+
+    return result;
   }
 }

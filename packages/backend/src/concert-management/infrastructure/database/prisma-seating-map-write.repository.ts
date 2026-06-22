@@ -16,7 +16,11 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
     assetData: CreateSeatingMapAssetData,
     concertId: string,
     oldAssetId?: string,
-  ): Promise<{ asset: SeatingMapAsset; concert: { id: string; seatingMapAssetId: string } }> {
+  ): Promise<{
+    asset: SeatingMapAsset;
+    concert: { id: string; seatingMapAssetId: string };
+    replacedStorageKey: string | null;
+  }> {
     return this.prisma.$transaction(async (tx) => {
       const concert = await tx.concert.findUnique({
         where: { id: concertId },
@@ -45,11 +49,14 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
         select: { id: true, seatingMapAssetId: true },
       });
 
+      let replacedStorageKey: string | null = null;
       if (currentAssetId && currentAssetId !== asset.id) {
-        await tx.asset.updateMany({
+        const previousAsset = await tx.asset.findUnique({
           where: { id: currentAssetId },
-          data: { status: AssetStatus.ARCHIVED },
+          select: { storageKey: true },
         });
+        replacedStorageKey = previousAsset?.storageKey ?? null;
+        await tx.asset.delete({ where: { id: currentAssetId } });
       }
 
       return {
@@ -58,6 +65,7 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
           id: updatedConcert.id,
           seatingMapAssetId: updatedConcert.seatingMapAssetId ?? asset.id,
         },
+        replacedStorageKey,
       };
     });
   }
