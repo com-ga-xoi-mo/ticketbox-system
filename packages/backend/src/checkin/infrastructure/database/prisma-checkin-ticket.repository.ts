@@ -6,6 +6,8 @@ import type {
   AcceptedScanPersistenceResult,
   CheckinTicketRecord,
   RecordAcceptedScanInput,
+  PersistedOfflineEvent,
+  RecordOfflineOutcomeInput,
   RecordRejectedScanInput,
 } from '../../domain/checkin-scan.types';
 import type { CheckinTicketRepositoryPort } from '../../domain/ports/checkin-ticket-repository.port';
@@ -48,15 +50,31 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
   async recordAcceptedScan(input: RecordAcceptedScanInput): Promise<AcceptedScanPersistenceResult> {
     try {
       const result = await this.prisma.$transaction(async (tx) => {
-        const ticket = await tx.ticket.findUnique({
-          where: { id: input.ticketId },
+        const checkedInAt = new Date();
+        const claim = await tx.ticket.updateMany({
+          where: {
+            id: input.ticketId,
+            status: TicketStatus.ISSUED,
+            checkedInAt: null,
+          },
+          data: { status: TicketStatus.CHECKED_IN, checkedInAt },
         });
 
-        if (!ticket || ticket.checkedInAt || ticket.status === TicketStatus.CHECKED_IN) {
+        if (claim.count === 0) {
+          const [ticket, acceptedEvent] = await Promise.all([
+            tx.ticket.findUnique({ where: { id: input.ticketId }, select: { checkedInAt: true } }),
+            tx.checkinEvent.findFirst({
+              where: { ticketId: input.ticketId, result: CheckinEventResult.ACCEPTED },
+              orderBy: { createdAt: 'asc' },
+              select: { id: true, deviceId: true },
+            }),
+          ]);
           return {
             status: 'duplicate' as const,
             ticketId: input.ticketId,
+            checkinEventId: acceptedEvent?.id,
             checkedInAt: ticket?.checkedInAt ?? undefined,
+            acceptedByDeviceId: acceptedEvent?.deviceId ?? undefined,
           };
         }
 
@@ -65,20 +83,16 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
             ticketId: input.ticketId,
             concertId: input.concertId,
             staffId: input.staffId,
-            source: CheckinEventSource.ONLINE,
+            source:
+              input.source === 'OFFLINE_SYNC'
+                ? CheckinEventSource.OFFLINE_SYNC
+                : CheckinEventSource.ONLINE,
             result: CheckinEventResult.ACCEPTED,
             scannedQrHash: input.scannedQrHash,
             deviceId: input.deviceId,
+            offlineEventId: input.offlineEventId ?? null,
             occurredAt: input.occurredAt,
-          },
-        });
-
-        const checkedInAt = new Date();
-        await tx.ticket.update({
-          where: { id: input.ticketId },
-          data: {
-            status: TicketStatus.CHECKED_IN,
-            checkedInAt,
+            syncedAt: input.syncedAt ?? null,
           },
         });
 
@@ -97,6 +111,63 @@ export class PrismaCheckinTicketRepository implements CheckinTicketRepositoryPor
           status: 'duplicate',
           ticketId: input.ticketId,
         };
+      }
+      throw err;
+    }
+  }
+
+  async findOfflineEvent(deviceId: string, localId: string): Promise<PersistedOfflineEvent | null> {
+    const event = await this.prisma.checkinEvent.findUnique({
+      where: { deviceId_offlineEventId: { deviceId, offlineEventId: localId } },
+      select: {
+        staffId: true,
+        ticketId: true,
+        result: true,
+        rejectionReason: true,
+        ticket: { select: { checkedInAt: true } },
+      },
+    });
+    if (!event) return null;
+    return {
+      staffId: event.staffId,
+      ticketId: event.ticketId ?? undefined,
+      result: event.result,
+      rejectionReason: event.rejectionReason ?? undefined,
+      checkedInAt: event.ticket?.checkedInAt ?? undefined,
+    };
+  }
+
+  async recordOfflineOutcome(
+    input: RecordOfflineOutcomeInput,
+  ): Promise<PersistedOfflineEvent | null> {
+    try {
+      await this.prisma.checkinEvent.create({
+        data: {
+          ticketId: input.ticketId ?? null,
+          concertId: input.concertId,
+          staffId: input.staffId,
+          source: CheckinEventSource.OFFLINE_SYNC,
+          result: input.result as CheckinEventResult,
+          scannedQrHash: input.scannedQrHash,
+          deviceId: input.deviceId,
+          offlineEventId: input.localId,
+          occurredAt: input.occurredAt,
+          syncedAt: input.syncedAt,
+          rejectionReason: input.rejectionReason ?? null,
+        },
+      });
+      return null;
+    } catch (err: unknown) {
+      // The upfront findOfflineEvent lookup and this write are not in one
+      // transaction (TOCTOU). A concurrent/replayed identical event can reach
+      // here and collide on the @@unique([deviceId, offlineEventId]) index.
+      // Resolve a known duplicate/replay to its stored deterministic outcome
+      // instead of surfacing HTTP 5xx; genuine infrastructure errors propagate.
+      if (isPrismaUniqueError(err)) {
+        const persisted = await this.findOfflineEvent(input.deviceId, input.localId);
+        if (persisted) {
+          return persisted;
+        }
       }
       throw err;
     }

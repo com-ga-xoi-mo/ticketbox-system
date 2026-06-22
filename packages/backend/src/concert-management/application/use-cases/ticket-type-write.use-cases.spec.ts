@@ -18,6 +18,8 @@ describe('Ticket Type Write Use Cases', () => {
       createConcert: vi.fn(),
       updateConcert: vi.fn(),
       findConcertById: vi.fn(),
+      findConcertsByOwner: vi.fn(),
+      findAllConcerts: vi.fn(),
       createTicketType: vi.fn(),
       updateTicketType: vi.fn(),
       archiveTicketType: vi.fn(),

@@ -5,6 +5,9 @@ import {
   StaffProfileResponseSchema,
   type LoginRequest,
   type OnlineScanRequest,
+  BatchSyncResponseSchema,
+  type BatchSyncRequest,
+  type BatchSyncResponse,
 } from '@ticketbox/api-types';
 import type { z } from 'zod';
 
@@ -34,6 +37,20 @@ export class ApiRequestError extends Error {
   ) {
     super(message);
     this.name = 'ApiRequestError';
+  }
+}
+
+export class ApiTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiTransportError';
+  }
+}
+
+export class ApiResponseValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiResponseValidationError';
   }
 }
 
@@ -88,18 +105,37 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     } catch (error) {
       if (error instanceof ApiRequestError) {
         if (error.status === 401 || error.status === 403) {
-          return { status: 'unauthorized', message: error.message };
+          return {
+            status: 'unauthorized',
+            httpStatus: error.status,
+            message: error.message,
+          };
         }
-        return { status: 'unavailable', message: error.message };
+        if (error.status >= 500) {
+          return { status: 'service-error', httpStatus: error.status, message: error.message };
+        }
+        return { status: 'request-error', httpStatus: error.status, message: error.message };
       }
       if (error instanceof ApiResponseValidationError) {
-        return { status: 'unavailable', message: error.message };
+        return { status: 'unknown-commit', message: error.message };
       }
       return {
-        status: 'network-error',
+        status: 'transport-error',
         message: error instanceof Error ? error.message : 'Network error',
       };
     }
+  }
+
+  async submitBatchSync(
+    accessToken: string,
+    request: BatchSyncRequest,
+  ): Promise<BatchSyncResponse> {
+    return this.request(
+      '/checkin/sync',
+      { method: 'POST', body: JSON.stringify(request) },
+      BatchSyncResponseSchema,
+      accessToken,
+    );
   }
 
   private async request<TSchema extends z.ZodTypeAny>(
@@ -115,10 +151,17 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       headers.set('authorization', `Bearer ${accessToken}`);
     }
 
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      ...init,
-      headers,
-    });
+    let response: FetchResponseLike;
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        ...init,
+        headers,
+      });
+    } catch (error) {
+      throw new ApiTransportError(
+        error instanceof Error ? error.message : 'Network request failed',
+      );
+    }
 
     let payload: unknown;
     try {
@@ -139,13 +182,6 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       throw new ApiResponseValidationError(`Invalid response from ${path}`);
     }
     return parsed.data;
-  }
-}
-
-export class ApiResponseValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ApiResponseValidationError';
   }
 }
 
