@@ -1,11 +1,18 @@
-import { OnlineScanRequestSchema, OnlineScanResponseSchema } from '@ticketbox/api-types';
+import {
+  BatchSyncRequestSchema,
+  BatchSyncResponseSchema,
+  OnlineScanRequestSchema,
+  OnlineScanResponseSchema,
+} from '@ticketbox/api-types';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
 
-import type { OnlineScanResult } from '../../domain/checkin-scan.types';
-import { toOnlineScanResponse } from './checkin-contract.mapper';
+import { BadRequestException } from '@nestjs/common';
+import type { BatchSyncResult, OnlineScanResult } from '../../domain/checkin-scan.types';
+import { toBatchSyncResponse, toOnlineScanResponse } from './checkin-contract.mapper';
 import { OnlineCheckinDto } from './dto/online-checkin.dto';
+import { ZodBodyPipe } from './zod-body.pipe';
 
 const assignmentId = '11111111-1111-4111-8111-111111111111';
 const concertId = '22222222-2222-4222-8222-222222222222';
@@ -35,6 +42,43 @@ describe('online check-in HTTP contract', () => {
       ticketId,
       checkedInAt: checkedInAt.toISOString(),
     });
+  });
+});
+
+describe('batch sync HTTP contract', () => {
+  const result: BatchSyncResult = {
+    events: [
+      { localId: '1', status: 'accepted', message: 'Accepted', ticketId, checkedInAt },
+      { localId: '2', status: 'duplicate', message: 'Duplicate' },
+      { localId: '3', status: 'invalid', message: 'Invalid', reasonCode: 'INVALID_TICKET' },
+      { localId: '4', status: 'conflict', message: 'Conflict', conflictReason: 'Other device' },
+      { localId: '5', status: 'unassigned', message: 'Unassigned', reasonCode: 'REVOKED_ASSIGNMENT' },
+    ],
+  };
+
+  it('maps every result variant deterministically to the shared response schema', () => {
+    const response = toBatchSyncResponse(result);
+    expect(BatchSyncResponseSchema.parse(response)).toEqual(response);
+    expect(response[0]).toMatchObject({ checkedInAt: checkedInAt.toISOString() });
+  });
+
+  it('rejects invalid, oversized, and duplicate-localId request bodies before use-case mapping', () => {
+    const pipe = new ZodBodyPipe(BatchSyncRequestSchema);
+    const valid = {
+      localId: 'local-1',
+      assignmentId,
+      concertId,
+      qrPayloadHash: 'a'.repeat(64),
+      scannedAt: checkedInAt.toISOString(),
+      deviceId: 'device-1',
+    };
+    for (const body of [
+      [{ ...valid, extra: true }],
+      Array.from({ length: 101 }, (_, index) => ({ ...valid, localId: `${index}` })),
+      [valid, valid],
+    ]) {
+      expect(() => pipe.transform(body)).toThrow(BadRequestException);
+    }
   });
 });
 

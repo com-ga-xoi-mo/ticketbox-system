@@ -15,6 +15,8 @@ import {
   type StaffAssignmentQueryPort,
 } from './application/ports/staff-assignment-query.port';
 import { OnlineCheckinUseCase } from './application/use-cases/online-checkin.use-case';
+import { BatchSyncUseCase } from './application/use-cases/batch-sync.use-case';
+import { ScanValidationService } from './application/services/scan-validation.service';
 import {
   CHECKIN_TICKET_REPOSITORY,
   type CheckinTicketRepositoryPort,
@@ -45,6 +47,32 @@ import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher'
       inject: [STAFF_ASSIGNMENT_QUERY],
       useFactory: (assignments: StaffAssignmentQueryPort) =>
         new ListMyCheckinAssignmentsQuery(assignments),
+    },
+    {
+      provide: ScanValidationService,
+      inject: [
+        CHECKIN_TICKET_REPOSITORY,
+        CHECKIN_STAFF_ASSIGNMENT_REPOSITORY,
+        AuthorizeCheckinAssignmentUseCase,
+      ],
+      useFactory: (
+        ticketRepository: CheckinTicketRepositoryPort,
+        assignmentRepository: CheckinStaffAssignmentRepositoryPort,
+        authorizeCheckinAssignment: AuthorizeCheckinAssignmentUseCase,
+      ) =>
+        new ScanValidationService(
+          ticketRepository,
+          assignmentRepository,
+          authorizeCheckinAssignment,
+        ),
+    },
+    {
+      provide: BatchSyncUseCase,
+      inject: [CHECKIN_TICKET_REPOSITORY, ScanValidationService],
+      useFactory: (
+        ticketRepository: CheckinTicketRepositoryPort,
+        validation: ScanValidationService,
+      ) => new BatchSyncUseCase(ticketRepository, validation),
     },
     {
       provide: OnlineCheckinUseCase,

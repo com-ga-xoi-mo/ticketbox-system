@@ -14,11 +14,13 @@
     "verify": "npm run typecheck && npm run test"
   },
   "dependencies": {
+    "@react-native-community/netinfo": "11.4.1",
     "@ticketbox/api-types": "0.1.0",
     "expo": "^52.0.0",
     "expo-camera": "^16.0.0",
     "expo-crypto": "~14.0.2",
     "expo-secure-store": "^14.0.0",
+    "expo-sqlite": "~15.1.4",
     "react": "^18.3.1",
     "react-native": "^0.76.0"
   },

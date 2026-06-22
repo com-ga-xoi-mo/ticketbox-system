@@ -19,6 +19,19 @@ export {
 export type { StaffAssignment, StaffAssignmentsResponse } from './checkin/assignment.contract';
 
 export {
+  BatchSyncEventResultSchema,
+  BatchSyncEventSchema,
+  BatchSyncRequestSchema,
+  BatchSyncResponseSchema,
+} from './checkin/batch-sync.contract';
+export type {
+  BatchSyncEvent,
+  BatchSyncEventResult,
+  BatchSyncRequest,
+  BatchSyncResponse,
+} from './checkin/batch-sync.contract';
+
+export {
   INVALID_SCAN_REASON_CODES,
   InvalidScanReasonCodeSchema,
   OnlineScanRequestSchema,

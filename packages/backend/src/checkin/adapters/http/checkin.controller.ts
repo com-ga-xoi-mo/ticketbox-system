@@ -6,15 +6,20 @@ import { Roles } from '../../../identity/adapters/http/decorators/roles.decorato
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { OnlineCheckinUseCase } from '../../application/use-cases/online-checkin.use-case';
-import type { OnlineScanResponse } from '@ticketbox/api-types';
+import { BatchSyncRequestSchema, type BatchSyncRequest, type BatchSyncResponse, type OnlineScanResponse } from '@ticketbox/api-types';
+import { BatchSyncUseCase } from '../../application/use-cases/batch-sync.use-case';
 import { OnlineCheckinDto } from './dto/online-checkin.dto';
-import { toOnlineScanResponse } from './checkin-contract.mapper';
+import { toBatchSyncResponse, toOnlineScanResponse } from './checkin-contract.mapper';
+import { ZodBodyPipe } from './zod-body.pipe';
 
 @Controller('checkin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.CHECKIN_STAFF)
 export class CheckinController {
-  constructor(private readonly onlineCheckin: OnlineCheckinUseCase) {}
+  constructor(
+    private readonly onlineCheckin: OnlineCheckinUseCase,
+    private readonly batchSync: BatchSyncUseCase,
+  ) {}
 
   @Post('scan')
   async scan(
@@ -32,5 +37,25 @@ export class CheckinController {
     });
 
     return toOnlineScanResponse(result);
+  }
+
+  @Post('sync')
+  async sync(
+    @Body(new ZodBodyPipe(BatchSyncRequestSchema)) events: BatchSyncRequest,
+    @Request() req: { user: AuthenticatedUser },
+  ): Promise<BatchSyncResponse> {
+    const result = await this.batchSync.execute({
+      actor: { userId: req.user.id, roles: req.user.roles },
+      events: events.map((event) => ({
+        localId: event.localId,
+        assignmentId: event.assignmentId,
+        concertId: event.concertId,
+        ...(event.gate ? { gateName: event.gate } : {}),
+        qrPayloadHash: event.qrPayloadHash,
+        scannedAt: new Date(event.scannedAt),
+        deviceId: event.deviceId,
+      })),
+    });
+    return toBatchSyncResponse(result);
   }
 }

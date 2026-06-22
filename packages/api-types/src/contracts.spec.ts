@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BatchSyncEventResultSchema,
+  BatchSyncRequestSchema,
+  BatchSyncResponseSchema,
   LoginRequestSchema,
   LoginResponseSchema,
   OnlineScanRequestSchema,
@@ -16,6 +19,82 @@ const concertId = '22222222-2222-4222-8222-222222222222';
 const ticketId = '33333333-3333-4333-8333-333333333333';
 const eventId = '44444444-4444-4444-8444-444444444444';
 const timestamp = '2026-07-01T12:00:00.000Z';
+const qrPayloadHash = 'a'.repeat(64);
+
+describe('batch sync contracts', () => {
+  const event = {
+    localId: ' local-1 ',
+    assignmentId,
+    concertId,
+    gate: ' Main Gate ',
+    qrPayloadHash,
+    scannedAt: timestamp,
+    deviceId: ' installation-1 ',
+  };
+
+  it('accepts empty and 100-event requests and trims bounded identifiers', () => {
+    expect(BatchSyncRequestSchema.parse([])).toEqual([]);
+    expect(BatchSyncRequestSchema.parse([event])[0]).toMatchObject({
+      localId: 'local-1',
+      gate: 'Main Gate',
+      deviceId: 'installation-1',
+    });
+    expect(
+      BatchSyncRequestSchema.safeParse(
+        Array.from({ length: 100 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('rejects invalid batch request boundaries and fields', () => {
+    const invalidRequests: unknown[] = [
+      Array.from({ length: 101 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+      [event, { ...event, localId: 'local-1' }],
+      [{ ...event, localId: '   ' }],
+      [{ ...event, localId: 'x'.repeat(161) }],
+      [{ ...event, qrPayloadHash: 'A'.repeat(64) }],
+      [{ ...event, qrPayloadHash: 'a'.repeat(63) }],
+      [{ ...event, gate: 'x'.repeat(121) }],
+      [{ ...event, deviceId: 'x'.repeat(161) }],
+      [{ ...event, assignmentId: undefined }],
+      [{ ...event, extra: true }],
+    ];
+    for (const candidate of invalidRequests) {
+      expect(BatchSyncRequestSchema.safeParse(candidate).success).toBe(false);
+    }
+  });
+
+  it.each([
+    { localId: '1', status: 'accepted', message: 'Accepted', ticketId, checkedInAt: timestamp },
+    { localId: '2', status: 'duplicate', message: 'Duplicate' },
+    { localId: '3', status: 'invalid', message: 'Invalid', reasonCode: 'INVALID_TICKET' },
+    {
+      localId: '4',
+      status: 'conflict',
+      message: 'Conflict',
+      conflictReason: 'Accepted on another device',
+    },
+    {
+      localId: '5',
+      status: 'unassigned',
+      message: 'Unassigned',
+      reasonCode: 'REVOKED_ASSIGNMENT',
+    },
+  ])('accepts every strict event result variant', (result) => {
+    expect(BatchSyncEventResultSchema.safeParse(result).success).toBe(true);
+    expect(BatchSyncResponseSchema.safeParse([result]).success).toBe(true);
+  });
+
+  it.each([
+    { localId: '1', status: 'accepted', message: 'Accepted', checkedInAt: timestamp },
+    { localId: '2', status: 'conflict', message: 'Conflict' },
+    { localId: '3', status: 'invalid', message: 'Invalid' },
+    { localId: '4', status: 'unassigned', message: 'Unassigned' },
+    { localId: '5', status: 'duplicate', message: 'Duplicate', extra: true },
+  ])('rejects missing and unknown result fields', (result) => {
+    expect(BatchSyncEventResultSchema.safeParse(result).success).toBe(false);
+  });
+});
 
 describe('auth contracts', () => {
   it('accepts token-only login and the public profile', () => {
