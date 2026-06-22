@@ -95,7 +95,7 @@ describe('Ticket Type Write Use Cases', () => {
       ).rejects.toThrow(InvalidSalePeriodError);
     });
 
-    it('throws conflict error if ticket type code already exists in concert', async () => {
+    it('throws domain conflict error if ticket type code already exists in concert', async () => {
       const useCase = new CreateTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const existing: TicketType = {
         id: 'tt-1',
@@ -136,7 +136,7 @@ describe('Ticket Type Write Use Cases', () => {
   });
 
   describe('UpdateTicketTypeUseCase', () => {
-    it('throws conflict error when updating code to another existing ticket type code in same concert', async () => {
+    it('throws domain conflict error when updating code to another existing ticket type code in same concert', async () => {
       const useCase = new UpdateTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const existing: TicketType[] = [
         {
@@ -191,7 +191,7 @@ describe('Ticket Type Write Use Cases', () => {
   });
 
   describe('ArchiveTicketTypeUseCase', () => {
-    it('throws domain error if ticket type has soldQuantity > 0', async () => {
+    it('throws domain validation error if ticket type has soldQuantity > 0', async () => {
       const useCase = new ArchiveTicketTypeUseCase(concertWriteRepo, authorizeConcertManagement);
       const ticketType: TicketType = {
         id: 'tt-1',

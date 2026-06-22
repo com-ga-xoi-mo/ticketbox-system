@@ -1,5 +1,5 @@
 /**
- * RedisCacheService integration tests (tasks 5.7–5.9).
+ * RedisCacheService integration tests.
  *
  * These tests run against the real Redis provided by `npm run start:deps`
  * (docker-compose). They are SKIPPED when `REDIS_URL` is not set so they
@@ -41,17 +41,14 @@ describeIfRedis('RedisCacheService integration (requires REDIS_URL)', () => {
     await redis.quit();
   });
 
-  // -------------------------------------------------------------------------
-  // 5.7 Thundering herd: many concurrent misses invoke loader exactly once
-  // -------------------------------------------------------------------------
-  it('5.7 SETNX mutex: concurrent misses invoke the loader exactly once', async () => {
+  it('SETNX mutex: fast concurrent misses invoke the loader exactly once', async () => {
     const key = `${TEST_KEY_PREFIX}thunderherd`;
     let loaderCallCount = 0;
 
     const loader = async () => {
       loaderCallCount++;
       // Simulate a slow DB read (enough for other concurrent calls to start)
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
       return 'loaded-value';
     };
 
@@ -63,16 +60,73 @@ describeIfRedis('RedisCacheService integration (requires REDIS_URL)', () => {
     // All callers get the correct value
     expect(results.every((r) => r === 'loaded-value')).toBe(true);
 
-    // The mutex ensures the loader was called at most a small number of times
-    // (ideally 1, but losers that exhaust the poll may also call it)
-    // The key invariant: loader called far fewer than 10 times
-    expect(loaderCallCount).toBeLessThan(5);
+    expect(loaderCallCount).toBe(1);
   }, 10_000);
 
-  // -------------------------------------------------------------------------
-  // 5.8 TTL: key expires after TTL and next getOrSet re-runs loader
-  // -------------------------------------------------------------------------
-  it('5.8 TTL expiry: loader is called again after the cache key expires', async () => {
+  it('slow original winner does not release every loser to the loader', async () => {
+    const key = `${TEST_KEY_PREFIX}slow-winner`;
+    let loaderCallCount = 0;
+
+    const loader = async () => {
+      loaderCallCount++;
+      const callNumber = loaderCallCount;
+      if (callNumber === 1) {
+        await sleep(1300);
+        return 'stale-original-winner';
+      }
+      await sleep(50);
+      return `fresh-winner-${callNumber}`;
+    };
+
+    const originalWinner = svc.getOrSet(key, 60, loader);
+
+    // Let the original request acquire the lock and enter its slow loader.
+    await sleep(50);
+
+    const loserResults = await Promise.all(
+      Array.from({ length: 9 }, () => svc.getOrSet(key, 60, loader)),
+    );
+    const originalWinnerResult = await originalWinner;
+
+    expect(originalWinnerResult).toBe('stale-original-winner');
+    expect(loserResults.every((result) => result === 'fresh-winner-2')).toBe(true);
+    expect(loaderCallCount).toBe(2);
+  }, 10_000);
+
+  it('stale original winner cannot overwrite the newer cached value or lock', async () => {
+    const key = `${TEST_KEY_PREFIX}stale-owner`;
+    const lockKey = `lock:${key}`;
+    let loaderCallCount = 0;
+
+    const loader = async () => {
+      loaderCallCount++;
+      const callNumber = loaderCallCount;
+      if (callNumber === 1) {
+        await sleep(1300);
+        return 'stale-original-winner';
+      }
+      await sleep(50);
+      return `fresh-winner-${callNumber}`;
+    };
+
+    const originalWinner = svc.getOrSet(key, 60, loader);
+    await sleep(50);
+
+    const loserResults = await Promise.all(
+      Array.from({ length: 3 }, () => svc.getOrSet(key, 60, loader)),
+    );
+    const originalWinnerResult = await originalWinner;
+
+    expect(originalWinnerResult).toBe('stale-original-winner');
+    expect(loserResults.every((result) => result === 'fresh-winner-2')).toBe(true);
+
+    const cachedRaw = await redis.get(key);
+    expect(cachedRaw).not.toBeNull();
+    expect(JSON.parse(cachedRaw!)).toBe('fresh-winner-2');
+    expect(await redis.exists(lockKey)).toBe(0);
+  }, 10_000);
+
+  it('TTL expiry: loader is called again after the cache key expires', async () => {
     const key = `${TEST_KEY_PREFIX}ttl-expiry`;
     let loaderCallCount = 0;
 
@@ -92,7 +146,7 @@ describeIfRedis('RedisCacheService integration (requires REDIS_URL)', () => {
     expect(loaderCallCount).toBe(1);
 
     // Wait for TTL to expire (Redis EX is in seconds — need > 1s)
-    await new Promise((r) => setTimeout(r, 1100));
+    await sleep(1100);
 
     // Third call after expiry — loader re-runs
     const v3 = await svc.getOrSet(key, 1, loader);
@@ -100,10 +154,7 @@ describeIfRedis('RedisCacheService integration (requires REDIS_URL)', () => {
     expect(loaderCallCount).toBe(2);
   }, 10_000);
 
-  // -------------------------------------------------------------------------
-  // 5.9 delByPrefix: removes matching keys via SCAN, leaves others intact
-  // -------------------------------------------------------------------------
-  it('5.9 delByPrefix: removes all matching keys via SCAN, leaves others intact', async () => {
+  it('delByPrefix: removes all matching keys via SCAN, leaves others intact', async () => {
     const prefix = `${TEST_KEY_PREFIX}concert:`;
     const matchingKeys = [
       `${prefix}list`,
@@ -136,3 +187,7 @@ describeIfRedis('RedisCacheService integration (requires REDIS_URL)', () => {
     expect(await redis.exists(otherKey)).toBe(1);
   }, 10_000);
 });
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

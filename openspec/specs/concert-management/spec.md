@@ -153,7 +153,10 @@ The system SHALL allow authorized admins to list, read, and edit all concerts an
 - **THEN** the system SHALL mark the concert as CANCELLED
 
 ### Requirement: Ticket type configuration
-The system SHALL allow organizers to configure ticket type code, name, description, price, quantity, sale window, maximum quantity per user, status, and seating-zone mappings per concert.
+The system SHALL allow organizers to configure ticket type code, name, description, price, quantity,
+sale window, maximum quantity per user, status, and seating-zone mappings per concert. Ticket-type
+validation SHALL preserve domain-level validation errors inside application use-cases and SHALL map
+those errors to HTTP validation or conflict responses at the HTTP adapter boundary.
 
 #### Scenario: Organizer configures SVIP ticket type
 - **WHEN** an organizer creates an SVIP ticket type with quantity 200 and max 2 per user
@@ -190,6 +193,18 @@ The system SHALL allow organizers to configure ticket type code, name, descripti
 #### Scenario: Organizer archives ticket type
 - **WHEN** an organizer archives a ticket type on a concert they own and no sold or reserved tickets exist for that type
 - **THEN** the system SHALL set the ticket type status to ARCHIVED rather than removing the record, preserving order history
+
+#### Scenario: Application use-case exposes domain validation errors
+- **WHEN** a ticket-type application use-case rejects invalid price, invalid quantity, invalid sale
+  period, duplicate code, or archive-with-sold-or-reserved-quantity input
+- **THEN** the application layer SHALL expose the corresponding domain error without converting it
+  to a Nest HTTP exception
+
+#### Scenario: HTTP adapter maps ticket-type domain errors
+- **WHEN** a protected ticket-type HTTP endpoint receives input that the application layer rejects
+  with a ticket-type domain validation or conflict error
+- **THEN** the HTTP adapter SHALL map the domain error to the appropriate validation or conflict
+  HTTP response
 
 ### Requirement: Seating map zone mapping
 The system SHALL allow organizers to define seating zones from uploaded SVG element IDs and map ticket types to those zones.
