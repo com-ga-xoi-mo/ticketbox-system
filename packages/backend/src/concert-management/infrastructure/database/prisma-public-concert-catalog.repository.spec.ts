@@ -175,6 +175,34 @@ describe('PrismaPublicConcertCatalogRepository', () => {
     expect(detail?.publishedArtistBio).toBeNull();
   });
 
+  it('maps public asset metadata with publicUrl without exposing storage internals', async () => {
+    const findFirst = vi.fn().mockResolvedValue(sampleConcert());
+    const repository = createRepositoryWithConcertApi({ findFirst });
+
+    const detail = await repository.findPublishedUpcomingDetailBySlug('anh-trai-say-hi-2026', now);
+
+    expect(detail?.posterAsset).toEqual({
+      id: 'poster-1',
+      kind: 'POSTER',
+      status: 'ACTIVE',
+      publicUrl: '/storage/poster.jpg',
+      originalName: 'poster.jpg',
+      contentType: 'image/jpeg',
+      sizeBytes: 100,
+    });
+    expect(detail?.seatingMapAsset).toEqual({
+      id: 'map-1',
+      kind: 'SEATING_MAP',
+      status: 'ACTIVE',
+      publicUrl: '/storage/map.svg',
+      originalName: 'map.svg',
+      contentType: 'image/svg+xml',
+      sizeBytes: 200,
+    });
+    expect('storageKey' in detail!.posterAsset!).toBe(false);
+    expect('checksum' in detail!.posterAsset!).toBe(false);
+  });
+
   it('exposes only the latest published artist bio on public concert detail', async () => {
     const findFirst = vi.fn().mockResolvedValue({
       ...sampleConcert(),
@@ -208,6 +236,23 @@ describe('PrismaPublicConcertCatalogRepository', () => {
         },
       ],
     });
+  });
+
+  it('filters availability queries to upcoming published concerts by slug', async () => {
+    const findFirst = vi.fn().mockResolvedValue(sampleConcert());
+    const repository = createRepositoryWithConcertApi({ findFirst });
+
+    await repository.findPublishedUpcomingAvailabilityBySlug('anh-trai-say-hi-2026', now);
+
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: ConcertStatus.PUBLISHED,
+          startsAt: { gte: now },
+          slug: 'anh-trai-say-hi-2026',
+        },
+      }),
+    );
   });
 
   it('returns null when a public detail query finds no matching concert', async () => {
