@@ -1,7 +1,19 @@
 import { Module } from '@nestjs/common';
-import { BackendCoreModule, HealthModule, OrderModule, PaymentModule } from '@ticketbox/backend';
+import {
+  BackendCoreModule,
+  ConcertManagementModule,
+  HealthModule,
+  OrderModule,
+  PaymentModule,
+} from '@ticketbox/backend';
 
 @Module({
-  imports: [BackendCoreModule, HealthModule, OrderModule, PaymentModule],
+  imports: [
+    BackendCoreModule,
+    HealthModule,
+    ConcertManagementModule,
+    OrderModule,
+    PaymentModule,
+  ],
 })
 export class AppModule {}

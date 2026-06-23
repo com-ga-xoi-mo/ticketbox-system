@@ -48,12 +48,15 @@ export class RateLimitInterceptor implements NestInterceptor {
     } catch (err: unknown) {
       if (err instanceof RateLimitExceededError) {
         response.setHeader('Retry-After', String(err.retryAfterSeconds));
-        throw new HttpException({
-          message: err.message,
-          error: 'Too Many Requests',
-          statusCode: 429,
-          retryAfterSeconds: err.retryAfterSeconds,
-        }, HttpStatus.TOO_MANY_REQUESTS);
+        throw new HttpException(
+          {
+            message: err.message,
+            error: 'Too Many Requests',
+            statusCode: 429,
+            retryAfterSeconds: err.retryAfterSeconds,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
       }
 
       if (err instanceof RateLimitStoreUnavailableError) {

@@ -8,14 +8,12 @@ describe('AuthorizeAdminActionUseCase', () => {
   const useCase = new AuthorizeAdminActionUseCase();
 
   it('allows users with ADMIN role', () => {
-    expect(() =>
-      useCase.execute({ userId: 'admin-id', roles: [Role.ADMIN] }),
-    ).not.toThrow();
+    expect(() => useCase.execute({ userId: 'admin-id', roles: [Role.ADMIN] })).not.toThrow();
   });
 
   it('denies users without ADMIN role', () => {
-    expect(() =>
-      useCase.execute({ userId: 'organizer-id', roles: [Role.ORGANIZER] }),
-    ).toThrow(ForbiddenAdminActionError);
+    expect(() => useCase.execute({ userId: 'organizer-id', roles: [Role.ORGANIZER] })).toThrow(
+      ForbiddenAdminActionError,
+    );
   });
 });

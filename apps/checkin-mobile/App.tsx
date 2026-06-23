@@ -1,0 +1,275 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+
+import { getMobileEnv } from './src/config/mobile-env';
+import { HttpCheckinMobileApiClient } from './src/api/http-checkin-mobile-api-client';
+import { LoginScreen } from './src/features/auth/LoginScreen';
+import { AssignmentScreen } from './src/features/assignments/AssignmentScreen';
+import { ScannerScreen } from './src/features/scanner/ScannerScreen';
+import type { AuthState } from './src/features/auth/auth-state';
+import { AuthSessionController } from './src/features/auth/auth-state';
+import type { AssignmentState } from './src/features/assignments/assignment-state';
+import { AssignmentController } from './src/features/assignments/assignment-state';
+import type { ScanWorkflowState } from './src/features/scanner/scan-workflow';
+import { ScanWorkflow } from './src/features/scanner/scan-workflow';
+import { ExpoSecureSessionStore } from './src/storage/session-store';
+import { getOrCreateInstallationId } from './src/storage/installation-id';
+import { restoreStartupSession } from './src/app/restore-startup-session';
+import { SqliteOfflineScanQueue } from './src/features/offline-queue/sqlite-offline-scan-queue';
+import type { OfflineScanEvent } from './src/features/offline-queue/offline-scan-queue.port';
+import { NetInfoNetworkMonitor } from './src/features/offline-queue/netinfo-network-monitor';
+import { hashQrPayload } from './src/features/offline-queue/qr-hasher';
+import { SyncService, type SyncServiceState } from './src/features/offline-queue/sync-service';
+import { SyncStatusPanel } from './src/features/offline-queue/SyncStatusPanel';
+import { expoLocalIdProvider } from './src/features/offline-queue/local-id-provider';
+import { OfflineQueueBootstrap } from './src/features/offline-queue/offline-queue-bootstrap';
+
+const env = getMobileEnv();
+
+export default function App(): React.JSX.Element {
+  const [authState, setAuthState] = useState<AuthState>({ status: 'restoring' });
+  const [assignmentState, setAssignmentState] = useState<AssignmentState>({ status: 'idle' });
+  const [scanState, setScanState] = useState<ScanWorkflowState>({ status: 'initializing' });
+  const [route, setRoute] = useState<'auth' | 'assignments' | 'scanner'>('auth');
+  const [scanWorkflow, setScanWorkflow] = useState<ScanWorkflow | null>(null);
+  const [syncService, setSyncService] = useState<SyncService | null>(null);
+  const [offlineQueue, setOfflineQueue] = useState<SqliteOfflineScanQueue | null>(null);
+  const [offlineBootstrapError, setOfflineBootstrapError] = useState<string | null>(null);
+  const [offlineBootstrapAttempt, setOfflineBootstrapAttempt] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [failedEvents, setFailedEvents] = useState<OfflineScanEvent[]>([]);
+  const [syncState, setSyncState] = useState<SyncServiceState>({
+    status: 'idle',
+    counts: { accepted: 0, duplicate: 0, invalid: 0, conflict: 0, unassigned: 0 },
+  });
+  const authStateRef = useRef(authState);
+  const apiClient = useMemo(() => new HttpCheckinMobileApiClient({ baseUrl: env.apiBaseUrl }), []);
+  const sessionStore = useMemo(() => new ExpoSecureSessionStore(), []);
+  const authController = useMemo(
+    () => new AuthSessionController(apiClient, sessionStore),
+    [apiClient, sessionStore],
+  );
+  const assignmentController = useMemo(() => new AssignmentController(apiClient), [apiClient]);
+  const offlineBootstrap = useMemo(() => new OfflineQueueBootstrap(), []);
+  useEffect(() => {
+    authStateRef.current = authState;
+  }, [authState]);
+
+  useEffect(() => {
+    let active = true;
+    let workflow: ScanWorkflow | null = null;
+    let service: SyncService | null = null;
+    let unsubscribeSync: (() => void) | null = null;
+    setOfflineBootstrapError(null);
+    setOfflineQueue(null);
+    setScanWorkflow(null);
+    setSyncService(null);
+    setScanState({ status: 'initializing' });
+    void offlineBootstrap.initialize().then(async (bootstrapState) => {
+      if (!active) return;
+      if (bootstrapState.status === 'recoverable-error') {
+        setOfflineBootstrapError(bootstrapState.message);
+        setScanState({ status: 'recoverable-error', message: bootstrapState.message });
+        return;
+      }
+      if (bootstrapState.status !== 'ready') return;
+      const queue = bootstrapState.queue;
+      const network = new NetInfoNetworkMonitor();
+      workflow = new ScanWorkflow(
+        apiClient,
+        getOrCreateInstallationId,
+        () => new Date(),
+        queue,
+        network,
+        hashQrPayload,
+        expoLocalIdProvider,
+      );
+      service = new SyncService(queue, apiClient, network, () => {
+        const current = authStateRef.current;
+        return current.status === 'authenticated' ? current.session : null;
+      });
+      unsubscribeSync = service.subscribe((state) => {
+        setSyncState(state);
+        void refreshQueue(queue, authStateRef.current);
+      });
+      setOfflineQueue(queue);
+      setScanWorkflow(workflow);
+      setSyncService(service);
+      setScanState(await workflow.initialize());
+    });
+    return () => {
+      active = false;
+      unsubscribeSync?.();
+      service?.dispose();
+      workflow?.dispose();
+    };
+  }, [apiClient, offlineBootstrap, offlineBootstrapAttempt]);
+
+  useEffect(() => {
+    if (authState.status === 'authenticated') {
+      void syncService?.trigger(authState.session);
+      if (offlineQueue) void refreshQueue(offlineQueue, authState);
+    }
+  }, [authState, offlineQueue, syncService]);
+
+  useEffect(() => {
+    let active = true;
+    setAuthState({ status: 'restoring' });
+
+    void restoreStartupSession(authController, assignmentController).then((restored) => {
+      if (!active) return;
+      setAuthState(restored.auth);
+      setAssignmentState(restored.assignments);
+      setRoute(restored.auth.status === 'authenticated' ? 'assignments' : 'auth');
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [assignmentController, authController]);
+
+  async function loadAssignments(auth: AuthState): Promise<void> {
+    if (auth.status !== 'authenticated') {
+      return;
+    }
+
+    setAssignmentState({ status: 'loading' });
+    const nextAssignments = await assignmentController.load(auth.session);
+    setAssignmentState(nextAssignments);
+    setRoute(nextAssignments.status === 'loaded' ? 'assignments' : 'assignments');
+  }
+
+  async function refreshQueue(queue: SqliteOfflineScanQueue, auth: AuthState): Promise<void> {
+    if (auth.status !== 'authenticated') return;
+    const [count, failed] = await Promise.all([
+      queue.getPendingCount(auth.session.profile.id),
+      queue.getFailedScanEvents(auth.session.profile.id),
+    ]);
+    setPendingCount(count);
+    setFailedEvents(failed);
+  }
+
+  return (
+    <SafeAreaView style={styles.root}>
+      <View style={styles.panel}>
+        <Text style={styles.eyebrow}>TicketBox</Text>
+        <Text style={styles.title}>Check-in Staff</Text>
+        <Text style={styles.body}>API: {env.apiBaseUrl}</Text>
+        {offlineBootstrapError ? (
+          <View>
+            <Text>{offlineBootstrapError}</Text>
+            <Button
+              onPress={() => setOfflineBootstrapAttempt((attempt) => attempt + 1)}
+              title="Retry offline storage"
+            />
+          </View>
+        ) : null}
+        {route === 'auth' ? (
+          <LoginScreen
+            onSubmit={(email, password) => {
+              void authController.login({ email, password }).then((nextAuth) => {
+                setAuthState(nextAuth);
+                void loadAssignments(nextAuth);
+              });
+            }}
+            state={authState}
+          />
+        ) : null}
+        {route === 'assignments' ? (
+          <AssignmentScreen
+            onOpenScanner={() => setRoute('scanner')}
+            onRetry={() => {
+              void loadAssignments(authState);
+            }}
+            onSelect={(assignmentId) => {
+              setAssignmentState(assignmentController.select(assignmentState, assignmentId));
+            }}
+            state={assignmentState}
+          />
+        ) : null}
+        {route === 'scanner' && assignmentState.status === 'loaded' ? (
+          <ScannerScreen
+            assignment={assignmentState.selected}
+            onDecodedPayload={(payload) => {
+              if (authState.status !== 'authenticated') {
+                return;
+              }
+
+              void scanWorkflow
+                ?.submitDecodedPayload(payload, assignmentState.selected, authState.session)
+                .then((state) => {
+                  setScanState(state);
+                  if (offlineQueue) void refreshQueue(offlineQueue, authState);
+                });
+              if (scanWorkflow) setScanState(scanWorkflow.state);
+            }}
+            onReset={() => scanWorkflow && setScanState(scanWorkflow.reset())}
+            onRetryInitialization={() => {
+              setScanState({ status: 'initializing' });
+              void scanWorkflow?.initialize().then(setScanState);
+            }}
+            state={scanState}
+          />
+        ) : null}
+        {route === 'scanner' && authState.status === 'authenticated' && offlineQueue ? (
+          <SyncStatusPanel
+            failedEvents={failedEvents}
+            onClearSynced={() => {
+              void offlineQueue.clearSynced(authState.session.profile.id).then(() =>
+                refreshQueue(offlineQueue, authState),
+              );
+            }}
+            onClearTerminalResults={() => {
+              void offlineQueue.clearTerminalResults(authState.session.profile.id).then(() =>
+                refreshQueue(offlineQueue, authState),
+              );
+            }}
+            onSync={() => void syncService?.trigger(authState.session)}
+            pendingCount={pendingCount}
+            state={syncState}
+          />
+        ) : null}
+        {route !== 'auth' ? (
+          <Button
+            onPress={() => {
+              void authController.logout().then((nextAuth) => {
+                setAuthState(nextAuth);
+                setAssignmentState({ status: 'idle' });
+                if (scanWorkflow) setScanState(scanWorkflow.reset());
+                setRoute('auth');
+              });
+            }}
+            title="Log out"
+          />
+        ) : null}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#101418',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  panel: {
+    gap: 12,
+  },
+  eyebrow: {
+    color: '#6ee7b7',
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#f8fafc',
+    fontSize: 30,
+    fontWeight: '700',
+  },
+  body: {
+    color: '#cbd5e1',
+    fontSize: 16,
+  },
+});

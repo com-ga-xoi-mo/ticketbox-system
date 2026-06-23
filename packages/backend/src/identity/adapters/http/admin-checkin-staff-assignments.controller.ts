@@ -35,15 +35,10 @@ import { RolesGuard } from './guards/roles.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ORGANIZER, Role.ADMIN)
 export class AdminCheckinStaffAssignmentsController {
-  constructor(
-    private readonly manageAssignments: ManageCheckinStaffAssignmentsUseCase,
-  ) {}
+  constructor(private readonly manageAssignments: ManageCheckinStaffAssignmentsUseCase) {}
 
   @Get()
-  async list(
-    @Param('concertId') concertId: string,
-    @Request() req: { user: AuthenticatedUser },
-  ) {
+  async list(@Param('concertId') concertId: string, @Request() req: { user: AuthenticatedUser }) {
     return this.handleAuthorizationErrors(() =>
       this.manageAssignments.listActive({
         actor: { userId: req.user.id, roles: req.user.roles },

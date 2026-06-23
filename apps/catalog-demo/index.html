@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TicketBox Catalog Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      aside,
+      section {
+        padding: 24px;
+      }
+
+      aside {
+        border-right: 1px solid #dbe4ee;
+        background: #ffffff;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.2;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      p {
+        margin: 8px 0 0;
+      }
+
+      label {
+        display: block;
+        margin: 20px 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      input,
+      button {
+        min-height: 40px;
+        border-radius: 8px;
+        font: inherit;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        padding: 8px 10px;
+      }
+
+      button {
+        border: 0;
+        padding: 8px 12px;
+        background: #0f766e;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .concert-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .concert-button {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #1f2937;
+        text-align: left;
+      }
+
+      .concert-button.active {
+        border-color: #0f766e;
+        box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.16);
+      }
+
+      .muted {
+        color: #64748b;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .card {
+        border: 1px solid #dbe4ee;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+      }
+
+      .pill {
+        display: inline-flex;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #075985;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .error {
+        color: #b91c1c;
+      }
+
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          border-right: 0;
+          border-bottom: 1px solid #dbe4ee;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <aside>
+        <h1>TicketBox Catalog Demo</h1>
+        <p class="muted">Read-only verification surface for public catalog APIs.</p>
+
+        <label for="apiBase">API base URL</label>
+        <input id="apiBase" value="http://localhost:3000" />
+        <div class="toolbar">
+          <button id="loadConcerts">Load concerts</button>
+          <button id="clearDetail" class="secondary">Clear detail</button>
+        </div>
+
+        <div id="status" class="muted"></div>
+        <div id="concertList" class="concert-list"></div>
+      </aside>
+
+      <section>
+        <div id="detail">
+          <h2>No concert selected</h2>
+          <p class="muted">
+            Load concerts and select one to verify detail, ticket types, zones, and availability.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const apiBase = document.querySelector('#apiBase');
+      const loadConcertsButton = document.querySelector('#loadConcerts');
+      const clearDetailButton = document.querySelector('#clearDetail');
+      const statusEl = document.querySelector('#status');
+      const concertListEl = document.querySelector('#concertList');
+      const detailEl = document.querySelector('#detail');
+
+      let selectedSlug = null;
+
+      function endpoint(path) {
+        return `${apiBase.value.replace(/\/$/, '')}${path}`;
+      }
+
+      function money(value) {
+        return new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND',
+          maximumFractionDigits: 0,
+        }).format(value);
+      }
+
+      function dateTime(value) {
+        return new Intl.DateTimeFormat('vi-VN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(value));
+      }
+
+      function setStatus(message, isError = false) {
+        statusEl.className = isError ? 'error' : 'muted';
+        statusEl.textContent = message;
+      }
+
+      async function getJson(path) {
+        const response = await fetch(endpoint(path));
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+        return response.json();
+      }
+
+      function renderConcertList(concerts) {
+        concertListEl.innerHTML = '';
+        concerts.forEach((concert) => {
+          const button = document.createElement('button');
+          button.className = `concert-button${concert.slug === selectedSlug ? ' active' : ''}`;
+          button.innerHTML = `
+            <h3>${concert.title}</h3>
+            <p>${concert.artistName}</p>
+            <p class="muted">${concert.city} - ${dateTime(concert.startsAt)}</p>
+            <p class="muted">${concert.availabilitySummary.totalAvailableQuantity} tickets available</p>
+          `;
+          button.addEventListener('click', () => loadDetail(concert.slug));
+          concertListEl.appendChild(button);
+        });
+      }
+
+      function renderDetail(detail, availability) {
+        detailEl.innerHTML = `
+          <div class="card">
+            <span class="pill">${detail.city}</span>
+            <h2>${detail.title}</h2>
+            <p>${detail.artistName}</p>
+            <p class="muted">${detail.venueName} - ${dateTime(detail.startsAt)}</p>
+            <p>${detail.description ?? ''}</p>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <h3>Assets</h3>
+              <p>Poster: ${detail.posterAsset?.originalName ?? detail.posterAsset?.publicUrl ?? 'None'}</p>
+              <p>Seating map: ${detail.seatingMapAsset?.originalName ?? detail.seatingMapAsset?.publicUrl ?? 'None'}</p>
+            </div>
+            <div class="card">
+              <h3>Availability Snapshot</h3>
+              <p>${availability.ticketTypes.reduce((total, item) => total + item.availableQuantity, 0)} tickets available</p>
+              <p class="muted">Generated at ${dateTime(availability.generatedAt)}</p>
+            </div>
+          </div>
+
+          <h2 style="margin-top: 24px">Ticket types</h2>
+          <div class="grid">
+            ${detail.ticketTypes
+              .map(
+                (ticketType) => `
+                  <div class="card">
+                    <span class="pill">${ticketType.status}</span>
+                    <h3>${ticketType.name}</h3>
+                    <p>${ticketType.code} - ${money(ticketType.priceVnd)}</p>
+                    <p>${ticketType.availableQuantity} available, max ${ticketType.maxPerUser} per user</p>
+                    <p class="muted">Sale: ${dateTime(ticketType.saleStartsAt)} to ${dateTime(ticketType.saleEndsAt)}</p>
+                    <p class="muted">Zones: ${ticketType.zoneIds.join(', ') || 'None'}</p>
+                  </div>
+                `,
+              )
+              .join('')}
+          </div>
+
+          <h2 style="margin-top: 24px">Seating zones</h2>
+          <div class="grid">
+            ${detail.seatingZones
+              .map(
+                (zone) => `
+                  <div class="card">
+                    <span class="pill">${zone.status}</span>
+                    <h3>${zone.label}</h3>
+                    <p>SVG element: ${zone.svgElementId}</p>
+                    <p class="muted">Color: ${zone.color ?? 'default'}</p>
+                  </div>
+                `,
+              )
+              .join('')}
+          </div>
+        `;
+      }
+
+      async function loadConcerts() {
+        try {
+          setStatus('Loading concerts...');
+          const concerts = await getJson('/concerts');
+          renderConcertList(concerts);
+          setStatus(`${concerts.length} concerts loaded.`);
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      }
+
+      async function loadDetail(slug) {
+        try {
+          selectedSlug = slug;
+          setStatus('Loading detail...');
+          const [detail, availability] = await Promise.all([
+            getJson(`/concerts/${slug}`),
+            getJson(`/concerts/${slug}/availability`),
+          ]);
+          renderDetail(detail, availability);
+          await loadConcerts();
+          setStatus(`Loaded ${detail.title}.`);
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      }
+
+      loadConcertsButton.addEventListener('click', loadConcerts);
+      clearDetailButton.addEventListener('click', () => {
+        selectedSlug = null;
+        detailEl.innerHTML = `
+          <h2>No concert selected</h2>
+          <p class="muted">Load concerts and select one to verify detail, ticket types, zones, and availability.</p>
+        `;
+        loadConcerts();
+      });
+
+      loadConcerts();
+    </script>
+  </body>
+</html>

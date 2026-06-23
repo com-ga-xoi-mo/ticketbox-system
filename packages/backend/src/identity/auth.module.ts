@@ -13,6 +13,8 @@ import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-a
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
 import { ManageCheckinStaffAssignmentsUseCase } from './application/use-cases/manage-checkin-staff-assignments.use-case';
+import { GetMyProfileQuery } from './application/queries/get-my-profile.query';
+import { PROFILE_QUERY, type ProfileQueryPort } from './application/ports/profile-query.port';
 
 // Adapters — HTTP controllers
 import { AdminCheckinStaffAssignmentsController } from './adapters/http/admin-checkin-staff-assignments.controller';
@@ -21,15 +23,9 @@ import { RolesGuard } from './adapters/http/guards/roles.guard';
 import { ProfileController } from './adapters/http/profile.controller';
 
 // Domain — DI tokens
-import {
-  PASSWORD_HASHER,
-  type PasswordHasherPort,
-} from './domain/ports/password-hasher.port';
+import { PASSWORD_HASHER, type PasswordHasherPort } from './domain/ports/password-hasher.port';
 import { TOKEN_ISSUER, type TokenIssuerPort } from './domain/ports/token-issuer.port';
-import {
-  USER_REPOSITORY,
-  type IUserRepository,
-} from './domain/ports/user-repository.port';
+import { USER_REPOSITORY, type IUserRepository } from './domain/ports/user-repository.port';
 import {
   CHECKIN_STAFF_ASSIGNMENT_REPOSITORY,
   type CheckinStaffAssignmentRepositoryPort,
@@ -44,6 +40,7 @@ import { BcryptPasswordHasher } from './infrastructure/crypto/bcrypt-password-ha
 import { PrismaCheckinStaffAssignmentRepository } from './infrastructure/database/prisma-checkin-staff-assignment.repository';
 import { PrismaConcertOwnershipRepository } from './infrastructure/database/prisma-concert-ownership.repository';
 import { PrismaUserRepository } from './infrastructure/database/prisma-user.repository';
+import { PrismaProfileQueryAdapter } from './infrastructure/database/prisma-profile-query.adapter';
 import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
@@ -56,11 +53,12 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
       inject: [PlatformConfigService],
-      useFactory: (config: PlatformConfigService) => ({
-        secret: config.jwtSecret,
-        signOptions: { expiresIn: config.jwtExpiry },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any),
+      useFactory: (config: PlatformConfigService) =>
+        ({
+          secret: config.jwtSecret,
+          signOptions: { expiresIn: config.jwtExpiry },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any,
     }),
   ],
   controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController],
@@ -85,6 +83,11 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       ) => new LoginUseCase(userRepository, passwordHasher, tokenIssuer),
     },
     {
+      provide: GetMyProfileQuery,
+      inject: [PROFILE_QUERY],
+      useFactory: (profiles: ProfileQueryPort) => new GetMyProfileQuery(profiles),
+    },
+    {
       provide: AuthorizeAdminActionUseCase,
       useFactory: () => new AuthorizeAdminActionUseCase(),
     },
@@ -107,16 +110,17 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
         assignmentRepository: CheckinStaffAssignmentRepositoryPort,
         authorizeConcertManagement: AuthorizeConcertManagementUseCase,
       ) =>
-        new ManageCheckinStaffAssignmentsUseCase(
-          assignmentRepository,
-          authorizeConcertManagement,
-        ),
+        new ManageCheckinStaffAssignmentsUseCase(assignmentRepository, authorizeConcertManagement),
     },
 
     // Infrastructure layer — Bind port to concrete implementation
     {
       provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: PROFILE_QUERY,
+      useClass: PrismaProfileQueryAdapter,
     },
     {
       provide: CONCERT_OWNERSHIP_REPOSITORY,
@@ -151,6 +155,7 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     AuthorizeConcertManagementUseCase,
     AuthorizeCheckinAssignmentUseCase,
     ManageCheckinStaffAssignmentsUseCase,
+    CHECKIN_STAFF_ASSIGNMENT_REPOSITORY,
   ],
 })
 export class AuthModule {}

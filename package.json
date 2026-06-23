@@ -14,15 +14,20 @@
     "packages/*"
   ],
   "scripts": {
-    "start:deps": "docker compose up -d postgres redis",
+    "start:deps": "docker compose up -d postgres redis maildev",
     "stop:deps": "docker compose down",
-    "dev:api": "nest start api --watch",
+    "build:api-types": "npm --workspace @ticketbox/api-types run build",
+    "dev:api": "npm run build:api-types && nest start api --watch",
     "dev:worker": "nest start worker --watch",
-    "build": "nest build api && nest build worker",
+    "dev:checkin-mobile": "npm run build:api-types && npm --workspace @ticketbox/checkin-mobile run start",
+    "dev:web": "npm --workspace @ticketbox/web run dev",
+    "build": "npm run build:api-types && nest build api && nest build worker",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
+    "test": "npm run build:api-types && vitest run --passWithNoTests",
+    "test:api-types": "npm --workspace @ticketbox/api-types run test",
+    "test:checkin-mobile": "npm --workspace @ticketbox/checkin-mobile run test",
     "test:e2e": "vitest run test/**/*.e2e-spec.ts",
     "health": "node tools/check-health.mjs",
     "verify:workspace": "node tools/verify-workspace.mjs",
@@ -32,12 +37,16 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "verify:prisma": "prisma validate && prisma generate",
-    "verify:database": "node tools/verify-database-seed.mjs"
+    "verify:database": "node tools/verify-database-seed.mjs",
+    "verify:checkin-mobile": "npm run build:api-types && npm --workspace @ticketbox/checkin-mobile run verify",
+    "verify:api-boundaries": "node tools/verify-api-types-boundaries.mjs",
+    "verify:web": "npm --workspace @ticketbox/web run verify"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1072.0",
     "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
@@ -50,6 +59,7 @@
     "bullmq": "^5.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cron-parser": "^4.9.0",
     "ioredis": "^5.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

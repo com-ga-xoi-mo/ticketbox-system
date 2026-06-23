@@ -15,11 +15,60 @@ The system SHALL send an in-app notification and email confirmation with e-ticke
 - **THEN** the system SHALL retry delivery without rolling back the paid order
 
 ### Requirement: Concert reminder notifications
-The system SHALL send reminders to ticket holders 24 hours before the concert starts.
+The system SHALL send a reminder to every valid ticket holder of a published concert approximately
+24 hours before the concert start time. The reminder SHALL be created as both an in-app notification
+and an email: the in-app notification is delivered by persistence (created in a sent state, readable
+in the app, not routed through a channel adapter), while only the email is routed through the
+notification channel adapter via the delivery queue. A scheduled worker job SHALL periodically scan
+for upcoming concerts and enqueue reminder work; each user SHALL receive at most one reminder per
+concert per channel. Concert start times SHALL be treated as absolute instants; the 24-hour boundary
+is evaluated as pure instant arithmetic, and the operating timezone (`Asia/Ho_Chi_Minh`) is used
+only to format the human-readable start time shown to users. Reminder email delivery SHALL use
+bounded retry attempts in the worker and SHALL NOT run in the request path.
+
+Only concerts with a **published** status SHALL be reminded; draft, cancelled, and ended concerts
+SHALL be excluded. A **valid ticket holder** is a user who holds at least one active (issued or
+checked-in, i.e. not voided or refunded) ticket on a **paid** order for the concert. The
+notification module SHALL obtain concert start time and the valid ticket-holder list through a read
+port, not by importing other modules' persistence models directly. The reminder use case SHALL NOT
+depend on the queue; enqueuing of email delivery jobs SHALL occur in the worker processor (adapter
+layer), keeping the application layer free of queue dependencies.
 
 #### Scenario: Reminder job finds ticket holders
-- **WHEN** a concert is 24 hours from start time
-- **THEN** the system SHALL enqueue reminder notifications for users with valid tickets
+- **WHEN** the scheduled reminder scan runs and a concert's start time falls within the window
+  `[now + 24h, now + 24h + scanInterval)`
+- **THEN** the system SHALL enqueue reminder notifications for every valid ticket holder of that concert
+
+#### Scenario: In-app reminder is created in a sent state
+- **WHEN** a reminder is processed for a valid ticket holder
+- **THEN** the system SHALL persist an in-app reminder in a sent state (readable in the app) without
+  routing it through a channel adapter or the delivery queue
+
+#### Scenario: Email reminder is queued for channel delivery
+- **WHEN** a reminder is processed for a valid ticket holder
+- **THEN** the system SHALL persist an email reminder in a pending state and enqueue exactly one
+  delivery job for it on the delivery queue, sent through the registered email channel adapter
+
+#### Scenario: Each user is reminded at most once per concert
+- **WHEN** the scheduler scans the same concert in overlapping runs, or a previously reminded user
+  is encountered again
+- **THEN** the system SHALL NOT create or send a duplicate reminder for a user/concert/channel that
+  already has a reminder, identified by a deterministic dedupe key
+
+#### Scenario: Only published concerts are reminded
+- **WHEN** the reminder scan encounters a concert whose status is not published (draft, cancelled,
+  or ended)
+- **THEN** the system SHALL NOT create, enqueue, or send reminders for that concert
+
+#### Scenario: Rescheduled concert is re-evaluated against the new start time
+- **WHEN** a concert's start time changes
+- **THEN** the reminder scan SHALL evaluate the 24-hour window against the new start time, and the
+  dedupe key SHALL prevent resending to users who were already reminded for that concert
+
+#### Scenario: Reminder email delivery failure is retried with bounded attempts
+- **WHEN** sending a reminder email fails transiently
+- **THEN** the worker SHALL retry delivery up to the configured bounded attempt limit without
+  blocking other reminders, and SHALL mark the notification failed after attempts are exhausted
 
 ### Requirement: Extensible notification channels
 The system SHALL model notification delivery through channel adapters so future SMS or Zalo OA channels can be added without changing purchase logic.
@@ -27,4 +76,38 @@ The system SHALL model notification delivery through channel adapters so future 
 #### Scenario: New channel is added
 - **WHEN** a new notification channel adapter is registered
 - **THEN** existing notification use cases SHALL be able to route messages through that adapter by configuration
+
+### Requirement: Notification delivery lint gate compliance
+The notification delivery test and support code SHALL satisfy the repository ESLint gate without changing notification delivery runtime behavior.
+
+#### Scenario: Notification support code passes lint
+- **WHEN** the repository lint command runs after this change is implemented
+- **THEN** notification delivery test doubles, support adapters, and processor specs SHALL not report unused-parameter or type-only import ESLint errors
+
+#### Scenario: Notification behavior remains unchanged
+- **WHEN** the notification delivery regression tests run after the lint cleanup
+- **THEN** purchase confirmation creation, email delivery retry behavior, and notification processor behavior SHALL continue to pass without queue contract, email behavior, database schema, API surface, or mobile app changes
+
+### Requirement: Notification adapter structure is explicit
+The system SHALL organize notification delivery folders so contributors can identify worker-driven inbound queue adapters, infrastructure provider implementations, and intentionally absent HTTP adapters without changing notification runtime behavior.
+
+#### Scenario: Worker-driven inbound adapters are visible
+- **WHEN** a contributor inspects the notification module
+- **THEN** BullMQ processors SHALL be located under an inbound queue adapter boundary and documented as the worker-triggered entry points for notification delivery
+
+#### Scenario: Infrastructure implementations are visible
+- **WHEN** the notification module persists notifications, enqueues notification jobs, or sends email
+- **THEN** the Prisma repository, queue producer, and email channel implementations SHALL be located under notification infrastructure boundaries while preserving the existing notification ports and integration contracts
+
+#### Scenario: HTTP adapter absence is intentional
+- **WHEN** a contributor inspects the notification module
+- **THEN** the module SHALL document that no notification HTTP adapter exists in this slice because notification delivery is currently triggered by worker events and queue jobs
+
+#### Scenario: Payment integration remains external
+- **WHEN** payment/order fulfillment emits a paid-order notification event in a later change
+- **THEN** it SHALL use the existing notification producer/event contract without moving payment fulfillment logic into the notification module
+
+#### Scenario: Runtime notification contracts remain unchanged
+- **WHEN** the notification module structure is refactored
+- **THEN** queue names, job names, queue payloads, email behavior, database schema, public API surface, and notification business logic SHALL remain unchanged
 
