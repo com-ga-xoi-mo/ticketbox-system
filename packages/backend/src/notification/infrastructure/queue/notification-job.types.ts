@@ -6,3 +6,6 @@ export interface NotificationDeliveryJobData {
   notificationId: string;
   toEmail: string;
 }
+
+/** Empty payload: the repeatable scan derives its own time window at run time. */
+export type ConcertReminderScanJobData = Record<string, never>;
