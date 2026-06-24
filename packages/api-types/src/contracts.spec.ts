@@ -13,6 +13,8 @@ import {
   PublicConcertListResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  TicketCacheDeltaResponseSchema,
+  TicketCacheFullResponseSchema,
   VipLookupRequestSchema,
   VipLookupResponseSchema,
 } from './index';
@@ -158,32 +160,37 @@ describe('batch sync contracts', () => {
     deviceId: ' installation-1 ',
   };
 
-  it('accepts empty and 100-event requests and trims bounded identifiers', () => {
-    expect(BatchSyncRequestSchema.parse([])).toEqual([]);
-    expect(BatchSyncRequestSchema.parse([event])[0]).toMatchObject({
+  it('accepts a 1-to-100 event request with optional since and trims bounded identifiers', () => {
+    expect(BatchSyncRequestSchema.parse({ events: [event] }).events[0]).toMatchObject({
       localId: 'local-1',
       gate: 'Main Gate',
       deviceId: 'installation-1',
     });
     expect(
-      BatchSyncRequestSchema.safeParse(
-        Array.from({ length: 100 }, (_, index) => ({ ...event, localId: `local-${index}` })),
-      ).success,
+      BatchSyncRequestSchema.safeParse({
+        events: Array.from({ length: 100 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+      }).success,
+    ).toBe(true);
+    expect(
+      BatchSyncRequestSchema.safeParse({ events: [event], since: timestamp }).success,
     ).toBe(true);
   });
 
   it('rejects invalid batch request boundaries and fields', () => {
     const invalidRequests: unknown[] = [
-      Array.from({ length: 101 }, (_, index) => ({ ...event, localId: `local-${index}` })),
-      [event, { ...event, localId: 'local-1' }],
-      [{ ...event, localId: '   ' }],
-      [{ ...event, localId: 'x'.repeat(161) }],
-      [{ ...event, qrPayloadHash: 'A'.repeat(64) }],
-      [{ ...event, qrPayloadHash: 'a'.repeat(63) }],
-      [{ ...event, gate: 'x'.repeat(121) }],
-      [{ ...event, deviceId: 'x'.repeat(161) }],
-      [{ ...event, assignmentId: undefined }],
-      [{ ...event, extra: true }],
+      {
+        events: Array.from({ length: 101 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+      },
+      { events: [event, { ...event, localId: 'local-1' }] },
+      { events: [{ ...event, localId: '   ' }] },
+      { events: [{ ...event, localId: 'x'.repeat(161) }] },
+      { events: [{ ...event, qrPayloadHash: 'A'.repeat(64) }] },
+      { events: [{ ...event, qrPayloadHash: 'a'.repeat(63) }] },
+      { events: [{ ...event, gate: 'x'.repeat(121) }] },
+      { events: [{ ...event, deviceId: 'x'.repeat(161) }] },
+      { events: [{ ...event, assignmentId: undefined }] },
+      { events: [{ ...event, extra: true }] },
+      { events: [event], extra: true },
     ];
     for (const candidate of invalidRequests) {
       expect(BatchSyncRequestSchema.safeParse(candidate).success).toBe(false);
@@ -208,7 +215,22 @@ describe('batch sync contracts', () => {
     },
   ])('accepts every strict event result variant', (result) => {
     expect(BatchSyncEventResultSchema.safeParse(result).success).toBe(true);
-    expect(BatchSyncResponseSchema.safeParse([result]).success).toBe(true);
+    expect(BatchSyncResponseSchema.safeParse({ results: [result] }).success).toBe(true);
+  });
+
+  it('accepts response with cacheUpdates and without', () => {
+    const accepted = { localId: '1', status: 'accepted', message: 'OK', ticketId, checkedInAt: timestamp };
+    expect(BatchSyncResponseSchema.safeParse({ results: [accepted] }).success).toBe(true);
+    expect(
+      BatchSyncResponseSchema.safeParse({
+        results: [accepted],
+        cacheUpdates: {
+          upserted: [{ hash: qrPayloadHash, status: 'checked_in' }],
+          voided: [],
+          syncedAt: timestamp,
+        },
+      }).success,
+    ).toBe(true);
   });
 
   it.each([
@@ -219,6 +241,50 @@ describe('batch sync contracts', () => {
     { localId: '5', status: 'duplicate', message: 'Duplicate', extra: true },
   ])('rejects missing and unknown result fields', (result) => {
     expect(BatchSyncEventResultSchema.safeParse(result).success).toBe(false);
+  });
+});
+
+describe('ticket cache contracts', () => {
+  it('validates full cache response', () => {
+    expect(
+      TicketCacheFullResponseSchema.safeParse({
+        entries: [{ hash: qrPayloadHash, status: 'valid' }],
+        syncedAt: timestamp,
+      }).success,
+    ).toBe(true);
+    expect(TicketCacheFullResponseSchema.safeParse({ entries: [], syncedAt: timestamp }).success).toBe(true);
+  });
+
+  it('validates delta cache response', () => {
+    expect(
+      TicketCacheDeltaResponseSchema.safeParse({
+        upserted: [{ hash: qrPayloadHash, status: 'checked_in' }],
+        voided: [qrPayloadHash],
+        syncedAt: timestamp,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects invalid cache status and unknown fields', () => {
+    expect(
+      TicketCacheFullResponseSchema.safeParse({
+        entries: [{ hash: qrPayloadHash, status: 'invalid_status' }],
+        syncedAt: timestamp,
+      }).success,
+    ).toBe(false);
+    expect(
+      TicketCacheFullResponseSchema.safeParse({
+        entries: [{ hash: qrPayloadHash, status: 'valid', extra: true }],
+        syncedAt: timestamp,
+      }).success,
+    ).toBe(false);
+    expect(
+      TicketCacheDeltaResponseSchema.safeParse({
+        upserted: [],
+        voided: ['not-a-hash'],
+        syncedAt: timestamp,
+      }).success,
+    ).toBe(false);
   });
 });
 

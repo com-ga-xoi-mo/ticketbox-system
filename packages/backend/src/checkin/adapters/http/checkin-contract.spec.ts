@@ -59,12 +59,12 @@ describe('batch sync HTTP contract', () => {
   it('maps every result variant deterministically to the shared response schema', () => {
     const response = toBatchSyncResponse(result);
     expect(BatchSyncResponseSchema.parse(response)).toEqual(response);
-    expect(response[0]).toMatchObject({ checkedInAt: checkedInAt.toISOString() });
+    expect(response.results[0]).toMatchObject({ checkedInAt: checkedInAt.toISOString() });
   });
 
   it('rejects invalid, oversized, and duplicate-localId request bodies before use-case mapping', () => {
     const pipe = new ZodBodyPipe(BatchSyncRequestSchema);
-    const valid = {
+    const event = {
       localId: 'local-1',
       assignmentId,
       concertId,
@@ -73,9 +73,9 @@ describe('batch sync HTTP contract', () => {
       deviceId: 'device-1',
     };
     for (const body of [
-      [{ ...valid, extra: true }],
-      Array.from({ length: 101 }, (_, index) => ({ ...valid, localId: `${index}` })),
-      [valid, valid],
+      { events: [{ ...event, extra: true }] },
+      { events: Array.from({ length: 101 }, (_, index) => ({ ...event, localId: `${index}` })) },
+      { events: [event, event] },
     ]) {
       expect(() => pipe.transform(body)).toThrow(BadRequestException);
     }

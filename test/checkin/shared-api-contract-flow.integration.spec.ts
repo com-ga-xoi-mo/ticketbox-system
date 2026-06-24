@@ -7,6 +7,8 @@ import { HttpCheckinMobileApiClient } from '../../apps/checkin-mobile/src/api/ht
 import { CheckinAssignmentsController } from '../../packages/backend/src/checkin/adapters/http/checkin-assignments.controller';
 import { CheckinController } from '../../packages/backend/src/checkin/adapters/http/checkin.controller';
 import { ListMyCheckinAssignmentsQuery } from '../../packages/backend/src/checkin/application/queries/list-my-checkin-assignments.query';
+import { BatchSyncUseCase } from '../../packages/backend/src/checkin/application/use-cases/batch-sync.use-case';
+import { GetTicketCacheUseCase } from '../../packages/backend/src/checkin/application/use-cases/get-ticket-cache.use-case';
 import { OnlineCheckinUseCase } from '../../packages/backend/src/checkin/application/use-cases/online-checkin.use-case';
 import { AuthController } from '../../packages/backend/src/identity/adapters/http/auth.controller';
 import { RolesGuard } from '../../packages/backend/src/identity/adapters/http/guards/roles.guard';
@@ -102,6 +104,8 @@ describe('shared API contracts across real HTTP routes and mobile client', () =>
           },
         },
         { provide: OnlineCheckinUseCase, useValue: onlineCheckin },
+        { provide: BatchSyncUseCase, useValue: { execute: vi.fn() } },
+        { provide: GetTicketCacheUseCase, useValue: { execute: vi.fn() } },
       ],
     })
       .overrideGuard(JwtAuthGuard)

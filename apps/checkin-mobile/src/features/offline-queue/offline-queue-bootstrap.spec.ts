@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SqliteDatabase } from './sqlite-database.port';
 import { OfflineQueueBootstrap } from './offline-queue-bootstrap';
 
-const database = {} as SqliteDatabase;
+const database = { execAsync: vi.fn(async () => undefined) } as unknown as SqliteDatabase;
 
 describe('OfflineQueueBootstrap', () => {
   it('surfaces database open failure and succeeds on explicit retry', async () => {
@@ -20,7 +20,7 @@ describe('OfflineQueueBootstrap', () => {
     });
     expect(bootstrap.state.status).toBe('recoverable-error');
 
-    await expect(bootstrap.initialize()).resolves.toEqual({ status: 'ready', queue });
+    await expect(bootstrap.initialize()).resolves.toEqual({ status: 'ready', queue, database });
     expect(openDatabase).toHaveBeenCalledTimes(2);
     expect(queue.initialize).toHaveBeenCalledOnce();
   });

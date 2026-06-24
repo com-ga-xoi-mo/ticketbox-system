@@ -86,6 +86,7 @@ describe('ProcessMomoIpnUseCase', () => {
       createRedirectSession: vi.fn(),
       verifySimulatorToken: vi.fn(),
       verifyMomoIpnPayload: vi.fn(() => buildMomoPayload()),
+      verifyVnpayCallbackPayload: vi.fn(),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
     useCase = new ProcessMomoIpnUseCase(

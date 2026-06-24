@@ -32,6 +32,7 @@ export interface InitiatePaymentCommand {
   userId: string;
   idempotencyKey: string;
   provider?: PaymentProvider;
+  clientIp?: string;
 }
 
 export interface InitiatePaymentResult {
@@ -109,6 +110,7 @@ export class InitiatePaymentUseCase {
         orderId: order.id,
         userId: order.userId,
         amountVnd: order.totalAmountVnd,
+        clientIp: command.clientIp,
       });
       await this.recordCircuitSuccess(circuitPermit);
 

@@ -52,6 +52,7 @@ describe('ProcessSimulatorPaymentCallbackUseCase', () => {
         providerTransactionId: 'sim-payment-1',
       })),
       verifyMomoIpnPayload: vi.fn(),
+      verifyVnpayCallbackPayload: vi.fn(),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
     useCase = new ProcessSimulatorPaymentCallbackUseCase(

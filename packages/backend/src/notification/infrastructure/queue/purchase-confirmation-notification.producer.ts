@@ -7,10 +7,13 @@ import {
   NOTIFICATION_PURCHASE_CONFIRMATION_QUEUE,
 } from '../../../platform/queue/platform-queue.constants';
 import type { OrderPaidForNotification } from '../../domain/events/order-paid-for-notification.event';
+import type { PurchaseConfirmationQueuePort } from '../../domain/ports/purchase-confirmation-queue.port';
 import type { PurchaseConfirmationJobData } from './notification-job.types';
 
 @Injectable()
-export class PurchaseConfirmationNotificationProducer {
+export class PurchaseConfirmationNotificationProducer
+  implements PurchaseConfirmationQueuePort
+{
   constructor(
     @InjectQueue(NOTIFICATION_PURCHASE_CONFIRMATION_QUEUE)
     private readonly queue: Queue<PurchaseConfirmationJobData>,
