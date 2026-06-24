@@ -6,6 +6,7 @@ import {
   ApiResponseValidationError,
   ApiTransportError,
 } from '../../api/http-checkin-mobile-api-client';
+import type { TicketCacheRepository } from '../ticket-cache/ticket-cache.repository';
 import type { NetworkMonitor } from './network-monitor.port';
 import type { OfflineScanEvent, OfflineScanQueue } from './offline-scan-queue.port';
 
@@ -50,6 +51,8 @@ export class SyncService {
     private readonly sessionProvider: SessionProvider,
     private readonly random: () => number = Math.random,
     private readonly clock: () => Date = () => new Date(),
+    private readonly ticketCache?: TicketCacheRepository,
+    private lastCacheSyncAt?: string,
   ) {
     this.unsubscribeNetwork = network.onStatusChange((online) => {
       if (online) void this.triggerAuthenticatedSession();
@@ -100,14 +103,40 @@ export class SyncService {
       }
       try {
         const pending = await this.queue.getPendingScanEvents(session.profile.id, 100);
-        if (pending.length === 0) {
+        const concertId = pending[0]?.concertId ?? this.lastCacheConcertId;
+
+        if (!concertId && pending.length === 0) {
           return this.setState({ status: 'idle', counts, lastSyncAt: this.clock().toISOString() });
         }
-        const response = await this.api.submitBatchSync(
-          session.accessToken,
-          pending.map(toBatchEvent),
-        );
-        await this.applyResponse(session.profile.id, pending, response, counts);
+
+        if (pending.length > 0) {
+          this.lastCacheConcertId = pending[0].concertId;
+        }
+
+        const response = await this.api.submitBatchSync(session.accessToken, {
+          concertId,
+          events: pending.map(toBatchEvent),
+          ...(this.lastCacheSyncAt ? { since: this.lastCacheSyncAt } : {}),
+        });
+        
+        if (pending.length > 0) {
+          await this.applyResponse(session.profile.id, pending, response, counts);
+        }
+
+        if (response.cacheUpdates && this.ticketCache && concertId) {
+          await this.ticketCache.applyDelta(
+            session.profile.id,
+            concertId,
+            response.cacheUpdates,
+            this.clock().toISOString(),
+          );
+          this.lastCacheSyncAt = response.cacheUpdates.syncedAt;
+        }
+        
+        if (pending.length < 100) {
+          return this.setState({ status: 'idle', counts, lastSyncAt: this.clock().toISOString() });
+        }
+        
         retry = 0;
       } catch (error) {
         const classification = classifySyncFailure(error);
@@ -145,9 +174,10 @@ export class SyncService {
     response: BatchSyncResponse,
     counts: SyncResultCounts,
   ): Promise<void> {
+    const results = response.results;
     const pendingIds = new Set(pending.map(({ localId }) => localId));
     const responseIds = new Set<string>();
-    for (const result of response) {
+    for (const result of results) {
       if (!pendingIds.has(result.localId) || responseIds.has(result.localId)) {
         throw new Error('Batch sync response correlation failed');
       }
@@ -155,7 +185,7 @@ export class SyncService {
     }
     if (responseIds.size !== pending.length) throw new Error('Batch sync response is incomplete');
 
-    for (const result of response) {
+    for (const result of results) {
       if (result.status === 'accepted' || result.status === 'duplicate') {
         await this.queue.markSynced(staffUserId, result.localId, this.clock().toISOString());
       } else {

@@ -71,3 +71,8 @@ docker-compose.override.yml
 .agent/
 .codex/
 .agents/skills
+# Ignore agent and extra files
+CLAUDE.md
+docs/manual-tests/
+DECISIONS.md
+press-kit.pdf

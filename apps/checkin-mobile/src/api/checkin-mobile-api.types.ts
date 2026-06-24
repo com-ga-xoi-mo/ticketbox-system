@@ -6,11 +6,20 @@ import type {
   StaffProfileResponse,
   BatchSyncRequest,
   BatchSyncResponse,
+  TicketCacheDeltaResponse,
+  TicketCacheFullResponse,
 } from '@ticketbox/api-types';
 
 export type StaffProfile = StaffProfileResponse;
 export type { LoginRequest, OnlineScanRequest, StaffAssignment };
 export type { BatchSyncRequest, BatchSyncResponse };
+export type { TicketCacheFullResponse, TicketCacheDeltaResponse };
+
+export interface TicketCacheRequest {
+  assignmentId: string;
+  concertId: string;
+  since?: string;
+}
 
 export interface MobileSession {
   readonly accessToken: string;
@@ -39,12 +48,22 @@ export type MobileApiFailure =
 export type OnlineScanResult =
   | OnlineScanResponse
   | MobileApiFailure
-  | { readonly status: 'queued'; readonly message: string; readonly localId: string };
+  | { readonly status: 'queued'; readonly message: string; readonly localId: string }
+  | { readonly status: 'accepted'; readonly message: string; readonly localId: string }
+  | { readonly status: 'duplicate'; readonly message: string }
+  | { readonly status: 'invalid'; readonly message: string; readonly reasonCode: string };
 
 export interface CheckinApiClient {
   submitOnlineScan(accessToken: string, request: OnlineScanRequest): Promise<OnlineScanResult>;
   submitBatchSync(accessToken: string, request: BatchSyncRequest): Promise<BatchSyncResponse>;
 }
 
+export interface TicketCacheApiClient {
+  fetchTicketCache(
+    accessToken: string,
+    request: TicketCacheRequest,
+  ): Promise<TicketCacheFullResponse | TicketCacheDeltaResponse>;
+}
+
 export interface CheckinMobileApiClient
-  extends AuthApiClient, AssignmentApiClient, CheckinApiClient {}
+  extends AuthApiClient, AssignmentApiClient, CheckinApiClient, TicketCacheApiClient {}
