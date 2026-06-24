@@ -83,6 +83,7 @@ export const envSchema = z
     GUEST_LIST_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
     GUEST_LIST_RETRY_BACKOFF_MS: z.coerce.number().int().min(100).default(5000),
     GUEST_LIST_PROCESSING_LEASE_MS: z.coerce.number().int().min(1000).default(120000),
+    TICKET_ACCESS_BASE_URL: z.string().url().default('http://localhost:5173'),
     STORAGE_DRIVER: z.enum(['s3', 'local']).default('local'),
     LOCAL_STORAGE_ROOT_DIR: z.string().min(1).default('data/uploads'),
     LOCAL_STORAGE_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000/storage'),

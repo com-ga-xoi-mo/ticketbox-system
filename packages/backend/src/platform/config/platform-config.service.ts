@@ -200,6 +200,10 @@ export class PlatformConfigService {
     return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
   }
 
+  get ticketAccessBaseUrl(): string {
+    return this.configService.get('TICKET_ACCESS_BASE_URL');
+  }
+
   get s3Endpoint(): string | undefined {
     return this.configService.get('S3_ENDPOINT', { infer: true });
   }
