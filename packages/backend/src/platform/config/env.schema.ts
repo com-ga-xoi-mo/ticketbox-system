@@ -49,6 +49,15 @@ export const envSchema = z
     EMAIL_RETRY_BACKOFF_MS: z.coerce.number().int().min(0).default(5000),
     EMAIL_SMTP_HOST: z.string().min(1).default('localhost'),
     EMAIL_SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+    EMAIL_SMTP_USER: optionalNonEmpty,
+    EMAIL_SMTP_PASS: optionalNonEmpty,
+    EMAIL_SMTP_SECURE: z.preprocess(
+      (value) =>
+        typeof value === 'string'
+          ? ['1', 'true', 'yes'].includes(value.trim().toLowerCase())
+          : Boolean(value),
+      z.boolean(),
+    ),
     MAILDEV_WEB_URL: z.string().url().optional(),
     ARTIST_BIO_PDF_MAX_BYTES: z.coerce
       .number()
