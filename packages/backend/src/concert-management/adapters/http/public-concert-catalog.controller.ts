@@ -1,10 +1,11 @@
 import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
-import { CatalogSearchParamsSchema } from '@ticketbox/api-types';
+import { CatalogSearchParamsSchema, FeaturedConcertParamsSchema } from '@ticketbox/api-types';
 
 import { GetConcertAvailabilityUseCase } from '../../application/use-cases/get-concert-availability.use-case';
 import { GetPublicConcertDetailUseCase } from '../../application/use-cases/get-public-concert-detail.use-case';
 import { ListConcertCitiesUseCase } from '../../application/use-cases/list-concert-cities.use-case';
 import { ListPublicConcertsUseCase } from '../../application/use-cases/list-public-concerts.use-case';
+import { ListFeaturedConcertsUseCase } from '../../application/use-cases/list-featured-concerts.use-case';
 import type { CatalogSearchFilters } from '../../domain/catalog.types';
 import { PublicConcertNotFoundError } from '../../domain/errors';
 
@@ -15,6 +16,7 @@ export class PublicConcertCatalogController {
     private readonly getPublicConcertDetail: GetPublicConcertDetailUseCase,
     private readonly getConcertAvailability: GetConcertAvailabilityUseCase,
     private readonly listConcertCities: ListConcertCitiesUseCase,
+    private readonly listFeaturedConcerts: ListFeaturedConcertsUseCase,
   ) {}
 
   @Get()
@@ -28,6 +30,7 @@ export class PublicConcertCatalogController {
         dateTo: parsedQuery.dateTo ? new Date(parsedQuery.dateTo) : undefined,
         minPrice: parsedQuery.minPrice,
         maxPrice: parsedQuery.maxPrice,
+        eventType: parsedQuery.eventType,
         sortBy: parsedQuery.sortBy,
         sortDir: parsedQuery.sortDir,
       };
@@ -43,6 +46,19 @@ export class PublicConcertCatalogController {
   @Get('cities')
   async listCities() {
     return this.listConcertCities.execute();
+  }
+
+  @Get('featured')
+  async listFeatured(@Query() query: unknown) {
+    try {
+      const parsedQuery = FeaturedConcertParamsSchema.parse(query || {});
+      return await this.listFeaturedConcerts.execute(undefined, parsedQuery.limit);
+    } catch (err: any) {
+      if (err?.name === 'ZodError') {
+        throw new BadRequestException('Invalid query parameters', { cause: err });
+      }
+      throw err;
+    }
   }
 
   @Get(':slug/availability')
