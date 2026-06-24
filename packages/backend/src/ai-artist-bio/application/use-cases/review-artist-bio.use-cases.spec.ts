@@ -132,7 +132,7 @@ describe('artist bio review and retry use cases', () => {
     expect(queue.enqueued).toEqual([]);
   });
 
-  it('reject keeps generated text non-public by moving the workflow back to draft', async () => {
+  it('reject keeps generated text non-public by moving the workflow to REJECTED', async () => {
     const repository = new InMemoryArtistBioRepository();
     repository.records.set(
       'artist-bio-1',
@@ -153,7 +153,7 @@ describe('artist bio review and retry use cases', () => {
     });
 
     expect(rejected).toMatchObject({
-      status: ArtistBioStatus.DRAFT,
+      status: ArtistBioStatus.REJECTED,
       generatedBio: 'Needs revision',
       publishedBio: null,
     });
