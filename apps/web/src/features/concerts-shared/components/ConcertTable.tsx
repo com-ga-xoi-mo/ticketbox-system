@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '../../../shared/ui/table';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+import { getAssetUrl } from '../../../shared/api/client';
 
 interface ConcertTableProps {
   concerts: Concert[];
@@ -69,11 +69,11 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
         </TableHeader>
         <TableBody>
           {concerts.map((concert) => {
-            const { label, badgeClass, dotClass } = mapStatus(concert.status);
+            const { label, variant, dotClass } = mapStatus(concert.status);
             const isCancelled = concert.status === 'CANCELLED';
             const isSelected = selectedId === concert.id;
             const imageUrl = concert.posterAssetId
-              ? `${API_BASE_URL}/assets/${concert.posterAssetId}`
+              ? getAssetUrl(concert.posterAssetId)
               : null;
 
             return (
@@ -188,7 +188,7 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
 
                 {/* Status */}
                 <TableCell>
-                  <Badge className={badgeClass}>
+                  <Badge variant={variant}>
                     {dotClass && <span className={`size-1.5 rounded-full ${dotClass}`} />}
                     {label}
                   </Badge>

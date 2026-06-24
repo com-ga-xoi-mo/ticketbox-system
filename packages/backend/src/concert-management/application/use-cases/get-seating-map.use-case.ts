@@ -12,6 +12,7 @@ export interface GetSeatingMapInput {
 
 export interface GetSeatingMapResult {
   assetId: string | null;
+  svgUrl: string | null;
   svgElementIds: string[];
 }
 
@@ -40,14 +41,16 @@ export class GetSeatingMapUseCase {
     if (!concert.seatingMapAssetId) {
       return {
         assetId: null,
+        svgUrl: null,
         svgElementIds: [],
       };
     }
 
     const asset = await this.seatingMapWriteRepo.findAssetById(concert.seatingMapAssetId);
-    
+
     return {
       assetId: concert.seatingMapAssetId,
+      svgUrl: asset?.publicUrl ?? null,
       svgElementIds: asset?.svgElementIds ?? [],
     };
   }

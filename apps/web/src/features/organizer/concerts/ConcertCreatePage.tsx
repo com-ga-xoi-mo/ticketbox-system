@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useConcert, useUpdateConcertMutation, useUploadPosterMutation } from './hooks';
+import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCreateConcertMutation, useUploadPosterMutation } from './hooks';
+import { Badge } from '../../../shared/ui/badge';
 import {
   validateConcertForm,
-  toUpdatePayload,
+  toCreatePayload,
   type ConcertFormValues,
   type ConcertFormErrors,
 } from '../../concerts-shared/concert-form';
-import { mapStatus } from '../../concerts-shared/status';
-import { Badge } from '../../../shared/ui/badge';
 import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
-import { toast } from 'sonner';
-
-import { getAssetUrl } from '../../../shared/api/client';
 
 function slugify(text: string): string {
   return text
@@ -24,14 +20,6 @@ function slugify(text: string): string {
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
-}
-
-function formatDateForInput(isoString?: string | null): string {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function FormSection({
@@ -60,13 +48,14 @@ function FormSection({
   );
 }
 
-export function ConcertEditPage() {
-  const { id = '' } = useParams();
+export function ConcertCreatePage() {
   const navigate = useNavigate();
-
-  const { data: concert, isLoading, isError, error } = useConcert(id);
-  const updateMutation = useUpdateConcertMutation();
+  const createMutation = useCreateConcertMutation();
   const uploadPosterMutation = useUploadPosterMutation();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
 
   const [values, setValues] = useState<ConcertFormValues>({
     slug: '',
@@ -82,59 +71,6 @@ export function ConcertEditPage() {
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [errors, setErrors] = useState<ConcertFormErrors>({});
   const [submitError, setSubmitError] = useState('');
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (concert) {
-      setValues({
-        slug: concert.slug,
-        title: concert.title,
-        artistName: concert.artistName,
-        venueName: concert.venueName,
-        venueAddress: concert.venueAddress || '',
-        city: concert.city,
-        startsAt: formatDateForInput(concert.startsAt),
-        endsAt: formatDateForInput(concert.endsAt),
-        description: concert.description || '',
-      });
-      setSlugManuallyEdited(true);
-    }
-  }, [concert]);
-
-  if (!id) return <Navigate to="/organizer/concerts" replace />;
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center" role="status">
-        <div className="size-10 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
-        <p className="mt-4 font-mono text-sm text-on-surface-variant">Loading concert…</p>
-      </div>
-    );
-  }
-
-  if (isError || !concert) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center p-6 text-center">
-        <span className="material-symbols-outlined mb-4 text-4xl text-error">error</span>
-        <h3 className="font-display text-lg font-bold text-on-surface">Failed to load concert</h3>
-        <p className="mt-2 max-w-sm text-sm text-on-surface-variant">
-          {error?.message || 'The concert could not be loaded.'}
-        </p>
-        <Button onClick={() => navigate(-1)} className="mt-6">
-          Go back
-        </Button>
-      </div>
-    );
-  }
-
-  const canEdit = concert.status !== 'ENDED' && concert.status !== 'CANCELLED';
-  if (!canEdit) return <Navigate to={`/organizer/concerts/${id}`} replace />;
-
-  const { label, variant, dotClass } = mapStatus(concert.status);
-  const posterUrl = concert.posterAssetId
-    ? getAssetUrl(concert.posterAssetId)
-    : null;
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const titleValue = e.target.value;
@@ -155,20 +91,11 @@ export function ConcertEditPage() {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDiscard = () => {
-    navigate('/organizer/concerts');
-  };
-
-  const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && concert) {
-      uploadPosterMutation.mutate(
-        { id: concert.id, file },
-        {
-          onError: (err) => setSubmitError(err.message || 'Failed to upload poster.'),
-        }
-      );
-    }
+    if (!file) return;
+    setPosterFile(file);
+    setPosterPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -182,19 +109,50 @@ export function ConcertEditPage() {
     }
     setErrors({});
 
-    updateMutation.mutate(
-      { id: concert.id, payload: toUpdatePayload(values) },
-      {
-        onSuccess: () => {
-          toast.success('Lưu thông tin sự kiện thành công');
-          navigate('/organizer/concerts');
-        },
-        onError: (err) => setSubmitError(err.message || 'Failed to save changes.'),
+    createMutation.mutate(toCreatePayload(values), {
+      onSuccess: (concert) => {
+        if (posterFile) {
+          uploadPosterMutation.mutate(
+            { id: concert.id, file: posterFile },
+            { onSettled: () => navigate(`/organizer/concerts/${concert.id}/edit`) },
+          );
+        } else {
+          navigate(`/organizer/concerts/${concert.id}/edit`);
+        }
       },
-    );
+      onError: (err) => setSubmitError(err.message || 'Failed to create concert.'),
+    });
   };
 
-  const isPending = updateMutation.isPending;
+  const isPending = createMutation.isPending || uploadPosterMutation.isPending;
+
+  const previewDate = values.startsAt
+    ? new Date(values.startsAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
+
+  const previewTime = values.startsAt
+    ? new Date(values.startsAt).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }) + ' ICT'
+    : null;
+
+  const duration = (() => {
+    if (!values.startsAt || !values.endsAt) return null;
+    const diffMs = new Date(values.endsAt).getTime() - new Date(values.startsAt).getTime();
+    if (diffMs <= 0 || isNaN(diffMs)) return null;
+    const diffMins = Math.floor(diffMs / 60000);
+    const h = Math.floor(diffMins / 60);
+    const m = diffMins % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  })();
 
   return (
     <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
@@ -211,9 +169,11 @@ export function ConcertEditPage() {
             </Link>
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">
-                Organizer — Editing Concert
+                Organizer — New Concert
               </p>
-              <h2 className="font-display text-xl font-bold text-on-surface">{concert.title}</h2>
+              <h2 className="font-display text-xl font-bold text-on-surface">
+                {values.title || 'Untitled Concert'}
+              </h2>
             </div>
           </div>
         </div>
@@ -222,10 +182,9 @@ export function ConcertEditPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* ── LEFT: Form sections ── */}
           <div className="flex flex-col gap-6">
-            {/* Event Details */}
             <FormSection icon="music_note" title="Event Details">
               <Input
-                id="edit-title"
+                id="create-title"
                 name="title"
                 label="Concert Title *"
                 value={values.title}
@@ -236,7 +195,7 @@ export function ConcertEditPage() {
               />
 
               <Input
-                id="edit-artist"
+                id="create-artist"
                 name="artistName"
                 label="Artist / Band *"
                 value={values.artistName}
@@ -247,10 +206,9 @@ export function ConcertEditPage() {
                 required
               />
 
-              {/* Slug with prefix */}
               <div className="flex flex-col gap-1">
                 <label
-                  htmlFor="edit-slug"
+                  htmlFor="create-slug"
                   className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant"
                 >
                   URL Slug *
@@ -265,7 +223,7 @@ export function ConcertEditPage() {
                     ticketbox.com/
                   </span>
                   <input
-                    id="edit-slug"
+                    id="create-slug"
                     name="slug"
                     value={values.slug}
                     onChange={handleSlugChange}
@@ -280,7 +238,7 @@ export function ConcertEditPage() {
               </div>
 
               <Textarea
-                id="edit-description"
+                id="create-description"
                 name="description"
                 label="Description"
                 value={values.description}
@@ -291,10 +249,9 @@ export function ConcertEditPage() {
               />
             </FormSection>
 
-            {/* Venue & Location */}
             <FormSection icon="location_on" title="Venue & Location">
               <Input
-                id="edit-venue"
+                id="create-venue"
                 name="venueName"
                 label="Venue Name *"
                 value={values.venueName}
@@ -306,7 +263,7 @@ export function ConcertEditPage() {
               />
 
               <Input
-                id="edit-address"
+                id="create-address"
                 name="venueAddress"
                 label="Address"
                 value={values.venueAddress}
@@ -317,7 +274,7 @@ export function ConcertEditPage() {
               />
 
               <Input
-                id="edit-city"
+                id="create-city"
                 name="city"
                 label="City *"
                 value={values.city}
@@ -329,11 +286,10 @@ export function ConcertEditPage() {
               />
             </FormSection>
 
-            {/* Schedule */}
             <FormSection icon="calendar_today" title="Schedule">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
-                  id="edit-starts-at"
+                  id="create-starts-at"
                   type="datetime-local"
                   name="startsAt"
                   label="Event Start *"
@@ -345,7 +301,7 @@ export function ConcertEditPage() {
                   required
                 />
                 <Input
-                  id="edit-ends-at"
+                  id="create-ends-at"
                   type="datetime-local"
                   name="endsAt"
                   label="Event End *"
@@ -371,14 +327,11 @@ export function ConcertEditPage() {
             {/* Poster Preview */}
             <div className="glass-panel overflow-hidden rounded-xl">
               <div className="relative min-h-[200px] w-full bg-gradient-to-br from-primary/20 via-surface-container to-tertiary/10">
-                {posterUrl ? (
+                {posterPreview ? (
                   <img
-                    src={posterUrl}
-                    alt={concert.title}
+                    src={posterPreview}
+                    alt="Poster preview"
                     className="absolute inset-0 h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-on-surface-variant/30">
@@ -388,15 +341,14 @@ export function ConcertEditPage() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
-                  <Badge variant={variant} className="mb-2 text-[11px] shadow-sm">
-                    {dotClass && <span className={cn('size-1.5 rounded-full', dotClass)} />}
-                    {label}
+                  <Badge className="mb-2 text-[11px] shadow-sm bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    Draft
                   </Badge>
                   <p className="break-words font-display text-base font-bold leading-normal text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
-                    {values.title || concert.title}
+                    {values.title || <span className="text-white/30">Concert Title</span>}
                   </p>
                   <p className="mt-0.5 text-xs text-white/60">
-                    {values.artistName || concert.artistName}
+                    {values.artistName || <span className="text-white/20">Artist Name</span>}
                   </p>
                 </div>
               </div>
@@ -408,10 +360,10 @@ export function ConcertEditPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-medium text-on-surface">
-                      {values.venueName || concert.venueName}
+                      {values.venueName || <span className="text-on-surface-variant/40">Venue Name</span>}
                     </p>
                     <p className="truncate text-xs text-on-surface-variant">
-                      {values.city || concert.city}
+                      {values.city || <span className="text-on-surface-variant/40">City</span>}
                     </p>
                   </div>
                 </div>
@@ -422,23 +374,9 @@ export function ConcertEditPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-mono text-xs font-semibold text-on-surface">
-                        {values.startsAt
-                          ? new Date(values.startsAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })
-                          : '—'}
+                        {previewDate ?? '—'}
                       </p>
-                      <p className="text-[11px] text-on-surface-variant">
-                        {values.startsAt
-                          ? new Date(values.startsAt).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: false,
-                            }) + ' ICT'
-                          : '—'}
-                      </p>
+                      <p className="text-[11px] text-on-surface-variant">{previewTime ?? '—'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -446,95 +384,15 @@ export function ConcertEditPage() {
                       schedule
                     </span>
                     <div className="min-w-0">
-                      <p className="font-mono text-xs font-semibold text-on-surface">
-                        Duration
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant">
-                        {(() => {
-                          if (!values.startsAt || !values.endsAt) return '—';
-                          const diffMs = new Date(values.endsAt).getTime() - new Date(values.startsAt).getTime();
-                          if (diffMs <= 0 || isNaN(diffMs)) return '—';
-                          const diffMins = Math.floor(diffMs / 60000);
-                          const h = Math.floor(diffMins / 60);
-                          const m = diffMins % 60;
-                          if (h > 0 && m > 0) return `${h}h ${m}m`;
-                          if (h > 0) return `${h}h`;
-                          return `${m}m`;
-                        })()}
-                      </p>
+                      <p className="font-mono text-xs font-semibold text-on-surface">Duration</p>
+                      <p className="text-[11px] text-on-surface-variant">{duration ?? '—'}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Setup Progress */}
-            <div className="glass-panel rounded-xl p-5">
-              <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-                Setup Progress
-              </p>
-              <div className="flex flex-col gap-3">
-                {[
-                  {
-                    label: 'Seating Map',
-                    done: !!concert.seatingMapConfigured,
-                    value: concert.seatingMapConfigured ? 'Configured' : 'Pending',
-                  },
-                  {
-                    label: 'Seating Zones',
-                    done: !!concert.seatingZonesCount,
-                    value: concert.seatingZonesCount
-                      ? `${concert.seatingZonesCount} zones`
-                      : 'Pending',
-                  },
-                  {
-                    label: 'Ticket Types',
-                    done: !!concert.ticketTypesCount,
-                    value: concert.ticketTypesCount
-                      ? `${concert.ticketTypesCount} types`
-                      : 'Pending',
-                  },
-                  {
-                    label: 'Check-in Staff',
-                    done: !!concert.checkinStaffCount,
-                    value: `${concert.checkinStaffCount || 0} assigned`,
-                  },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-center justify-between text-sm">
-                    <span className="text-on-surface-variant">{row.label}</span>
-                    <div
-                      className={cn(
-                        'flex items-center gap-1.5',
-                        row.done ? 'text-emerald-400' : 'text-on-surface-variant/50',
-                      )}
-                    >
-                      <span className="material-symbols-outlined text-[14px]">
-                        {row.done ? 'check_circle' : 'pending'}
-                      </span>
-                      <span className="text-xs font-medium">{row.value}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 border-t border-white/5 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-center"
-                  onClick={() => {
-                    if (concert.status !== 'DRAFT') {
-                      alert('This concert is no longer in DRAFT status. You will only be able to view the venue map.');
-                    }
-                    navigate(`/organizer/venue-maps/${concert.id}`);
-                  }}
-                >
-                  <span className="material-symbols-outlined text-[16px]">map</span>
-                  {concert.status === 'DRAFT' ? 'Edit Venue Map' : 'View Venue Map'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Media Section */}
+            {/* Media upload */}
             <div className="glass-panel rounded-xl p-5">
               <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-3">
                 <div className="flex items-center gap-2">
@@ -547,7 +405,7 @@ export function ConcertEditPage() {
                     Media
                   </h3>
                 </div>
-                {posterUrl && (
+                {posterPreview && (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -558,68 +416,59 @@ export function ConcertEditPage() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3">
-                {/* Primary Header Upload Area */}
-                <div 
-                  className="group relative h-[160px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/jpeg,image/png,image/webp" 
-                    onChange={handlePosterChange}
-                  />
+              <div
+                className="group relative h-[160px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                />
 
-                  {uploadPosterMutation.isPending && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                      <div className="size-6 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
+                {posterPreview ? (
+                  <>
+                    <img
+                      src={posterPreview}
+                      alt="Poster preview"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2">
+                      <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">
+                        Primary Header
+                      </Badge>
                     </div>
-                  )}
-
-                  {posterUrl ? (
-                    <>
-                      <img
-                        src={posterUrl}
-                        alt="Primary Header"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                      <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                        <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">
-                          Primary Header
-                        </Badge>
-                      </div>
-                      <div className="absolute bottom-2.5 right-2.5 font-mono text-[9px] text-white/70">
-                        1920×1080
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
-                      <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
-                      <span className="font-mono text-[10px] uppercase tracking-wider">Upload Header</span>
+                    <div className="absolute bottom-2.5 right-2.5 font-mono text-[9px] text-white/70">
+                      1920×1080
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
+                    <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                    <span className="font-mono text-[10px] uppercase tracking-wider">Upload Header</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Save / Discard repeated at bottom */}
+            {/* Create / Cancel */}
             <div className="flex flex-col gap-2">
               <Button type="submit" loading={isPending} className="w-full justify-center">
-                <span className="material-symbols-outlined text-[16px]">save</span>
-                Save Changes
+                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                Create Concert
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleDiscard}
+                onClick={() => navigate('/organizer/concerts')}
                 disabled={isPending}
                 className="w-full justify-center"
               >
-                <span className="material-symbols-outlined text-[16px]">undo</span>
-                Discard
+                <span className="material-symbols-outlined text-[16px]">close</span>
+                Cancel
               </Button>
             </div>
           </div>

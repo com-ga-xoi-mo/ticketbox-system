@@ -55,6 +55,7 @@ describe('OnlineCheckinUseCase', () => {
       listActiveAssignments: vi.fn(),
       createActiveAssignment: vi.fn(),
       revokeAssignment: vi.fn(),
+      revokeAllForStaffUser: vi.fn(),
       userHasCheckinStaffRole: vi.fn(),
     };
     authorizeCheckinAssignment = { execute: vi.fn() };

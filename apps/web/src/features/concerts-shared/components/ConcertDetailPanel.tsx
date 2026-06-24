@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import type { Concert } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+import { getAssetUrl } from '../../../shared/api/client';
 import { mapStatus } from '../status';
 import { Badge } from '../../../shared/ui/badge';
 import { Button } from '../../../shared/ui/button';
+import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { cn } from '../../../shared/ui/cn';
 
 interface ConcertDetailPanelProps {
@@ -31,20 +32,17 @@ export function ConcertDetailPanel({
   publishError,
   cancelError,
 }: ConcertDetailPanelProps) {
-  const { label, badgeClass, dotClass } = mapStatus(concert.status);
+  const { label, variant, dotClass } = mapStatus(concert.status);
+  
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   const handlePublish = async () => {
-    if (confirm(`Are you sure you want to publish "${concert.title}"?`)) {
-      onPublish?.();
-    }
+    setIsPublishDialogOpen(true);
   };
 
   const handleCancel = async () => {
-    if (
-      confirm(`Are you sure you want to cancel "${concert.title}"? This action cannot be undone.`)
-    ) {
-      onCancel?.();
-    }
+    setIsCancelDialogOpen(true);
   };
 
   const formatJustDate = (dateStr: string) => {
@@ -78,7 +76,7 @@ export function ConcertDetailPanel({
   const canEditDetails = canModify;
 
   const posterUrl = concert.posterAssetId
-    ? `${API_BASE_URL}/assets/${concert.posterAssetId}`
+    ? getAssetUrl(concert.posterAssetId)
     : null;
 
   return (
@@ -119,7 +117,7 @@ export function ConcertDetailPanel({
 
           {/* Status + title anchored at bottom */}
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 pt-10">
-            <Badge className={cn('mb-2.5 shadow-sm border-white/10 backdrop-blur-md', badgeClass)}>
+            <Badge variant={variant} className="mb-2.5 shadow-sm border-white/10 backdrop-blur-md">
               {dotClass && <span className={`size-1.5 rounded-full ${dotClass}`} />}
               {label}
             </Badge>
@@ -310,6 +308,27 @@ export function ConcertDetailPanel({
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={isPublishDialogOpen}
+        onOpenChange={setIsPublishDialogOpen}
+        title="Xác nhận xuất bản sự kiện"
+        description={`Bạn có chắc chắn muốn xuất bản sự kiện "${concert.title}" không? Sau khi xuất bản, khán giả sẽ có thể nhìn thấy sự kiện này.`}
+        confirmText="Xuất bản"
+        cancelText="Hủy"
+        onConfirm={() => onPublish?.()}
+      />
+
+      <ConfirmDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+        title="Xác nhận hủy sự kiện"
+        description={`Bạn có chắc chắn muốn hủy sự kiện "${concert.title}" không? Hành động này không thể hoàn tác.`}
+        confirmText="Xác nhận hủy"
+        cancelText="Quay lại"
+        confirmVariant="destructive"
+        onConfirm={() => onCancel?.()}
+      />
     </div>
   );
 }
