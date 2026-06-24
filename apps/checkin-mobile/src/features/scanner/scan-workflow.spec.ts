@@ -9,6 +9,7 @@ import { activeAssignment, staffSession } from '../../test/fixtures';
 import { ScanWorkflow } from './scan-workflow';
 import { FakeNetworkMonitor } from '../offline-queue/fake-network-monitor';
 import { InMemoryOfflineScanQueue } from '../offline-queue/in-memory-offline-scan-queue';
+import type { TicketCacheRepository } from '../ticket-cache/ticket-cache.repository';
 
 class Deferred<T> {
   readonly promise: Promise<T>;
@@ -19,6 +20,17 @@ class Deferred<T> {
       this.resolve = resolve;
     });
   }
+}
+
+function fakeTicketCache(lookup: (hash: string) => 'valid' | 'checked_in' | null): TicketCacheRepository {
+  return {
+    lookup: vi.fn(async (_staffId: string, _concertId: string, hash: string) => lookup(hash)),
+    markCheckedIn: vi.fn(async () => undefined),
+    replaceAll: vi.fn(),
+    applyDelta: vi.fn(),
+    clearForStaff: vi.fn(),
+    hasCache: vi.fn().mockResolvedValue(true),
+  } as unknown as TicketCacheRepository;
 }
 
 describe('ScanWorkflow', () => {
@@ -328,6 +340,105 @@ describe('ScanWorkflow', () => {
     await expect(
       workflow.submitDecodedPayload('raw', activeAssignment, staffSession),
     ).resolves.toEqual({ status: 'recoverable-error', message: 'SQLite unavailable' });
+  });
+
+  it('validates against cache when offline — accepted path', async () => {
+    const hash = 'a'.repeat(64);
+    const queue = new InMemoryOfflineScanQueue();
+    const cache = fakeTicketCache(() => 'valid');
+    const workflow = new ScanWorkflow(
+      { submitOnlineScan: vi.fn(), submitBatchSync },
+      async () => 'device-1',
+      () => new Date('2026-07-01T12:00:00.000Z'),
+      queue,
+      new FakeNetworkMonitor(false),
+      async () => hash,
+      () => 'localid-1',
+      cache,
+    );
+    await workflow.initialize();
+    const state = await workflow.submitDecodedPayload('raw', activeAssignment, staffSession);
+    expect(state).toEqual({ status: 'result', result: expect.objectContaining({ status: 'accepted' }) });
+    expect(cache.markCheckedIn).toHaveBeenCalled();
+  });
+
+  it('validates against cache when offline — duplicate path', async () => {
+    const queue = new InMemoryOfflineScanQueue();
+    const cache = fakeTicketCache(() => 'checked_in');
+    const workflow = new ScanWorkflow(
+      { submitOnlineScan: vi.fn(), submitBatchSync },
+      async () => 'device-1',
+      () => new Date(),
+      queue,
+      new FakeNetworkMonitor(false),
+      async () => 'b'.repeat(64),
+      () => 'localid-2',
+      cache,
+    );
+    await workflow.initialize();
+    const state = await workflow.submitDecodedPayload('raw', activeAssignment, staffSession);
+    expect(state).toEqual({ status: 'result', result: expect.objectContaining({ status: 'duplicate' }) });
+    const pendingCount = await queue.getPendingCount(staffSession.profile.id);
+    expect(pendingCount).toBe(0);
+  });
+
+  it('validates against cache when offline — invalid path', async () => {
+    const queue = new InMemoryOfflineScanQueue();
+    const cache = fakeTicketCache(() => null);
+    const workflow = new ScanWorkflow(
+      { submitOnlineScan: vi.fn(), submitBatchSync },
+      async () => 'device-1',
+      () => new Date(),
+      queue,
+      new FakeNetworkMonitor(false),
+      async () => 'c'.repeat(64),
+      () => 'localid-3',
+      cache,
+    );
+    await workflow.initialize();
+    const state = await workflow.submitDecodedPayload('raw', activeAssignment, staffSession);
+    expect(state).toEqual({ status: 'result', result: expect.objectContaining({ status: 'invalid' }) });
+    const pendingCount = await queue.getPendingCount(staffSession.profile.id);
+    expect(pendingCount).toBe(0);
+  });
+
+  it('resolves to recoverable-error (never stuck) when offline validation throws', async () => {
+    const queue = new InMemoryOfflineScanQueue();
+    const cache = fakeTicketCache(() => 'valid');
+    const workflow = new ScanWorkflow(
+      { submitOnlineScan: vi.fn(), submitBatchSync },
+      async () => 'device-1',
+      () => new Date(),
+      queue,
+      new FakeNetworkMonitor(false),
+      async () => {
+        throw new Error('expo-crypto failed');
+      },
+      () => 'localid-err',
+      cache,
+    );
+    await workflow.initialize();
+    const state = await workflow.submitDecodedPayload('raw', activeAssignment, staffSession);
+    expect(state).toEqual({ status: 'recoverable-error', message: 'expo-crypto failed' });
+  });
+
+  it('falls back to queue when offline and no cache available', async () => {
+    const queue = new InMemoryOfflineScanQueue();
+    const workflow = new ScanWorkflow(
+      { submitOnlineScan: vi.fn(), submitBatchSync },
+      async () => 'device-1',
+      () => new Date(),
+      queue,
+      new FakeNetworkMonitor(false),
+      async () => 'd'.repeat(64),
+      () => 'localid-4',
+      // no ticketCache
+    );
+    await workflow.initialize();
+    const state = await workflow.submitDecodedPayload('raw', activeAssignment, staffSession);
+    expect(state).toEqual({ status: 'result', result: expect.objectContaining({ status: 'queued' }) });
+    const pendingCount = await queue.getPendingCount(staffSession.profile.id);
+    expect(pendingCount).toBe(1);
   });
 
   it('uses injected UUIDs across restart and identical timestamps', async () => {

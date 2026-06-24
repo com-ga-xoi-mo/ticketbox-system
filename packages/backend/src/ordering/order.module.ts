@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../identity/auth.module';
+import { NotificationModule } from '../notification/notification.module';
+import { EnqueuePurchaseConfirmationUseCase } from '../notification/application/use-cases/enqueue-purchase-confirmation.use-case';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
@@ -27,6 +29,10 @@ import {
   type IInventoryReservationRepository,
 } from './domain/ports/inventory-reservation.port';
 import {
+  ORDER_PAID_NOTIFIER,
+  type OrderPaidNotifierPort,
+} from './domain/ports/order-paid-notifier.port';
+import {
   ORDER_REPOSITORY,
   type IOrderRepository,
 } from './domain/ports/order-repository.port';
@@ -46,7 +52,7 @@ import { PrismaTicketTypePricingRepository } from './infrastructure/database/pri
 import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket-issuing-order-event-publisher';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, AuthModule],
+  imports: [PlatformConfigModule, DatabaseModule, AuthModule, NotificationModule],
   controllers: [OrderController, InternalOrderController],
   providers: [
     {
@@ -135,8 +141,22 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
       useClass: PrismaOrderRepository,
     },
     {
+      provide: ORDER_PAID_NOTIFIER,
+      inject: [EnqueuePurchaseConfirmationUseCase],
+      useFactory: (
+        enqueuePurchaseConfirmation: EnqueuePurchaseConfirmationUseCase,
+      ): OrderPaidNotifierPort => ({
+        notifyOrderPaid: (orderId, paidAt) =>
+          enqueuePurchaseConfirmation.execute(orderId, paidAt),
+      }),
+    },
+    {
       provide: ORDER_EVENT_PUBLISHER,
-      useClass: TicketIssuingOrderEventPublisher,
+      inject: [IssueTicketsForPaidOrderUseCase, ORDER_PAID_NOTIFIER],
+      useFactory: (
+        issueTickets: IssueTicketsForPaidOrderUseCase,
+        orderPaidNotifier: OrderPaidNotifierPort,
+      ) => new TicketIssuingOrderEventPublisher(issueTickets, orderPaidNotifier),
     },
     {
       provide: TICKET_REPOSITORY,

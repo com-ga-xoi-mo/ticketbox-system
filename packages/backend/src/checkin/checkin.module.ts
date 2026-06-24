@@ -16,13 +16,19 @@ import {
 } from './application/ports/staff-assignment-query.port';
 import { OnlineCheckinUseCase } from './application/use-cases/online-checkin.use-case';
 import { BatchSyncUseCase } from './application/use-cases/batch-sync.use-case';
+import { GetTicketCacheUseCase } from './application/use-cases/get-ticket-cache.use-case';
 import { ScanValidationService } from './application/services/scan-validation.service';
 import {
   CHECKIN_TICKET_REPOSITORY,
   type CheckinTicketRepositoryPort,
 } from './domain/ports/checkin-ticket-repository.port';
+import {
+  TICKET_CACHE_QUERY,
+  type TicketCacheQueryPort,
+} from './domain/ports/ticket-cache-query.port';
 import { QR_TOKEN_HASHER, type QrTokenHasherPort } from './domain/ports/qr-token-hasher.port';
 import { PrismaCheckinTicketRepository } from './infrastructure/database/prisma-checkin-ticket.repository';
+import { PrismaTicketCacheQueryAdapter } from './infrastructure/database/prisma-ticket-cache-query.adapter';
 import { PrismaStaffAssignmentQueryAdapter } from './infrastructure/database/prisma-staff-assignment-query.adapter';
 import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher';
 
@@ -33,6 +39,10 @@ import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher'
     {
       provide: CHECKIN_TICKET_REPOSITORY,
       useClass: PrismaCheckinTicketRepository,
+    },
+    {
+      provide: TICKET_CACHE_QUERY,
+      useClass: PrismaTicketCacheQueryAdapter,
     },
     {
       provide: QR_TOKEN_HASHER,
@@ -68,11 +78,20 @@ import { Sha256QrTokenHasher } from './infrastructure/qr/sha256-qr-token-hasher'
     },
     {
       provide: BatchSyncUseCase,
-      inject: [CHECKIN_TICKET_REPOSITORY, ScanValidationService],
+      inject: [CHECKIN_TICKET_REPOSITORY, ScanValidationService, TICKET_CACHE_QUERY],
       useFactory: (
         ticketRepository: CheckinTicketRepositoryPort,
         validation: ScanValidationService,
-      ) => new BatchSyncUseCase(ticketRepository, validation),
+        cacheQuery: TicketCacheQueryPort,
+      ) => new BatchSyncUseCase(ticketRepository, validation, cacheQuery),
+    },
+    {
+      provide: GetTicketCacheUseCase,
+      inject: [TICKET_CACHE_QUERY, CHECKIN_STAFF_ASSIGNMENT_REPOSITORY],
+      useFactory: (
+        cacheQuery: TicketCacheQueryPort,
+        assignmentRepo: CheckinStaffAssignmentRepositoryPort,
+      ) => new GetTicketCacheUseCase(cacheQuery, assignmentRepo),
     },
     {
       provide: OnlineCheckinUseCase,

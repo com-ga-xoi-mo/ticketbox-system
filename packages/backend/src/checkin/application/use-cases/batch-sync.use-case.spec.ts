@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Role } from '../../../identity/domain/role.enum';
 import type { CheckinTicketRepositoryPort } from '../../domain/ports/checkin-ticket-repository.port';
+import type { TicketCacheQueryPort } from '../../domain/ports/ticket-cache-query.port';
 import type { ScanValidationService } from '../services/scan-validation.service';
 import { BatchSyncUseCase } from './batch-sync.use-case';
 
@@ -26,6 +27,7 @@ const ticket = {
 describe('BatchSyncUseCase', () => {
   let repository: CheckinTicketRepositoryPort;
   let validation: Pick<ScanValidationService, 'validate'>;
+  let cacheQuery: TicketCacheQueryPort;
   let useCase: BatchSyncUseCase;
 
   beforeEach(() => {
@@ -38,9 +40,13 @@ describe('BatchSyncUseCase', () => {
       recordOfflineOutcome: vi.fn(),
     };
     validation = { validate: vi.fn() };
+    cacheQuery = {
+      getFullCache: vi.fn().mockResolvedValue([]),
+      getDeltaCache: vi.fn().mockResolvedValue({ upserted: [], voided: [] }),
+    };
     vi.mocked(repository.findOfflineEvent).mockResolvedValue(null);
     vi.mocked(validation.validate).mockResolvedValue({ status: 'valid', ticket });
-    useCase = new BatchSyncUseCase(repository, validation as ScanValidationService);
+    useCase = new BatchSyncUseCase(repository, validation as ScanValidationService, cacheQuery);
   });
 
   it('isolates mixed accepted and invalid business outcomes', async () => {
@@ -124,5 +130,32 @@ describe('BatchSyncUseCase', () => {
   it('propagates unexpected infrastructure errors', async () => {
     vi.mocked(repository.recordAcceptedScan).mockRejectedValue(new Error('database unavailable'));
     await expect(useCase.execute({ actor, events: [event] })).rejects.toThrow('database unavailable');
+  });
+
+  it('omits cacheUpdates when since is not provided', async () => {
+    vi.mocked(repository.recordAcceptedScan).mockResolvedValue({
+      status: 'accepted',
+      ticketId: ticket.id,
+      checkedInAt: scannedAt,
+    });
+    const result = await useCase.execute({ actor, events: [event] });
+    expect(result.cacheUpdates).toBeUndefined();
+    expect(cacheQuery.getDeltaCache).not.toHaveBeenCalled();
+  });
+
+  it('computes cacheUpdates after events when since is provided', async () => {
+    vi.mocked(repository.recordAcceptedScan).mockResolvedValue({
+      status: 'accepted',
+      ticketId: ticket.id,
+      checkedInAt: scannedAt,
+    });
+    const since = new Date('2026-01-01T00:00:00Z');
+    vi.mocked(cacheQuery.getDeltaCache).mockResolvedValue({
+      upserted: [{ hash: 'a'.repeat(64), status: 'checked_in' }],
+      voided: [],
+    });
+    const result = await useCase.execute({ actor, events: [event], since });
+    expect(result.cacheUpdates?.upserted).toHaveLength(1);
+    expect(cacheQuery.getDeltaCache).toHaveBeenCalledWith(event.concertId, since);
   });
 });

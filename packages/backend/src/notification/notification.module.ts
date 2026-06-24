@@ -6,6 +6,7 @@ import { PlatformConfigService } from '../platform/config/platform-config.servic
 import { QueueModule } from '../platform/queue/queue.module';
 import { CreatePurchaseConfirmationNotificationsUseCase } from './application/use-cases/create-purchase-confirmation-notifications.use-case';
 import { DeliverNotificationUseCase } from './application/use-cases/deliver-notification.use-case';
+import { EnqueuePurchaseConfirmationUseCase } from './application/use-cases/enqueue-purchase-confirmation.use-case';
 import { SendConcertRemindersUseCase } from './application/use-cases/send-concert-reminders.use-case';
 import {
   CONCERT_REMINDER_READ_PORT,
@@ -19,8 +20,17 @@ import {
   NOTIFICATION_REPOSITORY,
   type NotificationRepositoryPort,
 } from './domain/ports/notification-repository.port';
+import {
+  PURCHASE_CONFIRMATION_QUEUE_PORT,
+  type PurchaseConfirmationQueuePort,
+} from './domain/ports/purchase-confirmation-queue.port';
+import {
+  PURCHASE_CONFIRMATION_READ_PORT,
+  type PurchaseConfirmationReadPort,
+} from './domain/ports/purchase-confirmation-read.port';
 import { PrismaConcertReminderReadAdapter } from './infrastructure/database/prisma-concert-reminder-read.adapter';
 import { PrismaNotificationRepository } from './infrastructure/database/prisma-notification.repository';
+import { PrismaPurchaseConfirmationReadAdapter } from './infrastructure/database/prisma-purchase-confirmation-read.adapter';
 import { createEmailChannelAdapter } from './infrastructure/email/email-channel.provider';
 import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue/purchase-confirmation-notification.producer';
 
@@ -39,6 +49,14 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
       provide: EMAIL_NOTIFICATION_CHANNEL,
       inject: [PlatformConfigService],
       useFactory: createEmailChannelAdapter,
+    },
+    {
+      provide: PURCHASE_CONFIRMATION_READ_PORT,
+      useClass: PrismaPurchaseConfirmationReadAdapter,
+    },
+    {
+      provide: PURCHASE_CONFIRMATION_QUEUE_PORT,
+      useExisting: PurchaseConfirmationNotificationProducer,
     },
     {
       provide: CreatePurchaseConfirmationNotificationsUseCase,
@@ -61,6 +79,20 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
         ),
     },
     {
+      provide: EnqueuePurchaseConfirmationUseCase,
+      inject: [
+        PURCHASE_CONFIRMATION_READ_PORT,
+        PURCHASE_CONFIRMATION_QUEUE_PORT,
+        PlatformConfigService,
+      ],
+      useFactory: (
+        readPort: PurchaseConfirmationReadPort,
+        queue: PurchaseConfirmationQueuePort,
+        config: PlatformConfigService,
+      ) =>
+        new EnqueuePurchaseConfirmationUseCase(readPort, queue, config.ticketAccessBaseUrl),
+    },
+    {
       provide: SendConcertRemindersUseCase,
       inject: [CONCERT_REMINDER_READ_PORT, NOTIFICATION_REPOSITORY],
       useFactory: (
@@ -73,6 +105,7 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
   exports: [
     CreatePurchaseConfirmationNotificationsUseCase,
     DeliverNotificationUseCase,
+    EnqueuePurchaseConfirmationUseCase,
     SendConcertRemindersUseCase,
     PurchaseConfirmationNotificationProducer,
     NOTIFICATION_REPOSITORY,

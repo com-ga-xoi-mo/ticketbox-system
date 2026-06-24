@@ -32,6 +32,17 @@ export type {
 } from './checkin/batch-sync.contract';
 
 export {
+  TicketCacheEntrySchema,
+  TicketCacheFullResponseSchema,
+  TicketCacheDeltaResponseSchema,
+} from './checkin/ticket-cache.contract';
+export type {
+  TicketCacheEntry,
+  TicketCacheFullResponse,
+  TicketCacheDeltaResponse,
+} from './checkin/ticket-cache.contract';
+
+export {
   INVALID_SCAN_REASON_CODES,
   InvalidScanReasonCodeSchema,
   OnlineScanRequestSchema,

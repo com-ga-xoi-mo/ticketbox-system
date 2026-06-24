@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CheckinApiClient } from '../../api/checkin-mobile-api.types';
+import type { TicketCacheRepository } from '../ticket-cache/ticket-cache.repository';
 import { staffSession } from '../../test/fixtures';
 import {
   ApiRequestError,
@@ -51,8 +52,8 @@ describe('SyncService', () => {
     const service = new SyncService(
       queue,
       client(async (_token, request) => {
-        sizes.push(request.length);
-        return request.map(({ localId }) => ({ localId, status: 'duplicate', message: 'Done' }));
+        sizes.push(request.events.length);
+        return { results: request.events.map(({ localId }) => ({ localId, status: 'duplicate' as const, message: 'Done' })) };
       }),
       new FakeNetworkMonitor(true),
       () => staffSession,
@@ -70,11 +71,13 @@ describe('SyncService', () => {
     await fill(queue, 3);
     const service = new SyncService(
       queue,
-      client(async (_token, request) => [
-        { localId: request[0].localId, status: 'accepted', message: 'Accepted', ticketId, checkedInAt },
-        { localId: request[1].localId, status: 'invalid', message: 'Invalid', reasonCode: 'INVALID_TICKET' },
-        { localId: request[2].localId, status: 'conflict', message: 'Conflict', conflictReason: 'Other device' },
-      ]),
+      client(async (_token, request) => ({
+        results: [
+          { localId: request.events[0].localId, status: 'accepted' as const, message: 'Accepted', ticketId, checkedInAt },
+          { localId: request.events[1].localId, status: 'invalid' as const, message: 'Invalid', reasonCode: 'INVALID_TICKET' as const },
+          { localId: request.events[2].localId, status: 'conflict' as const, message: 'Conflict', conflictReason: 'Other device' },
+        ],
+      })),
       new FakeNetworkMonitor(true),
       () => staffSession,
     );
@@ -92,9 +95,9 @@ describe('SyncService', () => {
     const submit = vi
       .fn<CheckinApiClient['submitBatchSync']>()
       .mockRejectedValueOnce(new ApiRequestError('Unavailable', 503))
-      .mockImplementationOnce(async (_token, request) =>
-        request.map(({ localId }) => ({ localId, status: 'duplicate', message: 'Done' })),
-      );
+      .mockImplementationOnce(async (_token, request) => ({
+        results: request.events.map(({ localId }) => ({ localId, status: 'duplicate' as const, message: 'Done' })),
+      }));
     const service = new SyncService(
       queue,
       client(submit),
@@ -120,9 +123,9 @@ describe('SyncService', () => {
     const submit = vi
       .fn<CheckinApiClient['submitBatchSync']>()
       .mockRejectedValueOnce(failure)
-      .mockImplementationOnce(async (_token, request) =>
-        request.map(({ localId }) => ({ localId, status: 'duplicate', message: 'Done' })),
-      );
+      .mockImplementationOnce(async (_token, request) => ({
+        results: request.events.map(({ localId }) => ({ localId, status: 'duplicate' as const, message: 'Done' })),
+      }));
     const service = new SyncService(
       queue,
       client(submit),
@@ -138,13 +141,15 @@ describe('SyncService', () => {
   });
 
   it.each([
-    ['incomplete response', async () => []],
+    ['incomplete response', async () => ({ results: [] as [] })],
     [
       'duplicate correlation',
-      async () => [
-        { localId: 'local-0', status: 'duplicate' as const, message: 'Done' },
-        { localId: 'local-0', status: 'duplicate' as const, message: 'Done again' },
-      ],
+      async () => ({
+        results: [
+          { localId: 'local-0', status: 'duplicate' as const, message: 'Done' },
+          { localId: 'local-0', status: 'duplicate' as const, message: 'Done again' },
+        ],
+      }),
     ],
   ])('stops on %s without retrying or removing pending rows', async (_name, submitBatchSync) => {
     const queue = new InMemoryOfflineScanQueue();
@@ -191,9 +196,9 @@ describe('SyncService', () => {
     queue.markSynced = vi.fn(async () => {
       throw new Error('SQLite write failed');
     });
-    const submit = vi.fn(async () => [
-      { localId: 'local-0', status: 'duplicate' as const, message: 'Done' },
-    ]);
+    const submit = vi.fn(async () => ({
+      results: [{ localId: 'local-0', status: 'duplicate' as const, message: 'Done' }],
+    }));
     const service = new SyncService(
       queue,
       client(submit),
@@ -218,9 +223,9 @@ describe('SyncService', () => {
     const submit = vi
       .fn<CheckinApiClient['submitBatchSync']>()
       .mockRejectedValueOnce(new ApiRequestError('Denied', status))
-      .mockImplementationOnce(async (_token, request) =>
-        request.map(({ localId }) => ({ localId, status: 'duplicate', message: 'Done' })),
-      );
+      .mockImplementationOnce(async (_token, request) => ({
+        results: request.events.map(({ localId }) => ({ localId, status: 'duplicate' as const, message: 'Done' })),
+      }));
     const service = new SyncService(
       queue,
       client(submit),
@@ -234,11 +239,40 @@ describe('SyncService', () => {
     service.dispose();
   });
 
+  it('merges cacheUpdates into TicketCacheRepository after sync', async () => {
+    const queue = new InMemoryOfflineScanQueue();
+    await fill(queue, 1);
+    const applyDelta = vi.fn(async () => undefined);
+    const cacheRepo = { applyDelta, lookup: vi.fn(), replaceAll: vi.fn(), clearForStaff: vi.fn(), hasCache: vi.fn(), markCheckedIn: vi.fn() };
+    const since = '2026-07-01T12:00:00.000Z';
+    const cacheUpdates = { upserted: [{ hash: 'a'.repeat(64), status: 'checked_in' as const }], voided: [], syncedAt: since };
+    const service = new SyncService(
+      queue,
+      client(async (_token, request) => ({
+        results: request.events.map(({ localId }) => ({ localId, status: 'duplicate' as const, message: 'Done' })),
+        cacheUpdates,
+      })),
+      new FakeNetworkMonitor(true),
+      () => staffSession,
+      Math.random,
+      () => new Date(),
+      cacheRepo as unknown as TicketCacheRepository,
+    );
+    await service.trigger(staffSession);
+    expect(applyDelta).toHaveBeenCalledWith(
+      staffSession.profile.id,
+      '22222222-2222-4222-8222-222222222222',
+      cacheUpdates,
+      expect.any(String),
+    );
+    service.dispose();
+  });
+
   it('is single-flight for auto/manual triggers, handles empty queues, and disposes subscriptions', async () => {
     const queue = new InMemoryOfflineScanQueue();
     const network = new FakeNetworkMonitor(true);
-    let resolveBatch!: (value: [{ localId: string; status: 'duplicate'; message: string }]) => void;
-    const batch = new Promise<[{ localId: string; status: 'duplicate'; message: string }]>(
+    let resolveBatch!: (value: { results: [{ localId: string; status: 'duplicate'; message: string }] }) => void;
+    const batch = new Promise<{ results: [{ localId: string; status: 'duplicate'; message: string }] }>(
       (resolve) => {
       resolveBatch = resolve;
       },
@@ -249,7 +283,7 @@ describe('SyncService', () => {
     const manual = service.trigger(staffSession);
     const joined = service.triggerAuthenticatedSession();
     expect(joined).toBe(manual);
-    resolveBatch([{ localId: 'local-0', status: 'duplicate', message: 'Done' }]);
+    resolveBatch({ results: [{ localId: 'local-0', status: 'duplicate', message: 'Done' }] });
     await expect(manual).resolves.toMatchObject({ status: 'idle' });
     service.dispose();
     network.setOnline(false);

@@ -176,26 +176,25 @@ describe('HttpCheckinMobileApiClient', () => {
 
   it('submits and validates batch sync responses through the shared contract', async () => {
     const requests: Array<{ input: string; body: string | undefined }> = [];
+    const batchEvent = {
+      localId: 'local-1',
+      assignmentId,
+      concertId,
+      qrPayloadHash: 'a'.repeat(64),
+      scannedAt: timestamp,
+      deviceId: 'device-1',
+    };
+    const request = { events: [batchEvent] };
     const client = new HttpCheckinMobileApiClient({
       baseUrl: 'http://localhost:3000',
       fetchImpl: async (input, init) => {
         requests.push({ input, body: init?.body as string | undefined });
-        return response(201, [{ localId: 'local-1', status: 'duplicate', message: 'Duplicate' }]);
+        return response(201, { results: [{ localId: 'local-1', status: 'duplicate', message: 'Duplicate' }] });
       },
     });
-    const request = [
-      {
-        localId: 'local-1',
-        assignmentId,
-        concertId,
-        qrPayloadHash: 'a'.repeat(64),
-        scannedAt: timestamp,
-        deviceId: 'device-1',
-      },
-    ];
-    await expect(client.submitBatchSync('token', request)).resolves.toEqual([
-      { localId: 'local-1', status: 'duplicate', message: 'Duplicate' },
-    ]);
+    await expect(client.submitBatchSync('token', request)).resolves.toEqual({
+      results: [{ localId: 'local-1', status: 'duplicate', message: 'Duplicate' }],
+    });
     expect(requests).toEqual([
       { input: 'http://localhost:3000/checkin/sync', body: JSON.stringify(request) },
     ]);

@@ -9,6 +9,7 @@ import type { OfflineScanQueue } from '../offline-queue/offline-scan-queue.port'
 import type { NetworkMonitor } from '../offline-queue/network-monitor.port';
 import type { QrHasher } from '../offline-queue/qr-hasher';
 import type { LocalIdProvider } from '../offline-queue/local-id-provider';
+import type { TicketCacheRepository } from '../ticket-cache/ticket-cache.repository';
 
 export type ScanWorkflowState =
   | { readonly status: 'initializing' }
@@ -34,6 +35,7 @@ export class ScanWorkflow {
     private readonly networkMonitor?: NetworkMonitor,
     private readonly qrHasher?: QrHasher,
     private readonly localIdProvider?: LocalIdProvider,
+    private readonly ticketCache?: TicketCacheRepository,
   ) {
     this.online = networkMonitor?.isOnline() ?? true;
     this.unsubscribeNetwork = networkMonitor?.onStatusChange((online) => {
@@ -94,8 +96,8 @@ export class ScanWorkflow {
 
     this.currentState = { status: 'submitting', request };
 
-    if (!this.online && this.offlineQueue && this.qrHasher && this.localIdProvider) {
-      return this.enqueue(qrPayload, assignment, session, request.scannedAt);
+    if (!this.online && this.qrHasher) {
+      return this.validateOffline(qrPayload, assignment, session, request.scannedAt);
     }
 
     try {
@@ -106,6 +108,9 @@ export class ScanWorkflow {
         this.qrHasher &&
         this.localIdProvider
       ) {
+        if (this.ticketCache) {
+          return this.validateOffline(qrPayload, assignment, session, request.scannedAt);
+        }
         return this.enqueue(qrPayload, assignment, session, request.scannedAt);
       }
       this.currentState = { status: 'result', result };
@@ -114,6 +119,82 @@ export class ScanWorkflow {
       this.currentState = {
         status: 'recoverable-error',
         message: error instanceof Error ? error.message : 'Unexpected scan submission failure',
+      };
+      return this.currentState;
+    }
+  }
+
+  private async validateOffline(
+    qrPayload: string,
+    assignment: StaffAssignment,
+    session: MobileSession,
+    scannedAt: string,
+  ): Promise<ScanWorkflowState> {
+    if (!this.qrHasher) {
+      this.currentState = { status: 'recoverable-error', message: 'QR hasher unavailable.' };
+      return this.currentState;
+    }
+    try {
+      const hash = await this.qrHasher(qrPayload);
+      if (this.ticketCache) {
+        const hasCache = await this.ticketCache.hasCache(session.profile.id, assignment.concertId);
+        if (hasCache) {
+          const cacheEntry = await this.ticketCache.lookup(
+            session.profile.id,
+            assignment.concertId,
+            hash,
+          );
+        if (cacheEntry === 'checked_in') {
+          this.currentState = {
+            status: 'result',
+            result: { status: 'duplicate', message: 'Ticket has already been checked in.' },
+          };
+          return this.currentState;
+        }
+        if (cacheEntry === 'valid') {
+          await this.ticketCache.markCheckedIn(session.profile.id, assignment.concertId, hash);
+          if (this.offlineQueue && this.localIdProvider) {
+            await this.offlineQueue.enqueue({
+              localId: this.localIdProvider(),
+              staffUserId: session.profile.id,
+              deviceId: this.deviceId!,
+              scannedAt,
+              qrPayloadHash: hash,
+              assignmentId: assignment.assignmentId,
+              concertId: assignment.concertId,
+              ...(assignment.gate ? { gate: assignment.gate } : {}),
+            });
+          }
+          this.currentState = {
+            status: 'result',
+            result: { status: 'accepted', message: 'Ticket accepted.', localId: hash },
+          };
+          return this.currentState;
+        }
+          // hash not in cache → invalid
+          this.currentState = {
+            status: 'result',
+            result: { status: 'invalid', message: 'Invalid ticket.', reasonCode: 'INVALID_TICKET' },
+          };
+          return this.currentState;
+        }
+      }
+      
+      // No cache available — fall back to queue
+      if (this.offlineQueue && this.localIdProvider) {
+        return await this.enqueue(qrPayload, assignment, session, scannedAt);
+      }
+      this.currentState = {
+        status: 'recoverable-error',
+        message: 'Offline queue is not available on this installation.',
+      };
+      return this.currentState;
+    } catch (error) {
+      // Never leave the UI stuck in `submitting`: any hashing/SQLite failure
+      // resolves to a recoverable error the user can retry.
+      this.currentState = {
+        status: 'recoverable-error',
+        message: error instanceof Error ? error.message : 'Offline validation failed',
       };
       return this.currentState;
     }

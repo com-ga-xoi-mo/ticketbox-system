@@ -155,6 +155,18 @@ export class PlatformConfigService {
     return this.configService.get('EMAIL_SMTP_PORT');
   }
 
+  get emailSmtpUser(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_USER', { infer: true });
+  }
+
+  get emailSmtpPass(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_PASS', { infer: true });
+  }
+
+  get emailSmtpSecure(): boolean {
+    return this.configService.get('EMAIL_SMTP_SECURE');
+  }
+
   get maildevWebUrl(): string | undefined {
     return this.configService.get('MAILDEV_WEB_URL', { infer: true });
   }
@@ -238,6 +250,10 @@ export class PlatformConfigService {
 
   get localStoragePublicBaseUrl(): string {
     return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
+  }
+
+  get ticketAccessBaseUrl(): string {
+    return this.configService.get('TICKET_ACCESS_BASE_URL');
   }
 
   get s3Endpoint(): string | undefined {
