@@ -4,6 +4,7 @@ import {
   InvalidScanReasonCodeSchema,
   UnassignedScanReasonCodeSchema,
 } from './online-scan.contract';
+import { TicketCacheDeltaResponseSchema } from './ticket-cache.contract';
 
 const LocalIdSchema = z.string().trim().min(1).max(160);
 
@@ -20,12 +21,11 @@ export const BatchSyncEventSchema = z
   .strict();
 export type BatchSyncEvent = z.infer<typeof BatchSyncEventSchema>;
 
-export const BatchSyncRequestSchema = z
+const BatchSyncEventsSchema = z
   .array(BatchSyncEventSchema)
   .max(100)
   .superRefine((events, context) => {
     const localIds = new Set<string>();
-
     events.forEach((event, index) => {
       if (localIds.has(event.localId)) {
         context.addIssue({
@@ -37,6 +37,14 @@ export const BatchSyncRequestSchema = z
       localIds.add(event.localId);
     });
   });
+
+export const BatchSyncRequestSchema = z
+  .object({
+    concertId: z.string().uuid().optional(),
+    events: BatchSyncEventsSchema,
+    since: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
 export type BatchSyncRequest = z.infer<typeof BatchSyncRequestSchema>;
 
 const resultBase = {
@@ -93,5 +101,10 @@ export const BatchSyncEventResultSchema = z.discriminatedUnion('status', [
 ]);
 export type BatchSyncEventResult = z.infer<typeof BatchSyncEventResultSchema>;
 
-export const BatchSyncResponseSchema = z.array(BatchSyncEventResultSchema);
+export const BatchSyncResponseSchema = z
+  .object({
+    results: z.array(BatchSyncEventResultSchema),
+    cacheUpdates: TicketCacheDeltaResponseSchema.optional(),
+  })
+  .strict();
 export type BatchSyncResponse = z.infer<typeof BatchSyncResponseSchema>;

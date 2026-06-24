@@ -6,12 +6,14 @@ import type {
   PersistedOfflineEvent,
 } from '../../domain/checkin-scan.types';
 import type { CheckinTicketRepositoryPort } from '../../domain/ports/checkin-ticket-repository.port';
+import type { TicketCacheQueryPort } from '../../domain/ports/ticket-cache-query.port';
 import type { ScanValidationService } from '../services/scan-validation.service';
 
 export class BatchSyncUseCase {
   constructor(
     private readonly tickets: CheckinTicketRepositoryPort,
     private readonly validation: ScanValidationService,
+    private readonly cacheQuery: TicketCacheQueryPort,
   ) {}
 
   async execute(command: BatchSyncCommand): Promise<BatchSyncResult> {
@@ -19,7 +21,18 @@ export class BatchSyncUseCase {
     for (const event of command.events) {
       events.push(await this.processEvent(command.actor.userId, command.actor, event));
     }
-    return { events };
+
+    if (!command.since) return { events };
+
+    const syncedAt = new Date();
+    const delta = await this.cacheQuery.getDeltaCache(
+      command.concertId ?? command.events[0]?.concertId ?? '',
+      command.since,
+    );
+    return {
+      events,
+      cacheUpdates: { ...delta, syncedAt },
+    };
   }
 
   private async processEvent(

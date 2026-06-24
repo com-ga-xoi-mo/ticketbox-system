@@ -5,9 +5,23 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "extra": {
-      "apiBaseUrl": "http://localhost:3000"
-    }
+      "apiBaseUrl": "http://localhost:3000",
+      "eas": {
+        "projectId": "f3b789db-93f8-4a85-a3a5-4ef95f3b7039"
+      }
+    },
+    "android": {
+      "package": "test.ticketbox.checkin"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-secure-store",
+      "expo-sqlite"
+    ],
+    "owner": "zinn1401"
   }
 }

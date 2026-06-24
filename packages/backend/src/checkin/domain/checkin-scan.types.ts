@@ -127,7 +127,9 @@ export interface BatchSyncEventCommand {
 
 export interface BatchSyncCommand {
   actor: OnlineScanActor;
+  concertId?: string;
   events: BatchSyncEventCommand[];
+  since?: Date;
 }
 
 export type BatchSyncEventResult =
@@ -142,8 +144,15 @@ export type BatchSyncEventResult =
       reasonCode: UnassignedScanReasonCode;
     };
 
+export interface BatchSyncCacheUpdates {
+  upserted: Array<{ hash: string; status: 'valid' | 'checked_in' }>;
+  voided: string[];
+  syncedAt: Date;
+}
+
 export interface BatchSyncResult {
   events: BatchSyncEventResult[];
+  cacheUpdates?: BatchSyncCacheUpdates;
 }
 
 export interface PersistedOfflineEvent {

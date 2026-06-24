@@ -3,18 +3,23 @@ import {
   OnlineScanResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  TicketCacheDeltaResponseSchema,
+  TicketCacheFullResponseSchema,
   type LoginRequest,
   type OnlineScanRequest,
   BatchSyncResponseSchema,
   type BatchSyncRequest,
   type BatchSyncResponse,
+  type TicketCacheDeltaResponse,
+  type TicketCacheFullResponse,
 } from '@ticketbox/api-types';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import type {
   CheckinMobileApiClient,
   MobileSession,
   OnlineScanResult,
+  TicketCacheRequest,
 } from './checkin-mobile-api.types';
 
 export interface FetchResponseLike {
@@ -138,6 +143,25 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     );
   }
 
+  async fetchTicketCache(
+    accessToken: string,
+    request: TicketCacheRequest,
+  ): Promise<TicketCacheFullResponse | TicketCacheDeltaResponse> {
+    const params = new URLSearchParams({
+      assignmentId: request.assignmentId,
+      concertId: request.concertId,
+    });
+    if (request.since) params.set('since', request.since);
+
+    const schema = z.union([TicketCacheFullResponseSchema, TicketCacheDeltaResponseSchema]);
+    return this.request(
+      `/checkin/ticket-cache?${params.toString()}`,
+      { method: 'GET' },
+      schema,
+      accessToken,
+    );
+  }
+
   private async request<TSchema extends z.ZodTypeAny>(
     path: string,
     init: RequestInit,
@@ -151,16 +175,32 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       headers.set('authorization', `Bearer ${accessToken}`);
     }
 
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new ApiTransportError('Request timed out')),
+        5_000,
+      );
+    });
+
     let response: FetchResponseLike;
     try {
-      response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-        ...init,
-        headers,
-      });
+      response = await Promise.race([
+        this.fetchImpl(`${this.baseUrl}${path}`, {
+          ...init,
+          headers,
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ]);
     } catch (error) {
-      throw new ApiTransportError(
-        error instanceof Error ? error.message : 'Network request failed',
-      );
+      controller.abort();
+      throw error instanceof ApiTransportError
+        ? error
+        : new ApiTransportError(error instanceof Error ? error.message : 'Network request failed');
+    } finally {
+      clearTimeout(timeoutId!);
     }
 
     let payload: unknown;
