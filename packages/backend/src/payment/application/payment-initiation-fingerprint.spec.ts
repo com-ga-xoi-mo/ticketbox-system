@@ -37,5 +37,12 @@ describe('createPaymentInitiationRequestHash', () => {
         provider: PaymentProvider.MOMO,
       }),
     ).not.toBe(base);
+    expect(
+      createPaymentInitiationRequestHash({
+        userId: 'user-1',
+        orderId: 'order-1',
+        provider: PaymentProvider.VNPAY,
+      }),
+    ).not.toBe(base);
   });
 });

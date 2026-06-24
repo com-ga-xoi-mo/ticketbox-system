@@ -8,6 +8,7 @@ export interface CreatePaymentRedirectSessionData {
   orderId: string;
   userId: string;
   amountVnd: number;
+  clientIp?: string;
 }
 
 export interface PaymentProviderMetadata {
@@ -15,6 +16,7 @@ export interface PaymentProviderMetadata {
   payUrl?: string;
   deeplink?: string;
   qrCodeUrl?: string;
+  vnpayTxnRef?: string;
   rawResponse?: Record<string, unknown>;
 }
 
@@ -58,6 +60,21 @@ export interface VerifiedMomoIpnPayload extends MomoIpnPayload {
   failureMessage: string | null;
 }
 
+export type VnpayCallbackPayload = Record<string, string>;
+
+export interface VerifiedVnpayCallbackPayload {
+  payload: VnpayCallbackPayload;
+  providerTransactionId: string;
+  providerEventId: string;
+  providerPaymentId: string | null;
+  amountVnd: number;
+  responseCode: string;
+  transactionStatus: string;
+  success: boolean;
+  failureCode: string | null;
+  failureMessage: string | null;
+}
+
 export interface PaymentGatewayPort {
   createRedirectSession(
     data: CreatePaymentRedirectSessionData,
@@ -66,4 +83,6 @@ export interface PaymentGatewayPort {
   verifySimulatorToken(token: string): PaymentSimulatorTokenPayload;
 
   verifyMomoIpnPayload(payload: MomoIpnPayload): VerifiedMomoIpnPayload;
+
+  verifyVnpayCallbackPayload(payload: VnpayCallbackPayload): VerifiedVnpayCallbackPayload;
 }

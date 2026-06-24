@@ -2,48 +2,51 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OrderStatus } from '../../../ordering/order.module';
 import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import {
+  PaymentCallbackMismatchError,
+  PaymentNotFoundError,
+  VnpayAmountMismatchError,
+} from '../../domain/errors';
 import { Payment } from '../../domain/payment.entity';
 import { PaymentEventType } from '../../domain/payment-event-type.enum';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import type {
-  MomoIpnPayload,
   PaymentGatewayPort,
-  VerifiedMomoIpnPayload,
+  VerifiedVnpayCallbackPayload,
 } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
-import { ProcessMomoIpnUseCase } from './process-momo-ipn.use-case';
+import { ProcessVnpayIpnUseCase } from './process-vnpay-ipn.use-case';
 
 function buildPayment(status = PaymentStatus.PENDING): Payment {
   return new Payment({
     id: 'payment-1',
     orderId: 'order-1',
     userId: 'user-1',
-    provider: PaymentProvider.MOMO,
+    provider: PaymentProvider.VNPAY,
     providerTransactionId: 'payment-1',
     status,
-    amountVnd: 2400000,
-    redirectUrl: 'https://test-payment.momo.vn/pay',
+    amountVnd: 1200000,
+    redirectUrl: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
     failureCode: null,
     failureMessage: null,
-    createdAt: new Date('2026-06-19T10:01:00.000Z'),
-    updatedAt: new Date('2026-06-19T10:01:00.000Z'),
+    createdAt: new Date('2026-06-24T03:00:00.000Z'),
+    updatedAt: new Date('2026-06-24T03:00:00.000Z'),
     completedAt: null,
   });
 }
 
-function buildMomoPayload(overrides: Partial<VerifiedMomoIpnPayload> = {}): VerifiedMomoIpnPayload {
+function verified(
+  overrides: Partial<VerifiedVnpayCallbackPayload> = {},
+): VerifiedVnpayCallbackPayload {
   return {
-    partnerCode: 'MOMOUDLU20220629',
-    orderId: 'payment-1',
-    requestId: 'payment-1',
-    amount: 2400000,
-    resultCode: 0,
-    message: 'Successful.',
-    responseTime: 1780000000000,
-    signature: 'signature',
+    payload: {},
     providerTransactionId: 'payment-1',
-    providerEventId: 'momo:payment-1:payment-1:123:0',
+    providerEventId: 'vnpay:payment-1:123456:00:00:20260624100200',
+    providerPaymentId: '123456',
+    amountVnd: 1200000,
+    responseCode: '00',
+    transactionStatus: '00',
     success: true,
     failureCode: null,
     failureMessage: null,
@@ -51,11 +54,11 @@ function buildMomoPayload(overrides: Partial<VerifiedMomoIpnPayload> = {}): Veri
   };
 }
 
-describe('ProcessMomoIpnUseCase', () => {
+describe('ProcessVnpayIpnUseCase', () => {
   let paymentRepository: PaymentRepositoryPort;
   let paymentGateway: PaymentGatewayPort;
   let transitionOrderStatusUseCase: { execute: ReturnType<typeof vi.fn> };
-  let useCase: ProcessMomoIpnUseCase;
+  let useCase: ProcessVnpayIpnUseCase;
 
   beforeEach(() => {
     paymentRepository = {
@@ -66,18 +69,9 @@ describe('ProcessMomoIpnUseCase', () => {
       updateStatus: vi.fn(async ({ status, failureCode, failureMessage, completedAt }) => {
         const payment = buildPayment(status);
         return new Payment({
-          id: payment.id,
-          orderId: payment.orderId,
-          userId: payment.userId,
-          provider: payment.provider,
-          providerTransactionId: payment.providerTransactionId,
-          status: payment.status,
-          amountVnd: payment.amountVnd,
-          redirectUrl: payment.redirectUrl,
+          ...payment,
           failureCode: failureCode ?? null,
           failureMessage: failureMessage ?? null,
-          createdAt: payment.createdAt,
-          updatedAt: payment.updatedAt,
           completedAt: completedAt ?? null,
         });
       }),
@@ -85,84 +79,99 @@ describe('ProcessMomoIpnUseCase', () => {
     paymentGateway = {
       createRedirectSession: vi.fn(),
       verifySimulatorToken: vi.fn(),
-      verifyMomoIpnPayload: vi.fn(() => buildMomoPayload()),
-      verifyVnpayCallbackPayload: vi.fn(),
+      verifyMomoIpnPayload: vi.fn(),
+      verifyVnpayCallbackPayload: vi.fn(() => verified()),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
-    useCase = new ProcessMomoIpnUseCase(
+    useCase = new ProcessVnpayIpnUseCase(
       paymentRepository,
       paymentGateway,
       transitionOrderStatusUseCase as unknown as TransitionOrderStatusUseCase,
     );
   });
 
-  it('marks successful MoMo IPN as paid and transitions the order', async () => {
-    const result = await useCase.execute({
-      payload: buildMomoPayload() as MomoIpnPayload,
-      occurredAt: new Date('2026-06-19T10:05:00.000Z'),
-    });
+  it('marks a successful VNPay IPN paid and transitions the order once', async () => {
+    const result = await useCase.execute({});
 
-    expect(paymentGateway.verifyMomoIpnPayload).toHaveBeenCalled();
-    expect(paymentRepository.findByProviderTransactionId).toHaveBeenCalledWith('payment-1');
     expect(paymentRepository.recordEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: PaymentEventType.CALLBACK_RECEIVED,
-        providerEventId: 'momo:payment-1:payment-1:123:0',
-        providerTransactionId: 'payment-1',
+        providerEventId: 'vnpay:payment-1:123456:00:00:20260624100200',
+        providerTransactionId: '123456',
       }),
     );
     expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ status: PaymentStatus.SUCCEEDED }),
     );
     expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderId: 'order-1',
-        status: OrderStatus.PAID,
-        skipOwnershipCheck: true,
-      }),
+      expect.objectContaining({ orderId: 'order-1', status: OrderStatus.PAID }),
     );
-    expect(result.duplicate).toBe(false);
     expect(result.orderTransitioned).toBe(true);
   });
 
-  it('marks failed MoMo IPN as failed without issuing tickets', async () => {
-    vi.mocked(paymentGateway.verifyMomoIpnPayload).mockReturnValue(
-      buildMomoPayload({
-        resultCode: 1006,
+  it('maps a failed VNPay IPN to failed payment and order', async () => {
+    vi.mocked(paymentGateway.verifyVnpayCallbackPayload).mockReturnValue(
+      verified({
+        responseCode: '24',
+        transactionStatus: '02',
         success: false,
-        failureCode: '1006',
-        failureMessage: 'Transaction failed.',
-        providerEventId: 'momo:payment-1:payment-1:123:1006',
+        failureCode: '24',
+        failureMessage: 'Customer cancelled',
       }),
     );
 
-    const result = await useCase.execute({ payload: buildMomoPayload() as MomoIpnPayload });
+    const result = await useCase.execute({});
 
     expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         status: PaymentStatus.FAILED,
-        failureCode: '1006',
-        failureMessage: 'Transaction failed.',
+        failureCode: '24',
+        failureMessage: 'Customer cancelled',
       }),
     );
     expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderId: 'order-1',
-        status: OrderStatus.FAILED,
-      }),
+      expect.objectContaining({ status: OrderStatus.FAILED }),
     );
     expect(result.payment.status).toBe(PaymentStatus.FAILED);
   });
 
-  it('ignores duplicate MoMo IPN callbacks and does not transition the order again', async () => {
+  it('rejects an amount mismatch before recording the callback', async () => {
+    vi.mocked(paymentGateway.verifyVnpayCallbackPayload).mockReturnValue(
+      verified({ amountVnd: 1000 }),
+    );
+
+    await expect(useCase.execute({})).rejects.toThrow(VnpayAmountMismatchError);
+    expect(paymentRepository.recordEvent).not.toHaveBeenCalled();
+    expect(paymentRepository.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown VNPay payment before recording the callback', async () => {
+    vi.mocked(paymentRepository.findByProviderTransactionId).mockResolvedValue(null);
+
+    await expect(useCase.execute({})).rejects.toThrow(PaymentNotFoundError);
+    expect(paymentRepository.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('rejects a callback that resolves to another provider', async () => {
+    vi.mocked(paymentRepository.findByProviderTransactionId).mockResolvedValue(
+      new Payment({
+        ...buildPayment(),
+        provider: PaymentProvider.MOMO,
+      }),
+    );
+
+    await expect(useCase.execute({})).rejects.toThrow(PaymentCallbackMismatchError);
+    expect(paymentRepository.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('treats duplicate success callback as a no-op', async () => {
     vi.mocked(paymentRepository.recordEvent).mockResolvedValue({ duplicate: true });
     vi.mocked(paymentRepository.findById).mockResolvedValue(buildPayment(PaymentStatus.SUCCEEDED));
 
-    const result = await useCase.execute({ payload: buildMomoPayload() as MomoIpnPayload });
+    const result = await useCase.execute({});
 
     expect(paymentRepository.updateStatus).not.toHaveBeenCalled();
     expect(transitionOrderStatusUseCase.execute).not.toHaveBeenCalled();
     expect(result.duplicate).toBe(true);
-    expect(result.payment.status).toBe(PaymentStatus.SUCCEEDED);
   });
 });

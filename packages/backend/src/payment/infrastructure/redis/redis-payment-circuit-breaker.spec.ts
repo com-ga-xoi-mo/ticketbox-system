@@ -207,7 +207,14 @@ describe('RedisPaymentCircuitBreaker', () => {
     await expect(
       circuit.acquireProviderCall({ provider: PaymentProvider.SIMULATOR }),
     ).rejects.toThrow(PaymentProviderCircuitOpenError);
-    await expect(circuit.acquireProviderCall({ provider: PaymentProvider.MOMO })).resolves.toMatchObject({
+    await expect(
+      circuit.acquireProviderCall({ provider: PaymentProvider.MOMO }),
+    ).resolves.toMatchObject({
+      state: PaymentCircuitBreakerState.CLOSED,
+    });
+    await expect(
+      circuit.acquireProviderCall({ provider: PaymentProvider.VNPAY }),
+    ).resolves.toMatchObject({
       state: PaymentCircuitBreakerState.CLOSED,
     });
   });
@@ -217,8 +224,8 @@ describe('RedisPaymentCircuitBreaker', () => {
     redis.fail = true;
     const circuit = new RedisPaymentCircuitBreaker(redis as never);
 
-    await expect(circuit.acquireProviderCall({ provider: PaymentProvider.SIMULATOR })).rejects.toThrow(
-      PaymentCircuitBreakerStoreUnavailableError,
-    );
+    await expect(
+      circuit.acquireProviderCall({ provider: PaymentProvider.SIMULATOR }),
+    ).rejects.toThrow(PaymentCircuitBreakerStoreUnavailableError);
   });
 });
