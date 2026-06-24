@@ -37,6 +37,6 @@ export class RejectArtistBioUseCase {
       );
     }
 
-    return this.repository.updateStatus(cmd.artistBioId, ArtistBioStatus.DRAFT);
+    return this.repository.updateStatus(cmd.artistBioId, ArtistBioStatus.REJECTED);
   }
 }
