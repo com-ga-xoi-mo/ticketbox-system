@@ -138,3 +138,26 @@ export const PublicConcertAvailabilityResponseSchema = z
 export type PublicConcertAvailabilityResponse = z.infer<
   typeof PublicConcertAvailabilityResponseSchema
 >;
+
+export const CatalogSortBySchema = z.enum(['date', 'price']);
+export type CatalogSortBy = z.infer<typeof CatalogSortBySchema>;
+
+export const CatalogSortDirSchema = z.enum(['asc', 'desc']);
+export type CatalogSortDir = z.infer<typeof CatalogSortDirSchema>;
+
+export const CatalogSearchParamsSchema = z
+  .object({
+    q: z.string().min(1).optional(),
+    city: z.string().min(1).optional(),
+    dateFrom: z.string().datetime({ offset: true }).optional(),
+    dateTo: z.string().datetime({ offset: true }).optional(),
+    minPrice: z.coerce.number().int().nonnegative().optional(),
+    maxPrice: z.coerce.number().int().nonnegative().optional(),
+    sortBy: CatalogSortBySchema.optional(),
+    sortDir: CatalogSortDirSchema.optional(),
+  })
+  .strict();
+export type CatalogSearchParams = z.infer<typeof CatalogSearchParamsSchema>;
+
+export const PublicConcertCitiesResponseSchema = z.array(z.string());
+export type PublicConcertCitiesResponse = z.infer<typeof PublicConcertCitiesResponseSchema>;
