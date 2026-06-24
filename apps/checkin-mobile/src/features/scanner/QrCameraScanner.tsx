@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 
@@ -14,12 +14,12 @@ export interface QrCameraScannerProps {
  * Thin wrapper around expo-camera's CameraView that forwards a decoded QR payload
  * exactly once per scan attempt.
  *
- * The camera emits onBarcodeScanned on every frame it sees a code. Gating purely on
- * `canSubmitScan(state)` is not enough: the `state` prop lags one React render behind
- * the workflow, so a few frames can still fire while it is stale. `handlingRef` is a
- * synchronous lock set the instant a decode is accepted and released only when the
- * workflow returns to `ready` (after a reset). The workflow's own non-`ready`
- * early-return remains a final backstop.
+ * The camera emits onBarcodeScanned on every frame it sees a code. `handlingRef` is a
+ * synchronous lock that dedupes the burst of frames between a decode and the workflow
+ * flipping to `submitting`. It is re-armed (cleared) synchronously on every `ready`
+ * render — including the one produced by the "scan another ticket" reset — so the
+ * handler is active again immediately, with no extra render needed. The handler stays
+ * defined whenever `ready` and ignores repeat frames internally via the lock.
  */
 export function QrCameraScanner({
   state,
@@ -28,11 +28,12 @@ export function QrCameraScanner({
   const handlingRef = useRef(false);
   const ready = canSubmitScan(state);
 
-  useEffect(() => {
-    if (ready) {
-      handlingRef.current = false;
-    }
-  }, [ready]);
+  if (ready) {
+    // Re-arm the lock on every ready render. Safe: no `ready` render occurs between a
+    // decode and the workflow flipping to `submitting`, so this never re-opens the lock
+    // mid-burst.
+    handlingRef.current = false;
+  }
 
   return (
     <View style={styles.container}>
@@ -40,8 +41,9 @@ export function QrCameraScanner({
         style={StyleSheet.absoluteFill}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={
-          ready && !handlingRef.current
+          ready
             ? ({ data }) => {
+                if (handlingRef.current) return;
                 handlingRef.current = true;
                 onDecodedPayload(data);
               }
