@@ -19,6 +19,7 @@ export enum NotificationAttemptStatus {
 export enum NotificationType {
   GENERAL = 'GENERAL',
   PURCHASE_CONFIRMATION = 'PURCHASE_CONFIRMATION',
+  CONCERT_REMINDER = 'CONCERT_REMINDER',
 }
 
 export interface NotificationRecord {

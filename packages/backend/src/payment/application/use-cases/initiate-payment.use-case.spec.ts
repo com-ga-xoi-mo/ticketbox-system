@@ -271,6 +271,36 @@ describe('InitiatePaymentUseCase', () => {
     expect(paymentCircuitBreaker.recordProviderCallFailure).not.toHaveBeenCalled();
   });
 
+  it('allows only one concurrent same-key initiation to call the provider', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    let claimed = false;
+    vi.mocked(paymentIdempotency.claimPaymentInitiation).mockImplementation(async () => {
+      if (claimed) {
+        return { status: 'IN_PROGRESS' };
+      }
+
+      claimed = true;
+      return { status: 'CLAIMED' };
+    });
+
+    const results = await Promise.allSettled([
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+      useCase.execute({ orderId: 'order-1', userId: 'user-1', idempotencyKey: 'pay-key-1' }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(
+      results.some(
+        (result) =>
+          result.status === 'rejected' && result.reason instanceof PaymentInitiationInProgressError,
+      ),
+    ).toBe(true);
+    expect(paymentGateway.createRedirectSession).toHaveBeenCalledTimes(1);
+    expect(paymentRepository.create).toHaveBeenCalledTimes(1);
+    expect(paymentIdempotency.completePaymentInitiation).toHaveBeenCalledTimes(1);
+  });
+
   it('marks the idempotency record failed and records circuit failure when provider initiation fails', async () => {
     getOrderUseCase.execute.mockResolvedValue(buildOrder());
     vi.mocked(paymentGateway.createRedirectSession).mockRejectedValue(

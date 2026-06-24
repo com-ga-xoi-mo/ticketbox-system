@@ -144,4 +144,28 @@ describe('ProcessSimulatorPaymentCallbackUseCase', () => {
     expect(result.duplicate).toBe(true);
     expect(result.payment.status).toBe(PaymentStatus.SUCCEEDED);
   });
+
+  it('processes repeated successful callback deliveries once', async () => {
+    vi.mocked(paymentRepository.recordEvent)
+      .mockResolvedValueOnce({ duplicate: false })
+      .mockResolvedValueOnce({ duplicate: true });
+    vi.mocked(paymentRepository.findById)
+      .mockResolvedValueOnce(buildPayment(PaymentStatus.PENDING))
+      .mockResolvedValueOnce(buildPayment(PaymentStatus.SUCCEEDED))
+      .mockResolvedValueOnce(buildPayment(PaymentStatus.SUCCEEDED));
+
+    const first = await useCase.execute({
+      token: 'token',
+      outcome: PaymentSimulatorOutcome.SUCCESS,
+    });
+    const duplicate = await useCase.execute({
+      token: 'token',
+      outcome: PaymentSimulatorOutcome.SUCCESS,
+    });
+
+    expect(first.duplicate).toBe(false);
+    expect(duplicate.duplicate).toBe(true);
+    expect(paymentRepository.updateStatus).toHaveBeenCalledTimes(1);
+    expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledTimes(1);
+  });
 });

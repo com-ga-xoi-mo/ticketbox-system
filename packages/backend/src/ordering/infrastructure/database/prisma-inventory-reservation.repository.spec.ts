@@ -17,9 +17,7 @@ import { PrismaInventoryReservationRepository } from './prisma-inventory-reserva
 const now = new Date('2026-06-16T10:00:00.000Z');
 const expiresAt = new Date('2026-06-16T10:15:00.000Z');
 
-function buildDomainOrder(
-  overrides: Partial<ConstructorParameters<typeof Order>[0]> = {},
-): Order {
+function buildDomainOrder(overrides: Partial<ConstructorParameters<typeof Order>[0]> = {}): Order {
   return new Order({
     id: 'order-1',
     orderNumber: 'ORD-20260616-ABC123',
@@ -218,11 +216,93 @@ describe('PrismaInventoryReservationRepository', () => {
     expect(tx.ticketType.update).not.toHaveBeenCalled();
   });
 
+  it('prevents oversell when concurrent reservations serialize through the ticket type lock', async () => {
+    const firstOrder = buildDomainOrder({
+      id: 'order-1',
+      idempotencyKey: 'idem-1',
+      totalAmountVnd: 150000,
+      items: [
+        new OrderItem({
+          id: 'item-1',
+          ticketTypeId: 'ticket-type-1',
+          quantity: 1,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 150000,
+        }),
+      ],
+    });
+    const secondOrder = buildDomainOrder({
+      id: 'order-2',
+      userId: 'user-2',
+      idempotencyKey: 'idem-2',
+      totalAmountVnd: 150000,
+      items: [
+        new OrderItem({
+          id: 'item-2',
+          ticketTypeId: 'ticket-type-1',
+          quantity: 1,
+          unitPriceVnd: 150000,
+          totalPriceVnd: 150000,
+        }),
+      ],
+    });
+
+    tx.order.findUnique.mockResolvedValue(null);
+    tx.$queryRaw
+      .mockResolvedValueOnce([
+        buildLockedTicketType({
+          totalQuantity: 1,
+          reservedQuantity: 0,
+          soldQuantity: 0,
+        }),
+      ])
+      .mockResolvedValueOnce([
+        buildLockedTicketType({
+          totalQuantity: 1,
+          reservedQuantity: 1,
+          soldQuantity: 0,
+        }),
+      ]);
+    tx.order.create.mockResolvedValueOnce(
+      buildPrismaOrder({
+        id: 'order-1',
+        totalAmountVnd: 150000,
+        items: [
+          {
+            id: 'item-1',
+            orderId: 'order-1',
+            ticketTypeId: 'ticket-type-1',
+            quantity: 1,
+            unitPriceVnd: 150000,
+            totalPriceVnd: 150000,
+          },
+        ],
+      }),
+    );
+
+    const results = await Promise.allSettled([
+      repository.reserve(firstOrder),
+      repository.reserve(secondOrder),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(
+      results.some(
+        (result) =>
+          result.status === 'rejected' && result.reason instanceof InsufficientTicketInventoryError,
+      ),
+    ).toBe(true);
+    expect(tx.order.create).toHaveBeenCalledTimes(1);
+    expect(tx.ticketType.update).toHaveBeenCalledTimes(1);
+    expect(tx.ticketType.update).toHaveBeenCalledWith({
+      where: { id: 'ticket-type-1' },
+      data: { reservedQuantity: { increment: 1 } },
+    });
+  });
+
   it.each([
-    [
-      buildLockedTicketType({ status: TicketTypeStatus.PAUSED }),
-      TicketTypeInactiveError,
-    ],
+    [buildLockedTicketType({ status: TicketTypeStatus.PAUSED }), TicketTypeInactiveError],
     [
       buildLockedTicketType({ saleStartsAt: new Date('2026-06-17T00:00:00.000Z') }),
       TicketTypeSaleWindowError,
@@ -231,19 +311,14 @@ describe('PrismaInventoryReservationRepository', () => {
       buildLockedTicketType({ saleEndsAt: new Date('2026-06-15T00:00:00.000Z') }),
       TicketTypeSaleWindowError,
     ],
-  ])(
-    'rejects inactive or out-of-window ticket types',
-    async (lockedTicketType, expectedError) => {
-      tx.order.findUnique.mockResolvedValueOnce(null);
-      tx.$queryRaw.mockResolvedValueOnce([lockedTicketType]);
+  ])('rejects inactive or out-of-window ticket types', async (lockedTicketType, expectedError) => {
+    tx.order.findUnique.mockResolvedValueOnce(null);
+    tx.$queryRaw.mockResolvedValueOnce([lockedTicketType]);
 
-      await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(
-        expectedError,
-      );
-      expect(tx.order.create).not.toHaveBeenCalled();
-      expect(tx.ticketType.update).not.toHaveBeenCalled();
-    },
-  );
+    await expect(repository.reserve(buildDomainOrder())).rejects.toThrow(expectedError);
+    expect(tx.order.create).not.toHaveBeenCalled();
+    expect(tx.ticketType.update).not.toHaveBeenCalled();
+  });
 
   it('rejects when paid quantity plus requested quantity exceeds max per user', async () => {
     tx.order.findUnique.mockResolvedValueOnce(null);
@@ -457,14 +532,12 @@ describe('PrismaInventoryReservationRepository', () => {
   });
 
   it('confirms paid inventory by moving reserved quantity to sold quantity', async () => {
-    tx.order.findUnique
-      .mockResolvedValueOnce(buildPrismaOrder())
-      .mockResolvedValueOnce(
-        buildPrismaOrder({
-          status: OrderStatus.PAID,
-          paidAt: new Date('2026-06-16T10:30:00.000Z'),
-        }),
-      );
+    tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder()).mockResolvedValueOnce(
+      buildPrismaOrder({
+        status: OrderStatus.PAID,
+        paidAt: new Date('2026-06-16T10:30:00.000Z'),
+      }),
+    );
     tx.order.updateMany.mockResolvedValueOnce({ count: 1 });
     tx.ticketType.updateMany.mockResolvedValueOnce({ count: 1 });
 

@@ -16,6 +16,8 @@ import { Role } from '../../../identity/domain/role.enum';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
 import { GetUserTicketUseCase } from '../../application/use-cases/get-user-ticket.use-case';
 import { GetOrderUseCase } from '../../application/use-cases/get-order.use-case';
@@ -51,6 +53,7 @@ export class OrderController {
 
   @Post('checkout/orders')
   @Roles(Role.AUDIENCE)
+  @RateLimited(RateLimitPolicy.CHECKOUT)
   async createOrder(
     @Body() dto: CreateOrderDto,
     @Request() req: { user: AuthenticatedUser },

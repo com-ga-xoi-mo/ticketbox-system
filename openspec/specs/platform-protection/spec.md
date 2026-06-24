@@ -4,15 +4,51 @@
 TBD - created by archiving change define-ticketbox-blueprint. Update Purpose after archive.
 ## Requirements
 ### Requirement: Redis-backed rate limiting
-The system SHALL rate limit public browsing, checkout, payment initiation, admin writes, and check-in sync using Redis-backed counters or token buckets.
+The system SHALL rate limit public browsing, checkout, payment initiation, admin writes, and check-in sync using Redis-backed token buckets with endpoint-specific policies and actor-specific bucket keys.
 
 #### Scenario: Checkout rate limit is exceeded
-- **WHEN** a user sends checkout requests faster than the configured limit
-- **THEN** the system SHALL reject excess requests with a controlled rate limit response
+- **WHEN** an authenticated user sends checkout requests faster than the configured checkout limit
+- **THEN** the system SHALL reject excess checkout requests with `429 Too Many Requests`
+- **AND** the response SHALL include a `Retry-After` value derived from the token bucket refill time
+- **AND** no order or inventory mutation SHALL be attempted for the rejected request
 
 #### Scenario: Browsing remains available under checkout pressure
 - **WHEN** checkout traffic is rate limited during a sale spike
-- **THEN** public concert browsing SHALL continue to serve cached or database-backed responses
+- **THEN** public concert browsing SHALL continue to use the browsing rate limit policy
+- **AND** checkout bucket exhaustion SHALL NOT block unrelated browsing requests
+
+#### Scenario: Anonymous browsing is limited by IP
+- **WHEN** anonymous clients request public browsing endpoints
+- **THEN** the system SHALL consume tokens from a browsing bucket keyed by client IP and route policy
+- **AND** excess requests SHALL receive `429 Too Many Requests` without invoking the application use case
+
+#### Scenario: Payment initiation is limited by user and order
+- **WHEN** an authenticated user initiates payment for an order faster than the configured payment limit
+- **THEN** the system SHALL consume tokens from a payment initiation bucket keyed by user, order, and provider-relevant route policy
+- **AND** excess requests SHALL receive `429 Too Many Requests`
+- **AND** payment idempotency replay, payment provider calls, and payment circuit breaker state SHALL NOT be mutated by rejected requests
+
+#### Scenario: Admin writes are limited by actor
+- **WHEN** an organizer or admin performs write operations faster than the configured admin-write limit
+- **THEN** the system SHALL consume tokens from an admin-write bucket keyed by role/user and route policy
+- **AND** excess write requests SHALL receive `429 Too Many Requests`
+- **AND** read-only admin or public browsing policies SHALL remain independent
+
+#### Scenario: Check-in sync is limited by device
+- **WHEN** a check-in client syncs events faster than the configured check-in sync limit
+- **THEN** the system SHALL consume tokens from a check-in sync bucket keyed by device identifier when available
+- **AND** the system SHALL fall back to authenticated staff identity or client IP only when no device identifier is available
+- **AND** excess sync requests SHALL receive `429 Too Many Requests` without recording duplicate check-in events
+
+#### Scenario: Token bucket allows configured bursts
+- **WHEN** requests arrive within the configured burst capacity for a policy
+- **THEN** the system SHALL allow the burst while decrementing available tokens
+- **AND** sustained traffic above the refill rate SHALL eventually be rejected with `429 Too Many Requests`
+
+#### Scenario: Endpoint policies are isolated
+- **WHEN** one endpoint class exhausts its token bucket for an actor
+- **THEN** other endpoint classes for the same actor SHALL use their own bucket state
+- **AND** the exhausted bucket SHALL NOT consume or reset tokens for unrelated policies
 
 ### Requirement: Concert catalog caching
 The system SHALL cache concert list, concert detail, and availability snapshots in Redis with
@@ -87,3 +123,29 @@ The system SHALL expose enough logs, health checks, metrics, or test output to d
 #### Scenario: Concurrency test evidence exists
 - **WHEN** the team runs the technical test suite or demo script
 - **THEN** the output SHALL demonstrate no oversell, enforced per-user limit, idempotent payment handling, and duplicate check-in rejection
+
+### Requirement: Rate limiting hardening evidence
+The system SHALL provide automated hardening tests proving Redis token bucket rate limiting behavior across endpoint policies and actors.
+
+#### Scenario: Requests within rate limit are allowed
+- **WHEN** an actor sends requests within the configured token bucket capacity and refill behavior
+- **THEN** the requests SHALL proceed to the protected handler
+
+#### Scenario: Excess requests are blocked with retry after
+- **WHEN** an actor exceeds the configured token bucket capacity for a protected endpoint
+- **THEN** the system SHALL reject excess requests with `429 Too Many Requests`
+- **AND** the response SHALL include an appropriate `Retry-After` value
+- **AND** the protected handler SHALL NOT be called for rejected requests
+
+#### Scenario: Endpoint policies remain isolated
+- **WHEN** checkout requests exhaust a checkout rate limit bucket
+- **THEN** browsing, payment initiation, admin write, and check-in sync policies SHALL use independent buckets according to their configured actor keys
+
+#### Scenario: Rejected payment initiation does not mutate payment state
+- **WHEN** payment initiation is rejected by rate limiting before the payment use case is invoked
+- **THEN** payment idempotency records, provider calls, and circuit breaker state SHALL NOT be mutated by that rejected request
+
+#### Scenario: Redis degradation behavior is explicit
+- **WHEN** the Redis-backed token bucket store is unavailable
+- **THEN** each endpoint policy SHALL follow its configured fail-open or fail-closed behavior
+- **AND** tests SHALL verify at least one fail-open policy and one fail-closed policy

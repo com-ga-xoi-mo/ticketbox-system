@@ -115,6 +115,18 @@ export class PlatformConfigService {
     return this.configService.get('EMAIL_SMTP_PORT');
   }
 
+  get emailSmtpUser(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_USER', { infer: true });
+  }
+
+  get emailSmtpPass(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_PASS', { infer: true });
+  }
+
+  get emailSmtpSecure(): boolean {
+    return this.configService.get('EMAIL_SMTP_SECURE');
+  }
+
   get maildevWebUrl(): string | undefined {
     return this.configService.get('MAILDEV_WEB_URL', { infer: true });
   }
