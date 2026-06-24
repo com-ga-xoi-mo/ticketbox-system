@@ -29,29 +29,29 @@
 
 ## 6. Frontend — Order Detail Page
 
-- [ ] 6.1 Create `apps/audience-web/src/features/account/OrderDetailPage.tsx`. Fetch order via `useOrderDetail(id)` using `useParams()`. Display: order number, status badge, total amount, creation date, line items table (ticket type, qty, unit price), payment timestamps (paidAt, cancelledAt, expiredAt when applicable), reservation countdown for PENDING_PAYMENT orders.
-- [ ] 6.2 Add "Continue Payment" button visible only when status is `PENDING_PAYMENT` and reservation has not expired. On click, show payment provider selection (can be a simple dropdown or buttons for VNPay/Momo). Call `useInitiatePayment()` with orderId, selected provider, and a generated idempotency key. On success, redirect to `redirectUrl` via `window.location.href`.
-- [ ] 6.3 Add "Cancel Order" button visible only when status is `PENDING_PAYMENT`. On click, open a confirmation dialog (shadcn `Dialog`). On confirm, call `useCancelOrder()`. On success, the query invalidation refreshes the page showing CANCELLED status. On error, show toast/alert with the error message.
-- [ ] 6.4 Create `apps/audience-web/src/shared/lib/idempotency.ts` with a `generateIdempotencyKey()` utility (UUID v4 or crypto.randomUUID) if it doesn't already exist.
+- [x] 6.1 Create `apps/audience-web/src/features/account/OrderDetailPage.tsx`. Fetch order via `useOrderDetail(id)` using `useParams()`. Display: order number, status badge, total amount, creation date, line items table (ticket type, qty, unit price), payment timestamps (paidAt, cancelledAt, expiredAt when applicable), reservation countdown for PENDING_PAYMENT orders.
+- [x] 6.2 Add "Continue Payment" button visible only when status is `PENDING_PAYMENT` and reservation has not expired. On click, show payment provider selection (can be a simple dropdown or buttons for VNPay/Momo). Call `useInitiatePayment()` with orderId, selected provider, and a generated idempotency key. On success, redirect to `redirectUrl` via `window.location.href`.
+- [x] 6.3 Add "Cancel Order" button visible only when status is `PENDING_PAYMENT`. On click, open a confirmation dialog (shadcn `Dialog`). On confirm, call `useCancelOrder()`. On success, the query invalidation refreshes the page showing CANCELLED status. On error, show toast/alert with the error message.
+- [x] 6.4 Create `apps/audience-web/src/shared/lib/idempotency.ts` with a `generateIdempotencyKey()` utility (UUID v4 or crypto.randomUUID) if it doesn't already exist.
 
 ## 7. Frontend — My Tickets Page
 
-- [ ] 7.1 Create `apps/audience-web/src/features/account/MyTicketsPage.tsx`. Fetch tickets via `useMyTickets()`. Render ticket cards showing: concert name, ticket type, ticketNumber, status badge, event date. Show empty state with link to `/events` when no tickets. Show skeletons during loading.
-- [ ] 7.2 Create a reusable `TicketStatusBadge` component in `apps/audience-web/src/features/account/components/TicketStatusBadge.tsx`. Map statuses: ISSUED → "Hợp lệ" (green), CHECKED_IN → "Đã check-in" (blue), VOIDED → "Đã hủy" (gray), REFUNDED → "Đã hoàn tiền" (gray).
+- [x] 7.1 Create `apps/audience-web/src/features/account/MyTicketsPage.tsx`. Fetch tickets via `useMyTickets()`. Render ticket cards showing: concert name, ticket type, ticketNumber, status badge, event date. Show empty state with link to `/events` when no tickets. Show skeletons during loading.
+- [x] 7.2 Create a reusable `TicketStatusBadge` component in `apps/audience-web/src/features/account/components/TicketStatusBadge.tsx`. Map statuses: ISSUED → "Hợp lệ" (green), CHECKED_IN → "Đã check-in" (blue), VOIDED → "Đã hủy" (gray), REFUNDED → "Đã hoàn tiền" (gray).
 
 ## 8. Frontend — Ticket Detail / Wallet Page
 
-- [ ] 8.1 Install `qrcode.react` (or `react-qr-code`) as a dependency in `apps/audience-web/package.json`.
-- [ ] 8.2 Create `apps/audience-web/src/features/account/TicketDetailPage.tsx`. Fetch ticket via `useTicketDetail(id)`. Render mobile-first wallet card layout: large QR code (min 280px, SVG) from `qrPayload` centered at top, brightness hint text below QR, concert name, venue, date/time, ticket type, seat/zone, ticket number, status badge, checked-in timestamp if applicable. Minimal chrome — back button only.
-- [ ] 8.3 Handle edge cases: QR payload absent (show "QR unavailable, please refresh" message), VOIDED ticket (dim/overlay QR with voided indicator), CHECKED_IN ticket (show QR with checked-in overlay and timestamp). Loading state with skeleton matching wallet layout.
+- [x] 8.1 Install `qrcode.react` (or `react-qr-code`) as a dependency in `apps/audience-web/package.json`.
+- [x] 8.2 Create `apps/audience-web/src/features/account/TicketDetailPage.tsx`. Fetch ticket via `useTicketDetail(id)`. Render mobile-first wallet card layout: large QR code (min 280px, SVG) from `qrPayload` centered at top, brightness hint text below QR, concert name, venue, date/time, ticket type, seat/zone, ticket number, status badge, checked-in timestamp if applicable. Minimal chrome — back button only.
+- [x] 8.3 Handle edge cases: QR payload absent (show "QR unavailable, please refresh" message), VOIDED ticket (dim/overlay QR with voided indicator), CHECKED_IN ticket (show QR with checked-in overlay and timestamp). Loading state with skeleton matching wallet layout.
 
 ## 9. Frontend — Routing
 
-- [ ] 9.1 Update `apps/audience-web/src/app/router.tsx` to add nested routes under `/account`: `/account` (AccountPage), `/account/orders` (MyOrdersPage), `/account/orders/:id` (OrderDetailPage), `/account/tickets` (MyTicketsPage), `/account/tickets/:id` (TicketDetailPage). Use lazy loading (`React.lazy` + `Suspense`) for all new pages to keep initial bundle small.
-- [ ] 9.2 Wrap all `/account/*` routes with `AudienceProtectedRoute` — either as a layout element or within each page component (match existing pattern).
+- [x] 9.1 Update `apps/audience-web/src/app/router.tsx` to add nested routes under `/account`: `/account` (AccountPage), `/account/orders` (MyOrdersPage), `/account/orders/:id` (OrderDetailPage), `/account/tickets` (MyTicketsPage), `/account/tickets/:id` (TicketDetailPage). Use lazy loading (`React.lazy` + `Suspense`) for all new pages to keep initial bundle small.
+- [x] 9.2 Wrap all `/account/*` routes with `AudienceProtectedRoute` — either as a layout element or within each page component (match existing pattern).
 
 ## 10. Integration Verification
 
-- [ ] 10.1 Verify the full flow end-to-end: login as AUDIENCE user → navigate to /account → see profile → click My Orders → see order list → click an order → see detail → test Continue Payment on a PENDING_PAYMENT order → test Cancel Order → navigate to My Tickets → see ticket list → click a ticket → see wallet card with QR code.
-- [ ] 10.2 Verify mobile responsiveness: test ticket wallet card on 375px viewport, ensure QR is scannable size, text is readable, touch targets are adequate.
-- [ ] 10.3 Verify error states: unauthenticated redirect to login, 404 for non-owned order/ticket, network error displays with retry, expired reservation disables Continue Payment.
+- [x] 10.1 Verify the full flow end-to-end: login as AUDIENCE user → navigate to /account → see profile → click My Orders → see order list → click an order → see detail → test Continue Payment on a PENDING_PAYMENT order → test Cancel Order → navigate to My Tickets → see ticket list → click a ticket → see wallet card with QR code.
+- [x] 10.2 Verify mobile responsiveness: test ticket wallet card on 375px viewport, ensure QR is scannable size, text is readable, touch targets are adequate.
+- [x] 10.3 Verify error states: unauthenticated redirect to login, 404 for non-owned order/ticket, network error displays with retry, expired reservation disables Continue Payment.
