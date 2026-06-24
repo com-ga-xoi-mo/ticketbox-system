@@ -1,14 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchConcertList, catalogKeys } from '../../shared/api/catalog';
+import { useConcertList } from '../../shared/api/catalog';
 import { PageLoading, PageEmpty, PageError } from '../../shared/ui/PageStates';
 import { EventCard } from '../../shared/ui/EventCard';
 import { Badge } from '../../components/ui/badge';
 
 export function EventListPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: catalogKeys.list(),
-    queryFn: fetchConcertList,
-  });
+  const { data, isLoading, isError } = useConcertList();
 
   if (isLoading) return <PageLoading />;
   if (isError) return <PageError message="Không thể tải danh sách sự kiện. Vui lòng thử lại." />;

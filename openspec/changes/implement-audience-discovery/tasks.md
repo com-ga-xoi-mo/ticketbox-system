@@ -21,20 +21,20 @@
 
 ## 3. Audience Web — New shadcn/ui Primitives
 
-- [ ] 3.1 Install shadcn `tabs` component: `npx shadcn@latest add tabs -c apps/audience-web` (style `radix-nova` is read from `components.json` automatically). Output: `apps/audience-web/src/components/ui/tabs.tsx`.
-- [ ] 3.2 Install shadcn `select` component: `npx shadcn@latest add select -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/select.tsx`.
-- [ ] 3.3 Install shadcn `popover` component: `npx shadcn@latest add popover -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/popover.tsx`.
-- [ ] 3.4 Install shadcn `dialog` component: `npx shadcn@latest add dialog -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/dialog.tsx`.
-- [ ] 3.5 Verify all new primitives render without errors by running `npm run verify:audience-web`.
+- [x] 3.1 Install shadcn `tabs` component: `npx shadcn@latest add tabs -c apps/audience-web` (style `radix-nova` is read from `components.json` automatically). Output: `apps/audience-web/src/components/ui/tabs.tsx`.
+- [x] 3.2 Install shadcn `select` component: `npx shadcn@latest add select -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/select.tsx`.
+- [x] 3.3 Install shadcn `popover` component: `npx shadcn@latest add popover -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/popover.tsx`.
+- [x] 3.4 Install shadcn `dialog` component: `npx shadcn@latest add dialog -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/dialog.tsx`.
+- [x] 3.5 Verify all new primitives render without errors by running `npm run verify:audience-web`.
 
 ## 4. Audience Web — API Client & Query Hooks
 
-- [ ] 4.1 Update `fetchConcertList` in `apps/audience-web/src/shared/api/catalog.ts` to accept optional `CatalogSearchParams` and append non-empty params as URL query string to `GET /concerts`.
-- [ ] 4.2 Add `fetchConcertCities` function that calls `GET /concerts/cities` and parses response with `PublicConcertCitiesResponseSchema`.
-- [ ] 4.3 Update `catalogKeys` to include `cities()` and make `list(params?)` include filter params in the query key for proper cache keying.
-- [ ] 4.4 Create `useConcertList(params)` custom hook in `apps/audience-web/src/shared/api/catalog.ts` (or a new hooks file) that wraps `useQuery` with `catalogKeys.list(params)` and `fetchConcertList(params)`.
-- [ ] 4.5 Create `useConcertCities()` custom hook that wraps `useQuery` with `catalogKeys.cities()` and `fetchConcertCities`.
-- [ ] 4.6 Write unit tests for the updated `fetchConcertList` with params and `fetchConcertCities`.
+- [x] 4.1 Update `fetchConcertList` in `apps/audience-web/src/shared/api/catalog.ts` to accept optional `CatalogSearchParams` and append non-empty params as URL query string to `GET /concerts`.
+- [x] 4.2 Add `fetchConcertCities` function that calls `GET /concerts/cities` and parses response with `PublicConcertCitiesResponseSchema`.
+- [x] 4.3 Update `catalogKeys` to include `cities()` and make `list(params?)` include filter params in the query key for proper cache keying.
+- [x] 4.4 Create `useConcertList(params)` custom hook in `apps/audience-web/src/shared/api/catalog.ts` (or a new hooks file) that wraps `useQuery` with `catalogKeys.list(params)` and `fetchConcertList(params)`.
+- [x] 4.5 Create `useConcertCities()` custom hook that wraps `useQuery` with `catalogKeys.cities()` and `fetchConcertCities`.
+- [x] 4.6 Write unit tests for the updated `fetchConcertList` with params and `fetchConcertCities`.
 
 ## 5. Audience Web — Extended Page States
 

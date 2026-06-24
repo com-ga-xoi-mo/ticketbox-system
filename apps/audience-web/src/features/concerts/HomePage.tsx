@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CalendarHeart, ShieldCheck, Sparkles, Ticket } from 'lucide-react';
-import { fetchConcertList, catalogKeys } from '../../shared/api/catalog';
+import { useConcertList } from '../../shared/api/catalog';
 import { EventCard } from '../../shared/ui/EventCard';
 import { PageLoading, PageError } from '../../shared/ui/PageStates';
 import { Badge } from '../../components/ui/badge';
@@ -9,10 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 
 export function HomePage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: catalogKeys.list(),
-    queryFn: fetchConcertList,
-  });
+  const { data, isLoading, isError } = useConcertList();
 
   return (
     <div className="relative">
