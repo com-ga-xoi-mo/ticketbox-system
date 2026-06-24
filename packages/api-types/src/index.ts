@@ -4,12 +4,14 @@ export {
   ROLE_CODES,
   RoleCodeSchema,
   StaffProfileResponseSchema,
+  MyProfileResponseSchema,
 } from './auth/auth.contract';
 export type {
   LoginRequest,
   LoginResponse,
   RoleCode,
   StaffProfileResponse,
+  MyProfileResponse,
 } from './auth/auth.contract';
 
 export {
@@ -108,3 +110,34 @@ export type {
   OnlineScanResponse,
   UnassignedScanReasonCode,
 } from './checkin/online-scan.contract';
+
+export {
+  ORDER_STATUSES,
+  OrderStatusSchema,
+  OrderItemSummarySchema,
+  OrderSummaryResponseSchema,
+  OrderDetailResponseSchema,
+  OrderListResponseSchema,
+} from './ordering/order.contract';
+export type {
+  OrderStatus,
+  OrderItemSummary,
+  OrderSummaryResponse,
+  OrderDetailResponse,
+  OrderListResponse,
+} from './ordering/order.contract';
+
+export {
+  TICKET_STATUSES,
+  TicketStatusSchema,
+  TicketSummaryResponseSchema,
+  TicketDetailResponseSchema,
+  TicketListResponseSchema,
+} from './ordering/ticket.contract';
+export type {
+  TicketStatus,
+  TicketSummaryResponse,
+  TicketDetailResponse,
+  TicketListResponse,
+} from './ordering/ticket.contract';
+
