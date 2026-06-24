@@ -48,15 +48,62 @@ export function QrCameraScanner({
             : undefined
         }
       />
+      <View pointerEvents="none" style={styles.reticle}>
+        <View style={[styles.corner, styles.topLeft]} />
+        <View style={[styles.corner, styles.topRight]} />
+        <View style={[styles.corner, styles.bottomLeft]} />
+        <View style={[styles.corner, styles.bottomRight]} />
+      </View>
     </View>
   );
 }
+
+const RETICLE = '#3b82f6';
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
     aspectRatio: 1,
     overflow: 'hidden',
-    borderRadius: 12,
+    borderRadius: 16,
+    backgroundColor: '#0f172a',
+  },
+  reticle: {
+    ...StyleSheet.absoluteFillObject,
+    margin: 18,
+  },
+  corner: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderColor: RETICLE,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 10,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 10,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 10,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 10,
   },
 });
