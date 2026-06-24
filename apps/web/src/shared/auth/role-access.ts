@@ -8,7 +8,7 @@ export function canAccess(session: Session | null, allowedRoles: Role[]): boolea
 
 export function redirectFor(session: Session | null): string {
   if (!session) return '/login';
-  if (session.roles.includes('ADMIN')) return '/dashboard';
-  if (session.roles.includes('ORGANIZER')) return '/concerts';
+  if (session.roles.includes('ADMIN')) return '/admin/dashboard';
+  if (session.roles.includes('ORGANIZER')) return '/organizer/concerts';
   return '/no-access';
 }

@@ -40,6 +40,7 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
           sizeBytes: assetData.sizeBytes,
           checksum: assetData.checksum,
           uploadedById: assetData.uploadedById,
+          metadata: assetData.metadata,
         },
       });
 
@@ -48,6 +49,8 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
         data: { seatingMapAssetId: asset.id },
         select: { id: true, seatingMapAssetId: true },
       });
+
+      await tx.seatingZone.deleteMany({ where: { concertId } });
 
       let replacedStorageKey: string | null = null;
       if (currentAssetId && currentAssetId !== asset.id) {
@@ -76,6 +79,7 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
   }
 
   private toDomain(asset: Asset): SeatingMapAsset {
+    const metadata = (asset.metadata as { svgElementIds?: string[] } | null) || {};
     return {
       id: asset.id,
       kind: asset.kind,
@@ -89,6 +93,7 @@ export class PrismaSeatingMapWriteRepository implements SeatingMapWriteRepositor
       uploadedById: asset.uploadedById,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
+      svgElementIds: metadata.svgElementIds ?? [],
     };
   }
 }

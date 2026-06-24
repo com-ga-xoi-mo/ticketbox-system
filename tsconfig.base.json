@@ -15,6 +15,7 @@
     "declaration": true,
     "declarationMap": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@ticketbox/backend": ["packages/backend/src/index"],
       "@ticketbox/backend/*": ["packages/backend/src/*"]
