@@ -31,7 +31,7 @@ export class VnpayPaymentGateway {
       vnp_Locale: this.config.vnpayLocale,
       vnp_OrderInfo: `TicketBox payment for order ${data.orderId}`,
       vnp_OrderType: this.config.vnpayOrderType,
-      vnp_ReturnUrl: this.config.vnpayReturnUrl,
+      vnp_ReturnUrl: data.returnUrl ?? this.config.vnpayReturnUrl,
       vnp_TmnCode: this.config.vnpayTmnCode,
       vnp_TxnRef: data.paymentId,
       vnp_Version: this.config.vnpayVersion,

@@ -88,6 +88,7 @@ export class PaymentController {
         userId: req.user.id,
         idempotencyKey: dto.idempotencyKey,
         provider: dto.provider,
+        returnUrl: dto.returnUrl,
         clientIp: req.ip,
       });
 

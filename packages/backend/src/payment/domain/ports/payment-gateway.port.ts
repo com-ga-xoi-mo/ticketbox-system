@@ -8,6 +8,7 @@ export interface CreatePaymentRedirectSessionData {
   orderId: string;
   userId: string;
   amountVnd: number;
+  returnUrl?: string;
   clientIp?: string;
 }
 

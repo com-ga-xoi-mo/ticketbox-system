@@ -11,4 +11,8 @@ export class InitiatePaymentDto {
   @IsOptional()
   @IsIn([PaymentProvider.SIMULATOR, PaymentProvider.MOMO, PaymentProvider.VNPAY])
   provider?: PaymentProvider;
+
+  @IsOptional()
+  @IsString()
+  returnUrl?: string;
 }
