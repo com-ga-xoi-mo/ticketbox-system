@@ -1,8 +1,7 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
-  NotFoundException,
+  Get,
   Param,
   Patch,
   Post,
@@ -10,10 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import {
-  ConcertNotFoundError,
-  ForbiddenConcertOwnershipError,
-} from '../../../identity/domain/errors';
 import { Role } from '../../../identity/domain/role.enum';
 import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
@@ -22,8 +17,10 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth
 import { ArchiveTicketTypeUseCase } from '../../application/use-cases/archive-ticket-type.use-case';
 import { CreateTicketTypeUseCase } from '../../application/use-cases/create-ticket-type.use-case';
 import { UpdateTicketTypeUseCase } from '../../application/use-cases/update-ticket-type.use-case';
+import { ListTicketTypesWithZoneMappingsUseCase } from '../../application/use-cases/list-ticket-types-with-zone-mappings.use-case';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { UpdateTicketTypeDto } from './dto/update-ticket-type.dto';
+import { mapConcertErrors } from './concert-error.mapper';
 
 @Controller('organizer/concerts/:id/ticket-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -33,7 +30,22 @@ export class OrganizerTicketTypeController {
     private readonly createTicketTypeUseCase: CreateTicketTypeUseCase,
     private readonly updateTicketTypeUseCase: UpdateTicketTypeUseCase,
     private readonly archiveTicketTypeUseCase: ArchiveTicketTypeUseCase,
+    private readonly listTicketTypesWithZoneMappingsUseCase: ListTicketTypesWithZoneMappingsUseCase,
   ) {}
+
+  @Get()
+  async getTicketTypes(
+    @Param('id') concertId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapConcertErrors(() =>
+      this.listTicketTypesWithZoneMappingsUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: false,
+      }),
+    );
+  }
 
   @Post()
   async create(
@@ -41,7 +53,7 @@ export class OrganizerTicketTypeController {
     @Body() dto: CreateTicketTypeDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.createTicketTypeUseCase.execute({
         concertId,
         requesterId: req.user.id,
@@ -66,7 +78,7 @@ export class OrganizerTicketTypeController {
     @Body() dto: UpdateTicketTypeDto,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.updateTicketTypeUseCase.execute({
         concertId,
         ticketTypeId: typeId,
@@ -92,7 +104,7 @@ export class OrganizerTicketTypeController {
     @Param('typeId') typeId: string,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.handleErrors(() =>
+    return mapConcertErrors(() =>
       this.archiveTicketTypeUseCase.execute({
         concertId,
         ticketTypeId: typeId,
@@ -101,19 +113,5 @@ export class OrganizerTicketTypeController {
         allowAdminOverride: false,
       }),
     );
-  }
-
-  private async handleErrors<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (err: unknown) {
-      if (err instanceof ForbiddenConcertOwnershipError) {
-        throw new ForbiddenException(err.message);
-      }
-      if (err instanceof ConcertNotFoundError) {
-        throw new NotFoundException(err.message);
-      }
-      throw err;
-    }
   }
 }

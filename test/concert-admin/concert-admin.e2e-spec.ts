@@ -160,6 +160,9 @@ describe('Concert Admin Management E2E', () => {
           maxPerUser: 4,
         }),
       });
+      if (res2.status !== 409) {
+        console.error('ERROR RESPONSE:', await res2.text());
+      }
       expect(res2.status).toBe(409);
     },
   );
