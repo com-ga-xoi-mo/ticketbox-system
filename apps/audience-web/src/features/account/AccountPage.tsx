@@ -1,86 +1,85 @@
-import { Link } from 'react-router-dom';
 import { AudienceProtectedRoute } from '../../shared/auth/AudienceProtectedRoute';
 import { useMyProfile } from '../../shared/api/profile';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
-import { Ticket, ShoppingBag, User, AlertCircle } from 'lucide-react';
+import { User, AlertCircle, Mail, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
+import { Badge } from '../../components/ui/badge';
 
 export function AccountPage() {
   const { data: profile, isLoading, isError, refetch } = useMyProfile();
 
   return (
     <AudienceProtectedRoute>
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <h1 className="mb-8 text-3xl font-black tracking-tight">Tài khoản của tôi</h1>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Profile Summary */}
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Hồ sơ cá nhân
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+        <Card className="shadow-sm">
+          <CardHeader className="border-b bg-muted/20 pb-6">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <User className="h-6 w-6 text-primary" />
+              Thông tin cá nhân
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {isLoading ? (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-64" />
                 </div>
-              ) : isError ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Lỗi</AlertTitle>
-                  <AlertDescription>
-                    Không thể tải thông tin.
-                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => refetch()}>
-                      Thử lại
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              ) : profile ? (
-                <div className="space-y-1">
-                  <p className="font-semibold">{profile.displayName}</p>
-                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-64" />
                 </div>
-              ) : null}
-            </CardContent>
-          </Card>
+              </div>
+            ) : isError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Lỗi</AlertTitle>
+                <AlertDescription>
+                  Không thể tải thông tin tài khoản.
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+                    Thử lại
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : profile ? (
+              <div className="space-y-6">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Họ và tên
+                  </span>
+                  <span className="text-lg font-semibold">{profile.displayName}</span>
+                </div>
 
-          {/* Navigation Cards */}
-          <div className="grid gap-6 sm:grid-cols-2 md:col-span-2">
-            <Link to="/account/orders" className="block h-full">
-              <Card className="h-full transition-colors hover:bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-primary" />
-                    Đơn hàng của tôi
-                  </CardTitle>
-                  <CardDescription>
-                    Xem lịch sử mua vé và trạng thái thanh toán
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </span>
+                  <span className="text-lg">{profile.email}</span>
+                </div>
 
-            <Link to="/account/tickets" className="block h-full">
-              <Card className="h-full transition-colors hover:bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Ticket className="h-5 w-5 text-primary" />
-                    Vé của tôi
-                  </CardTitle>
-                  <CardDescription>
-                    Xem vé điện tử (QR code) và lịch sử check-in
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          </div>
-        </div>
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" />
+                    Phân quyền
+                  </span>
+                  <div className="flex gap-2">
+                    {profile.roles.map((role) => (
+                      <Badge key={role} variant="secondary" className="uppercase">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
     </AudienceProtectedRoute>
   );
