@@ -108,3 +108,28 @@ export type {
   OnlineScanResponse,
   UnassignedScanReasonCode,
 } from './checkin/online-scan.contract';
+
+export {
+  CreateOrderItemRequestSchema,
+  CreateOrderRequestSchema,
+  InitiatePaymentRequestSchema,
+  IssuedTicketDetailSchema,
+  IssuedTicketSummarySchema,
+  OrderItemSchema,
+  OrderSchema,
+  OrderStatusSchema,
+  PaymentInitiationResponseSchema,
+  PaymentProviderSchema,
+} from './ordering/order.contract';
+export type {
+  CreateOrderItemRequest,
+  CreateOrderRequest,
+  InitiatePaymentRequest,
+  IssuedTicketDetail,
+  IssuedTicketSummary,
+  Order,
+  OrderItem,
+  OrderStatus,
+  PaymentInitiationResponse,
+  PaymentProvider,
+} from './ordering/order.contract';
