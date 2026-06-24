@@ -15,9 +15,10 @@ export async function fetchMyProfile(): Promise<MyProfileResponse> {
   return MyProfileResponseSchema.parse(data);
 }
 
-export function useMyProfile() {
+export function useMyProfile(enabled: boolean = true) {
   return useQuery({
     queryKey: profileKeys.mine(),
     queryFn: fetchMyProfile,
+    enabled,
   });
 }
