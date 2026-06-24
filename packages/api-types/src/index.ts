@@ -13,6 +13,39 @@ export type {
 } from './auth/auth.contract';
 
 export {
+  AssetKindCodeSchema,
+  AssetStatusCodeSchema,
+  PublicAssetSchema,
+  PublicAvailabilityTicketTypeSchema,
+  PublicConcertAvailabilityResponseSchema,
+  PublicConcertAvailabilitySummarySchema,
+  PublicConcertDetailResponseSchema,
+  PublicConcertListResponseSchema,
+  PublicConcertSummarySchema,
+  PublicSeatingZoneSchema,
+  PublicTicketTypeSchema,
+  PublicTicketTypeZoneMappingSchema,
+  SeatingZoneStatusCodeSchema,
+  TicketTypeStatusCodeSchema,
+} from './catalog/public-concert.contract';
+export type {
+  AssetKindCode,
+  AssetStatusCode,
+  PublicAsset,
+  PublicAvailabilityTicketType,
+  PublicConcertAvailabilityResponse,
+  PublicConcertAvailabilitySummary,
+  PublicConcertDetailResponse,
+  PublicConcertListResponse,
+  PublicConcertSummary,
+  PublicSeatingZone,
+  PublicTicketType,
+  PublicTicketTypeZoneMapping,
+  SeatingZoneStatusCode,
+  TicketTypeStatusCode,
+} from './catalog/public-concert.contract';
+
+export {
   StaffAssignmentSchema,
   StaffAssignmentsResponseSchema,
 } from './checkin/assignment.contract';
