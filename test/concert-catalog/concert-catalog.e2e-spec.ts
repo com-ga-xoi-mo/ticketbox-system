@@ -49,6 +49,46 @@ describeIfDB('Public Concert Catalog E2E', () => {
     expect(body[0]).toHaveProperty('availabilitySummary');
   });
 
+  it('GET /concerts/cities returns distinct cities', async () => {
+    const res = await fetch(`${baseUrl}/concerts/cities`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as string[];
+    expect(body).toBeInstanceOf(Array);
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain('Ho Chi Minh City');
+  });
+
+  it('GET /concerts accepts filters and sorting', async () => {
+    const res = await fetch(`${baseUrl}/concerts?q=anh&city=Ho+Chi+Minh+City&sortBy=price&sortDir=asc`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Array<{ slug: string; city: string; availabilitySummary: { minPriceVnd: number } }>;
+    expect(body.length).toBeGreaterThan(0);
+    body.forEach(concert => {
+      expect(concert.city).toBe('Ho Chi Minh City');
+      expect(concert.slug).toContain('anh');
+    });
+
+    if (body.length >= 2) {
+      expect(body[0].availabilitySummary.minPriceVnd).toBeLessThanOrEqual(body[1].availabilitySummary.minPriceVnd);
+    }
+  });
+
+  it('GET /concerts rejects invalid query parameters', async () => {
+    const res = await fetch(`${baseUrl}/concerts?sortBy=invalid`);
+
+    expect(res.status).toBe(400);
+  });
+
+  it('GET /concerts accepts date and price range filters', async () => {
+    const res = await fetch(`${baseUrl}/concerts?minPrice=0&maxPrice=10000000&dateFrom=2026-01-01T00:00:00Z&dateTo=2026-12-31T23:59:59Z`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Array<{ slug: string }>;
+    expect(body.length).toBeGreaterThan(0);
+  });
+
   it('GET /concerts/:slug returns detail with zones, mappings, and public availability', async () => {
     const res = await fetch(`${baseUrl}/concerts/anh-trai-say-hi-2026`);
 

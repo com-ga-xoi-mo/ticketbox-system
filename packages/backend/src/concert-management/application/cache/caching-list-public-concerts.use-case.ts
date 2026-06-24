@@ -1,4 +1,4 @@
-import type { ConcertSummary } from '../../domain/catalog.types';
+import type { CatalogSearchFilters, ConcertSummary } from '../../domain/catalog.types';
 import type { CacheServicePort } from '../../../platform/cache/cache.tokens';
 import type { ListPublicConcertsUseCase } from '../use-cases/list-public-concerts.use-case';
 import { ConcertCacheKeys } from './concert-cache-keys';
@@ -19,11 +19,19 @@ export class CachingListPublicConcertsUseCase {
     private readonly cache: CacheServicePort,
   ) {}
 
-  async execute(now = new Date()): Promise<ConcertSummary[]> {
+  async execute(now = new Date(), filters?: CatalogSearchFilters): Promise<ConcertSummary[]> {
+    // Determine a cache key based on filters if present.
+    let key = ConcertCacheKeys.list();
+    if (filters && Object.keys(filters).length > 0) {
+      // Serialize filters deterministically for cache key
+      const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
+      key = `${key}:filtered:${Buffer.from(filterKey).toString('base64')}`;
+    }
+
     return this.cache.getOrSet(
-      ConcertCacheKeys.list(),
+      key,
       TTL_SECONDS,
-      () => this.inner.execute(now),
+      () => this.inner.execute(now, filters),
     );
   }
 }

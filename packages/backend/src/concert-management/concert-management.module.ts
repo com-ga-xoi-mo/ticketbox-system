@@ -70,6 +70,7 @@ import { PrismaAssetReadRepository } from './infrastructure/database/prisma-asse
 import { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
 import { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
 import { ListPublicConcertsUseCase } from './application/use-cases/list-public-concerts.use-case';
+import { ListConcertCitiesUseCase } from './application/use-cases/list-concert-cities.use-case';
 import { CreateConcertUseCase } from './application/use-cases/create-concert.use-case';
 import { UpdateConcertUseCase } from './application/use-cases/update-concert.use-case';
 import { PublishConcertUseCase } from './application/use-cases/publish-concert.use-case';
@@ -157,6 +158,11 @@ import { AssetController } from './adapters/http/asset.controller';
       inject: [PUBLIC_CONCERT_CATALOG, CACHE_SERVICE],
       useFactory: (catalog: PublicConcertCatalogPort, cache: CacheServicePort) =>
         new CachingListPublicConcertsUseCase(new ListPublicConcertsUseCase(catalog), cache),
+    },
+    {
+      provide: ListConcertCitiesUseCase,
+      inject: [PUBLIC_CONCERT_CATALOG],
+      useFactory: (catalog: PublicConcertCatalogPort) => new ListConcertCitiesUseCase(catalog),
     },
     {
       provide: GetPublicConcertDetailUseCase,
@@ -354,6 +360,7 @@ export { AssetController } from './adapters/http/asset.controller';
 export { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
 export { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
 export { ListPublicConcertsUseCase } from './application/use-cases/list-public-concerts.use-case';
+export { ListConcertCitiesUseCase } from './application/use-cases/list-concert-cities.use-case';
 export { CreateConcertUseCase } from './application/use-cases/create-concert.use-case';
 export { UpdateConcertUseCase } from './application/use-cases/update-concert.use-case';
 export { PublishConcertUseCase } from './application/use-cases/publish-concert.use-case';
