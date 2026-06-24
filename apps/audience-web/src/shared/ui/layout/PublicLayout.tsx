@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Menu, Sparkles, Ticket, UserRound } from 'lucide-react';
+import { Menu, Sparkles, Ticket, UserRound, LogOut } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { cn } from '../cn';
 import { Button } from '../../../components/ui/button';
@@ -35,8 +35,14 @@ function Logo() {
 }
 
 function NavLinks({ onClick }: { onClick?: () => void }) {
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    signOut();
+    onClick?.();
+    navigate('/');
+  };
 
   return (
     <nav className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-2">
@@ -47,15 +53,33 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       >
         Sự kiện
       </Link>
-      {session ? (
+      {session && (
         <Link
-          to="/account"
+          to="/orders"
           onClick={onClick}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+          className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
         >
-          <UserRound className="size-4" aria-hidden="true" />
-          Tài khoản
+          Đơn hàng
         </Link>
+      )}
+      {session ? (
+        <>
+          <Link
+            to="/account"
+            onClick={onClick}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <UserRound className="size-4" aria-hidden="true" />
+            Tài khoản
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            Đăng xuất
+          </button>
+        </>
       ) : (
         <Button
           size="sm"

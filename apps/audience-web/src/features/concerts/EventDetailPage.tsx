@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
+import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
+import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { PageLoading, PageError, PageUnavailable, PageSoldOut } from '../../shared/ui/PageStates';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -60,6 +62,8 @@ function calculateZoneAvailability(zoneId: string, data: PublicConcertDetailResp
 
 export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated, redirectToLogin } = useRequireAuth();
   const [posterError, setPosterError] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map());
@@ -107,6 +111,24 @@ export function EventDetailPage() {
   };
 
   const hasSelectedTickets = Array.from(quantities.values()).some(qty => qty > 0);
+
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    
+    const selectedQuantities = Array.from(quantities.entries()).filter(([_, qty]) => qty > 0);
+    const state = {
+      concertId: data?.id,
+      concertSlug: data?.slug,
+      concertTitle: data?.title,
+      quantities: selectedQuantities,
+      idempotencyKey: generateIdempotencyKey(),
+    };
+    
+    navigate('/checkout', { state });
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -300,6 +322,7 @@ export function EventDetailPage() {
                   <Button 
                     className="h-11 rounded-full px-7 shadow-xl shadow-primary/20"
                     disabled={!hasSelectedTickets}
+                    onClick={handleCheckout}
                   >
                     Tiếp tục mua vé
                     <Ticket className="ml-2 size-4" aria-hidden="true" />

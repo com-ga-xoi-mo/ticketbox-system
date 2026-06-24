@@ -7,6 +7,10 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { AccessDeniedPage } from '../features/auth/AccessDeniedPage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { AccountPage } from '../features/account/AccountPage';
+import { CheckoutPage } from '../features/checkout/CheckoutPage';
+import { PaymentResultPage } from '../features/orders/PaymentResultPage';
+import { OrderDetailPage } from '../features/orders/OrderDetailPage';
+import { MyOrdersPage } from '../features/orders/MyOrdersPage';
 
 export const router = createBrowserRouter([
   {
@@ -24,6 +28,10 @@ export const router = createBrowserRouter([
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
       { path: '/account', element: <AccountPage /> },
+      { path: '/checkout', element: <CheckoutPage /> },
+      { path: '/orders', element: <MyOrdersPage /> },
+      { path: '/orders/:id', element: <OrderDetailPage /> },
+      { path: '/orders/:id/result', element: <PaymentResultPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

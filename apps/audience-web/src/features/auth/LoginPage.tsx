@@ -17,10 +17,13 @@ export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
+  const returnTo = searchParams.get('returnTo');
+  const stateFrom = (location.state as { from?: { pathname: string } })?.from?.pathname;
+  const from = returnTo || stateFrom || '/';
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
