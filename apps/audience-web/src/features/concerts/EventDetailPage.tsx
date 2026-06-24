@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket } from 'lucide-react';
@@ -33,6 +34,12 @@ function formatPrice(vnd: number): string {
 
 export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const [posterError, setPosterError] = useState(false);
+
+  useEffect(() => {
+    setPosterError(false);
+  }, [slug]);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: catalogKeys.detail(slug ?? ''),
     queryFn: () => fetchConcertDetail(slug ?? ''),
@@ -46,12 +53,13 @@ export function EventDetailPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="lg:sticky lg:top-28 lg:self-start">
-          {data.posterAsset?.publicUrl ? (
+          {data.posterAsset?.publicUrl && !posterError ? (
             <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-card shadow-[0_28px_80px_rgb(15_23_42/0.18)]">
               <img
                 src={resolveImageUrl(data.posterAsset.publicUrl)}
                 alt={data.title}
                 className="aspect-[4/5] w-full object-cover"
+                onError={() => setPosterError(true)}
               />
             </div>
           ) : (

@@ -38,21 +38,21 @@
 
 ## 5. Audience Web — Extended Page States
 
-- [ ] 5.1 Add `PageNoResults` component to `apps/audience-web/src/shared/ui/PageStates.tsx` that displays a contextual "no results" message with a "Clear filters" action callback.
-- [ ] 5.2 Add `PageSoldOut` component that displays a sold-out banner suitable for embedding in the event detail page.
-- [ ] 5.3 Add `PageUnavailable` component that displays an unavailable/ended event state with a link back to the event listing.
-- [ ] 5.4 Write tests for the new page state components.
+- [x] 5.1 Add `PageNoResults` component to `apps/audience-web/src/shared/ui/PageStates.tsx` that displays a contextual "no results" message with a "Clear filters" action callback.
+- [x] 5.2 Add `PageSoldOut` component that displays a sold-out banner suitable for embedding in the event detail page.
+- [x] 5.3 Add `PageUnavailable` component that displays an unavailable/ended event state with a link back to the event listing.
+- [x] 5.4 Write tests for the new page state components.
 
 ## 6. Audience Web — Homepage Discovery
 
-- [ ] 6.1 Refactor `HomePage.tsx` hero section to use the first concert from the API response as the dynamic featured event, displaying its poster, title, artist, venue, city, date, and a CTA link to its detail page.
-- [ ] 6.2 Add a search bar to the hero section that navigates to `/events?q=<term>` on submit using `useNavigate`.
-- [ ] 6.3 Add a graceful fallback hero when no concerts are available (branded message + CTA to `/events`).
-- [ ] 6.4 Integrate `useConcertCities()` hook and render city discovery tabs (using shadcn `tabs`) above the featured events section, with "All" as the default tab.
-- [ ] 6.5 Implement client-side city filtering of the featured events section when a city tab is selected (filter the already-fetched concert list).
-- [ ] 6.6 Hide city tabs when only one city is available.
-- [ ] 6.7 Ensure responsive layout: single-column stacked hero on mobile, two-column hero on desktop; 1/2/3-column event grid across breakpoints.
-- [ ] 6.8 Write tests for HomePage: dynamic hero rendering, search bar navigation, city tab filtering, loading/error states.
+- [x] 6.1 Refactor `HomePage.tsx` hero section to use the first concert from the API response as the dynamic featured event, displaying its poster, title, artist, venue, city, date, and a CTA link to its detail page.
+- [x] 6.2 Add a search bar to the hero section that navigates to `/events?q=<term>` on submit using `useNavigate`.
+- [x] 6.3 Add a graceful fallback hero when no concerts are available (branded message + CTA to `/events`).
+- [x] 6.4 Integrate `useConcertCities()` hook and render city discovery tabs (using shadcn `tabs`) above the featured events section, with "All" as the default tab.
+- [x] 6.5 Implement client-side city filtering of the featured events section when a city tab is selected (filter the already-fetched concert list).
+- [x] 6.6 Hide city tabs when only one city is available.
+- [x] 6.7 Ensure responsive layout: single-column stacked hero on mobile, two-column hero on desktop; 1/2/3-column event grid across breakpoints.
+- [x] 6.8 Write tests for HomePage: dynamic hero rendering, search bar navigation, city tab filtering, loading/error states.
 
 ## 7. Audience Web — Event Listing with Search/Filter/Sort
 
