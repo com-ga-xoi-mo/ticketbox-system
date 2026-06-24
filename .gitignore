@@ -74,6 +74,7 @@ docker-compose.override.yml
 .cursor/
 .expo/
 .npmrc
+
 # Ignore agent and extra files
 CLAUDE.md
 docs/manual-tests/
