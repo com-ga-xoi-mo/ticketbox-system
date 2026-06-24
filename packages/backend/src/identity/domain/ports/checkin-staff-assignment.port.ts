@@ -38,5 +38,7 @@ export interface CheckinStaffAssignmentRepositoryPort {
     concertId: string;
   }): Promise<CheckinStaffAssignmentRecord>;
 
+  revokeAllForStaffUser(staffUserId: string): Promise<void>;
+
   userHasCheckinStaffRole(userId: string): Promise<boolean | null>;
 }

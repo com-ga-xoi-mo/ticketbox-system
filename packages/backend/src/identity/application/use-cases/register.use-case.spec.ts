@@ -5,6 +5,7 @@ import type { PasswordHasherPort } from '../../domain/ports/password-hasher.port
 import type { TokenIssuerPort } from '../../domain/ports/token-issuer.port';
 import type { IUserRepository, UserRecord } from '../../domain/ports/user-repository.port';
 import { Role } from '../../domain/role.enum';
+import { UserStatus } from '../../domain/user-status.enum';
 import { RegisterUseCase } from './register.use-case';
 
 // ---------------------------------------------------------------------------
@@ -14,15 +15,21 @@ import { RegisterUseCase } from './register.use-case';
 const mockUser: UserRecord = {
   id: 'user-id-1',
   email: 'test@example.com',
-  passwordHash: 'hashed',
+  displayName: 'Test User',
+  status: UserStatus.ACTIVE,
   roles: ['AUDIENCE'],
 };
 
 function buildMocks() {
-  const userRepo: IUserRepository = {
+  const userRepo = {
     createWithAudienceRole: vi.fn(),
+    createWithRoles: vi.fn(),
+    findById: vi.fn(),
     findByEmail: vi.fn(),
-  };
+    listUsers: vi.fn(),
+    updateProfile: vi.fn(),
+    setStatus: vi.fn(),
+  } as unknown as IUserRepository;
 
   const passwordHasher: PasswordHasherPort = {
     hash: vi.fn(async (plainTextPassword: string) => `hashed:${plainTextPassword}`),

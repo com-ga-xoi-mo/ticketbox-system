@@ -1,14 +1,18 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { EmailAlreadyRegisteredError } from '../../domain/errors';
+import { UserStatus } from '../../domain/user-status.enum';
 import type {
   CreateUserData,
   IUserRepository,
+  UpdateUserProfileData,
+  UserFilter,
   UserRecord,
+  UserRecordWithPassword,
 } from '../../domain/ports/user-repository.port';
 
-/** Prisma error code for a unique-constraint violation */
 const PRISMA_UNIQUE_CONSTRAINT = 'P2002';
 
 function isPrismaUniqueError(err: unknown): boolean {
@@ -20,31 +24,33 @@ function isPrismaUniqueError(err: unknown): boolean {
   );
 }
 
-/**
- * Concrete implementation of IUserRepository backed by Prisma + PostgreSQL.
- *
- * This class is the ONLY place in the Identity module that imports PrismaService.
- * All upper layers (use-cases, controllers) see only the IUserRepository port.
- *
- * The AUDIENCE role ID is cached in onModuleInit() to avoid an extra DB round-trip
- * on every registration request.
- */
 @Injectable()
 export class PrismaUserRepository implements IUserRepository, OnModuleInit {
-  /** Cached at startup — role IDs never change after seeding */
-  private audienceRoleId!: string;
+  private roleIdMap = new Map<string, string>();
 
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit(): Promise<void> {
-    const role = await this.prisma.role.findUnique({ where: { code: 'AUDIENCE' } });
-    if (!role) {
+    const roles = await this.prisma.role.findMany();
+    for (const role of roles) {
+      this.roleIdMap.set(role.code, role.id);
+    }
+    if (!this.roleIdMap.has('AUDIENCE')) {
       throw new Error('AUDIENCE role not found in database. Run seed first.');
     }
-    this.audienceRoleId = role.id;
   }
 
   async createWithAudienceRole(data: CreateUserData): Promise<UserRecord> {
+    return this.createWithRoles(data, ['AUDIENCE']);
+  }
+
+  async createWithRoles(data: CreateUserData, roles: string[]): Promise<UserRecord> {
+    const roleIds = roles.map((r) => {
+      const id = this.roleIdMap.get(r);
+      if (!id) throw new Error(`Role code ${r} not found.`);
+      return id;
+    });
+
     try {
       const user = await this.prisma.user.create({
         data: {
@@ -52,7 +58,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
           passwordHash: data.passwordHash,
           displayName: data.displayName,
           roles: {
-            create: { roleId: this.audienceRoleId },
+            create: roleIds.map((roleId) => ({ roleId })),
           },
         },
         include: {
@@ -69,7 +75,16 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
     }
   }
 
-  async findByEmail(email: string): Promise<UserRecord | null> {
+  async findById(id: string): Promise<UserRecord | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { roles: { include: { role: true } } },
+    });
+    if (!user) return null;
+    return this.toUserRecord(user);
+  }
+
+  async findByEmail(email: string): Promise<UserRecordWithPassword | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: {
@@ -78,6 +93,94 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
     });
 
     if (!user) return null;
+    return this.toUserRecordWithPassword(user);
+  }
+
+  async listUsers(filter?: UserFilter): Promise<UserRecord[]> {
+    const where: Prisma.UserWhereInput = {};
+
+    if (filter?.status) {
+      where.status = filter.status as any;
+    }
+
+    if (filter?.unassigned) {
+      where.checkinAssignments = {
+        none: {
+          status: 'ACTIVE',
+        },
+      };
+    }
+    
+    if (filter?.role) {
+      const roleId = this.roleIdMap.get(filter.role);
+      if (roleId) {
+        where.roles = {
+          some: {
+            roleId,
+          },
+        };
+      } else {
+        // If the role code is unknown, return an empty array or handle accordingly.
+        return [];
+      }
+    }
+
+    const users = await this.prisma.user.findMany({
+      where,
+      include: { roles: { include: { role: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return users.map((u) => this.toUserRecord(u));
+  }
+
+  async updateProfile(id: string, data: UpdateUserProfileData): Promise<UserRecord> {
+    try {
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: {
+          ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
+          ...(data.email !== undefined ? { email: data.email } : {}),
+        },
+        include: { roles: { include: { role: true } } },
+      });
+      return this.toUserRecord(user);
+    } catch (err) {
+      if (isPrismaUniqueError(err)) {
+        throw new EmailAlreadyRegisteredError(data.email || '');
+      }
+      throw err;
+    }
+  }
+
+  async setStatus(id: string, status: UserStatus): Promise<UserRecord> {
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: {
+        status: status as any,
+      },
+      include: { roles: { include: { role: true } } },
+    });
+    return this.toUserRecord(user);
+  }
+
+  async setRoles(id: string, roles: string[]): Promise<UserRecord> {
+    const roleIds = roles.map((r) => {
+      const roleId = this.roleIdMap.get(r);
+      if (!roleId) throw new Error(`Role code ${r} not found.`);
+      return roleId;
+    });
+
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: {
+        roles: {
+          deleteMany: {},
+          create: roleIds.map((roleId) => ({ roleId })),
+        },
+      },
+      include: { roles: { include: { role: true } } },
+    });
     return this.toUserRecord(user);
   }
 
@@ -85,17 +188,20 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  private toUserRecord(user: {
-    id: string;
-    email: string;
-    passwordHash: string;
-    roles: Array<{ role: { code: string } }>;
-  }): UserRecord {
+  private toUserRecord(user: any): UserRecord {
     return {
       id: user.id,
       email: user.email,
+      displayName: user.displayName,
+      status: user.status as UserStatus,
+      roles: user.roles.map((ur: any) => ur.role.code),
+    };
+  }
+
+  private toUserRecordWithPassword(user: any): UserRecordWithPassword {
+    return {
+      ...this.toUserRecord(user),
       passwordHash: user.passwordHash,
-      roles: user.roles.map((ur) => ur.role.code),
     };
   }
 }

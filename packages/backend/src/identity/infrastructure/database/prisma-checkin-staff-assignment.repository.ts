@@ -88,31 +88,35 @@ export class PrismaCheckinStaffAssignmentRepository implements CheckinStaffAssig
         staffId: data.staffUserId,
         concertId: data.concertId,
         gateName: data.gateName ?? null,
-        status: ACTIVE_ASSIGNMENT_STATUS,
       },
     });
 
     if (existing) {
-      throw new DuplicateCheckinAssignmentError(data.staffUserId, data.concertId, data.gateName);
-    }
-
-    try {
-      const assignment = await this.prisma.checkinStaffAssignment.create({
-        data: {
-          staffId: data.staffUserId,
-          concertId: data.concertId,
-          gateName: data.gateName ?? null,
-          status: ACTIVE_ASSIGNMENT_STATUS,
-        },
-      });
-
-      return this.toAssignmentRecord(assignment);
-    } catch (err: unknown) {
-      if (isPrismaUniqueError(err)) {
+      if (existing.status === ACTIVE_ASSIGNMENT_STATUS) {
         throw new DuplicateCheckinAssignmentError(data.staffUserId, data.concertId, data.gateName);
       }
-      throw err;
+      // Reactivate a previously revoked assignment instead of creating a duplicate
+      const updated = await this.prisma.checkinStaffAssignment.update({
+        where: { id: existing.id },
+        data: {
+          status: ACTIVE_ASSIGNMENT_STATUS,
+          assignedAt: new Date(),
+          revokedAt: null,
+        },
+      });
+      return this.toAssignmentRecord(updated);
     }
+
+    const assignment = await this.prisma.checkinStaffAssignment.create({
+      data: {
+        staffId: data.staffUserId,
+        concertId: data.concertId,
+        gateName: data.gateName ?? null,
+        status: ACTIVE_ASSIGNMENT_STATUS,
+      },
+    });
+
+    return this.toAssignmentRecord(assignment);
   }
 
   async revokeAssignment(params: {
@@ -143,6 +147,19 @@ export class PrismaCheckinStaffAssignmentRepository implements CheckinStaffAssig
     });
 
     return this.toAssignmentRecord(assignment);
+  }
+
+  async revokeAllForStaffUser(staffUserId: string): Promise<void> {
+    await this.prisma.checkinStaffAssignment.updateMany({
+      where: {
+        staffId: staffUserId,
+        status: ACTIVE_ASSIGNMENT_STATUS,
+      },
+      data: {
+        status: REVOKED_ASSIGNMENT_STATUS,
+        revokedAt: new Date(),
+      },
+    });
   }
 
   async userHasCheckinStaffRole(userId: string): Promise<boolean | null> {
