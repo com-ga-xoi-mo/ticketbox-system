@@ -1,9 +1,4 @@
-# Web App Shell
-
-## Purpose
-TBD
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Role-gated protected routes
 
@@ -71,17 +66,3 @@ The app shell SHALL redirect authenticated users from the root route to the firs
 
 - **WHEN** an authenticated session includes both `ADMIN` and `ORGANIZER`
 - **THEN** the app redirects to `/admin/dashboard`
-
-### Requirement: Collapsible sidebar layout
-
-The shell SHALL render a collapsible sidebar (expandable label mode and collapsed icon-only mode) alongside a content area that hosts the active feature page.
-
-#### Scenario: Sidebar collapses to icons
-
-- **WHEN** the user toggles the sidebar to collapsed mode
-- **THEN** the sidebar shows icons only and the content area expands to fill the freed space
-
-#### Scenario: Active item highlighted
-
-- **WHEN** a feature page is active
-- **THEN** its corresponding sidebar item is visually marked as active
