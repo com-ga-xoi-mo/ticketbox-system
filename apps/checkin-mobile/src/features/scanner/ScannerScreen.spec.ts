@@ -26,3 +26,19 @@ describe('ScannerScreen readiness controls', () => {
     expect(canSubmitScan({ status: 'ready' })).toBe(true);
   });
 });
+
+describe('camera decode gating', () => {
+  // The camera fires onBarcodeScanned every frame; the handler is wired to
+  // canSubmitScan(state) so decodes are only forwarded while the workflow is ready.
+  it('accepts a decode only when the workflow is ready', () => {
+    expect(canSubmitScan({ status: 'ready' })).toBe(true);
+  });
+
+  it.each<ScanWorkflowState>([
+    { status: 'initializing' },
+    { status: 'recoverable-error', message: 'camera permission denied' },
+    { status: 'result', result: { status: 'duplicate', message: 'Already checked in' } },
+  ])('suspends decode handling while state is $status', (state) => {
+    expect(canSubmitScan(state)).toBe(false);
+  });
+});

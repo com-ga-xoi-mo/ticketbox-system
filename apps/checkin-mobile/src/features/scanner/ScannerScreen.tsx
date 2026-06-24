@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Button, Text, TextInput, View } from 'react-native';
+import React from 'react';
+import { Button, Linking, Text, View } from 'react-native';
+import { useCameraPermissions } from 'expo-camera';
 
 import type { StaffAssignment } from '../../api/checkin-mobile-api.types';
 import type { ScanWorkflowState } from './scan-workflow';
-import { canSubmitScan } from './scanner-screen-state';
+import { QrCameraScanner } from './QrCameraScanner';
 
 export interface ScannerScreenProps {
   readonly assignment: StaffAssignment;
@@ -20,33 +21,43 @@ export function ScannerScreen({
   onReset,
   onRetryInitialization,
 }: ScannerScreenProps): React.JSX.Element {
-  const [decodedPayload, setDecodedPayload] = useState('');
-  const canSubmit = canSubmitScan(state);
+  const [permission, requestPermission] = useCameraPermissions();
 
   return (
     <View>
-      {canSubmit ? <Text>Scanner ready for {assignment.concertTitle}</Text> : null}
-      <TextInput
-        editable={canSubmit}
-        onChangeText={setDecodedPayload}
-        placeholder="Decoded QR payload"
-        value={decodedPayload}
-      />
-      <Button
-        disabled={!canSubmit}
-        onPress={() => {
-          if (canSubmit) onDecodedPayload(decodedPayload);
-        }}
-        title="Submit scan"
-      />
-      {state.status === 'initializing' ? <Text>Initializing this installation...</Text> : null}
-      {state.status === 'submitting' ? <Text>Submitting scan...</Text> : null}
-      {state.status === 'result' ? <Text>{state.result.message}</Text> : null}
-      {state.status === 'recoverable-error' ? <Text>{state.message}</Text> : null}
-      {state.status === 'recoverable-error' ? (
-        <Button onPress={onRetryInitialization} title="Retry initialization" />
+      {permission == null ? <Text>Checking camera permission…</Text> : null}
+
+      {permission != null && !permission.granted ? (
+        <View>
+          <Text>Camera access is required to scan ticket QR codes.</Text>
+          {permission.canAskAgain ? (
+            <Button onPress={() => void requestPermission()} title="Grant camera access" />
+          ) : (
+            <Button onPress={() => void Linking.openSettings()} title="Open settings" />
+          )}
+        </View>
       ) : null}
-      {state.status === 'result' ? <Button onPress={onReset} title="Scan another ticket" /> : null}
+
+      {permission?.granted ? (
+        <View>
+          {state.status === 'ready' ? (
+            <Text>Scanner ready for {assignment.concertTitle}</Text>
+          ) : null}
+          <QrCameraScanner state={state} onDecodedPayload={onDecodedPayload} />
+          {state.status === 'initializing' ? (
+            <Text>Initializing this installation…</Text>
+          ) : null}
+          {state.status === 'submitting' ? <Text>Submitting scan…</Text> : null}
+          {state.status === 'result' ? <Text>{state.result.message}</Text> : null}
+          {state.status === 'recoverable-error' ? <Text>{state.message}</Text> : null}
+          {state.status === 'recoverable-error' ? (
+            <Button onPress={onRetryInitialization} title="Retry initialization" />
+          ) : null}
+          {state.status === 'result' ? (
+            <Button onPress={onReset} title="Scan another ticket" />
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

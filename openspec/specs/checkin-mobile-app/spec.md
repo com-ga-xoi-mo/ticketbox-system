@@ -80,17 +80,27 @@ The mobile app SHALL load the authenticated check-in staff user's active assignm
 
 ### Requirement: QR scan UI foundation
 
-The mobile app SHALL provide a QR scan UI foundation that can accept decoded QR payloads, prevent duplicate local submissions while one scan is in flight, validate successful API responses using the shared online scan contract, and render clear local scan result states.
+The mobile app SHALL provide a QR scan UI foundation that acquires decoded QR payloads from the device camera, requests and reflects camera-permission state before scanning, prevents duplicate local submissions while one scan is in flight or its result is displayed, validates successful API responses using the shared online scan contract, and renders clear local scan result states. The UI SHALL NOT provide a manual free-text QR payload entry field as a scan input source.
 
 #### Scenario: Scanner opens with selected assignment
 
-- **WHEN** staff opens the scanner with an active selected assignment
-- **THEN** the app SHALL show the scanner-ready state for that assignment
+- **WHEN** staff opens the scanner with an active selected assignment and camera permission already granted
+- **THEN** the app SHALL show the scanner-ready state for that assignment with the live camera preview active
 
-#### Scenario: Decoded QR starts online submission
+#### Scenario: Camera permission is requested before scanning
 
-- **WHEN** the scanner receives a decoded QR payload while no scan submission is in flight
-- **THEN** the app SHALL create a shared online scan request containing the selected assignment, concert context, QR payload, device ID, and scan timestamp
+- **WHEN** staff opens the scanner and camera permission status is undetermined
+- **THEN** the app SHALL present a permission request action, SHALL NOT activate barcode decoding until permission is granted, and SHALL NOT expose a manual payload-entry fallback
+
+#### Scenario: Denied camera permission is recoverable
+
+- **WHEN** camera permission has been denied
+- **THEN** the app SHALL show a recoverable permission-blocked state explaining the camera is required, SHALL NOT activate scanning or accept any scan input, and SHALL offer a way to re-request or open system settings
+
+#### Scenario: Decoded camera QR starts online submission
+
+- **WHEN** the camera decodes a QR barcode while the scan workflow is `ready` and no scan submission is in flight
+- **THEN** the app SHALL create a shared online scan request containing the selected assignment, concert context, the decoded QR payload, device ID, and scan timestamp
 
 #### Scenario: Stable installation identifier is included
 
@@ -117,10 +127,10 @@ The mobile app SHALL provide a QR scan UI foundation that can accept decoded QR 
 - **WHEN** installation-ID initialization previously failed and staff selects the retry action
 - **THEN** the app SHALL call the asynchronous scan-workflow initialization again, show `initializing` while it runs, enter `ready` only on success, and SHALL NOT use a state-only reset as the retry operation
 
-#### Scenario: Duplicate local decode is ignored while submitting
+#### Scenario: Duplicate camera decode is ignored while submitting or showing a result
 
-- **WHEN** another QR decode event fires while the previous scan submission is still in flight
-- **THEN** the app SHALL disable scanner submission and ignore or debounce the repeated decode event until the current submission finishes
+- **WHEN** the camera emits another barcode decode event while the previous scan submission is still in flight or its result is still displayed
+- **THEN** the app SHALL suspend camera barcode handling and ignore or debounce the repeated decode event until staff resets to scan another ticket
 
 #### Scenario: Business scan result is displayed
 
