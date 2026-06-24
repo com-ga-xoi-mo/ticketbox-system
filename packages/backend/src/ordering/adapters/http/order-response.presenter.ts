@@ -18,6 +18,7 @@ export function serializeOrder(order: Order) {
     items: order.items.map((item) => ({
       id: item.id,
       ticketTypeId: item.ticketTypeId,
+      ticketTypeName: item.ticketTypeName,
       quantity: item.quantity,
       unitPriceVnd: item.unitPriceVnd,
       totalPriceVnd: item.totalPriceVnd,

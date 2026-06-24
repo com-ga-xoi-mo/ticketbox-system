@@ -21,6 +21,7 @@ export class PrismaTicketTypePricingRepository implements TicketTypePricingRepos
       },
       select: {
         id: true,
+        name: true,
         concertId: true,
         priceVnd: true,
       },
@@ -28,6 +29,7 @@ export class PrismaTicketTypePricingRepository implements TicketTypePricingRepos
 
     return ticketTypes.map((ticketType) => ({
       ticketTypeId: ticketType.id,
+      ticketTypeName: ticketType.name,
       concertId: ticketType.concertId,
       unitPriceVnd: ticketType.priceVnd,
     }));

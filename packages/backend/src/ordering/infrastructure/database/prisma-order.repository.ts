@@ -30,6 +30,9 @@ interface PrismaOrderWithItems {
     quantity: number;
     unitPriceVnd: number;
     totalPriceVnd: number;
+    ticketType: {
+      name: string;
+    };
   }>;
 }
 
@@ -63,7 +66,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           })),
         },
       },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
     });
 
     return this.toDomain(created);
@@ -72,7 +75,7 @@ export class PrismaOrderRepository implements IOrderRepository {
   async findById(orderId: string): Promise<Order | null> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
     });
 
     return order ? this.toDomain(order) : null;
@@ -81,7 +84,7 @@ export class PrismaOrderRepository implements IOrderRepository {
   async findByUserId(userId: string): Promise<Order[]> {
     const orders = await this.prisma.order.findMany({
       where: { userId },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -99,7 +102,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           idempotencyKey,
         },
       },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
     });
 
     return order ? this.toDomain(order) : null;
@@ -152,6 +155,7 @@ export class PrismaOrderRepository implements IOrderRepository {
           new OrderItem({
             id: item.id,
             ticketTypeId: item.ticketTypeId,
+            ticketTypeName: item.ticketType.name,
             quantity: item.quantity,
             unitPriceVnd: item.unitPriceVnd,
             totalPriceVnd: item.totalPriceVnd,

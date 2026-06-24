@@ -22,7 +22,7 @@ function buildDomainOrder(overrides: Partial<ConstructorParameters<typeof Order>
     createdAt: now,
     updatedAt: now,
     items: [
-      new OrderItem({
+      new OrderItem({ ticketTypeName: 'Mock Ticket',
         id: 'order-item-1',
         ticketTypeId: 'ticket-type-1',
         quantity: 2,
@@ -53,7 +53,7 @@ function buildPrismaOrder(overrides: Record<string, unknown> = {}) {
       {
         id: 'order-item-1',
         orderId: 'order-1',
-        ticketTypeId: 'ticket-type-1',
+        ticketTypeId: 'ticket-type-1', ticketType: { name: 'Mock Ticket' },
         quantity: 2,
         unitPriceVnd: 150000,
         totalPriceVnd: 300000,
@@ -106,7 +106,7 @@ describe('PrismaOrderRepository', () => {
           ],
         },
       }),
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
     });
     expect(result).toBeInstanceOf(Order);
     expect(result.items[0]).toBeInstanceOf(OrderItem);
@@ -131,7 +131,7 @@ describe('PrismaOrderRepository', () => {
 
     expect(prisma.order.findMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
       orderBy: { createdAt: 'desc' },
     });
     expect(result.map((order) => order.id)).toEqual(['order-2', 'order-1']);
@@ -149,7 +149,7 @@ describe('PrismaOrderRepository', () => {
           idempotencyKey: 'idem-1',
         },
       },
-      include: { items: true },
+      include: { items: { include: { ticketType: true } } },
     });
     expect(result?.idempotencyKey).toBe('idem-1');
   });

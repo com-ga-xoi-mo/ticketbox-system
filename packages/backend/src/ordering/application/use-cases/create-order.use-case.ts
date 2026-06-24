@@ -57,21 +57,22 @@ export class CreateOrderUseCase {
         ticketTypeIds,
       );
     const pricingByTicketTypeId = new Map(
-      pricingRecords.map((pricing) => [pricing.ticketTypeId, pricing.unitPriceVnd]),
+      pricingRecords.map((pricing) => [pricing.ticketTypeId, pricing]),
     );
     const items = command.items.map(
       (item) => {
-        const unitPriceVnd = pricingByTicketTypeId.get(item.ticketTypeId);
-        if (unitPriceVnd === undefined) {
+        const pricing = pricingByTicketTypeId.get(item.ticketTypeId);
+        if (pricing === undefined) {
           throw new TicketTypeNotFoundError(command.concertId, item.ticketTypeId);
         }
 
         return new OrderItem({
           id: randomUUID(),
           ticketTypeId: item.ticketTypeId,
+          ticketTypeName: pricing.ticketTypeName,
           quantity: item.quantity,
-          unitPriceVnd,
-          totalPriceVnd: item.quantity * unitPriceVnd,
+          unitPriceVnd: pricing.unitPriceVnd,
+          totalPriceVnd: item.quantity * pricing.unitPriceVnd,
         });
       },
     );

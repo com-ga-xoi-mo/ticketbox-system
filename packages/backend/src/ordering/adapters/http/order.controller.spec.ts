@@ -36,7 +36,7 @@ function buildOrder(overrides: Partial<ConstructorParameters<typeof Order>[0]> =
     items: [
       new OrderItem({
         id: 'order-item-1',
-        ticketTypeId: 'ticket-type-1',
+        ticketTypeName: 'Mock Ticket', ticketTypeId: 'ticket-type-1',
         quantity: 2,
         unitPriceVnd: 150000,
         totalPriceVnd: 300000,

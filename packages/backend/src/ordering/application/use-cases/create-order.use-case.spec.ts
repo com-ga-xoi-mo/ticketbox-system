@@ -72,7 +72,7 @@ describe('CreateOrderUseCase', () => {
     vi.mocked(orderRepository.findByUserIdAndIdempotencyKey).mockResolvedValue(null);
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
-    ).mockResolvedValue([{ ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
+    ).mockResolvedValue([{ ticketTypeName: 'Mock 1', ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
 
     const result = await useCase.execute({
       userId: 'user-1',
@@ -94,7 +94,7 @@ describe('CreateOrderUseCase', () => {
     vi.mocked(orderRepository.findByUserIdAndIdempotencyKey).mockResolvedValue(null);
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
-    ).mockResolvedValue([{ ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
+    ).mockResolvedValue([{ ticketTypeName: 'Mock 1', ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
 
     const result = await useCase.execute({
       userId: 'user-1',
@@ -111,8 +111,8 @@ describe('CreateOrderUseCase', () => {
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
     ).mockResolvedValue([
-      { ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 },
-      { ticketTypeId: 'ticket-type-2', concertId: 'concert-1', unitPriceVnd: 250000 },
+      { ticketTypeName: 'Mock 1', ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 },
+      { ticketTypeName: 'Mock 2', ticketTypeId: 'ticket-type-2', concertId: 'concert-1', unitPriceVnd: 250000 },
     ]);
 
     const result = await useCase.execute({
@@ -152,7 +152,7 @@ describe('CreateOrderUseCase', () => {
     vi.mocked(orderRepository.findByUserIdAndIdempotencyKey).mockResolvedValue(null);
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
-    ).mockResolvedValue([{ ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
+    ).mockResolvedValue([{ ticketTypeName: 'Mock 1', ticketTypeId: 'ticket-type-1', concertId: 'concert-1', unitPriceVnd: 150000 }]);
 
     const result = await useCase.execute({
       userId: 'user-1',

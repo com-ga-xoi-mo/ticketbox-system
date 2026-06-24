@@ -53,6 +53,9 @@ interface PrismaOrderWithItems {
     quantity: number;
     unitPriceVnd: number;
     totalPriceVnd: number;
+    ticketType: {
+      name: string;
+    };
   }>;
 }
 
@@ -72,7 +75,7 @@ export class PrismaInventoryReservationRepository
               idempotencyKey: order.idempotencyKey ?? '',
             },
           },
-          include: { items: true },
+          include: { items: { include: { ticketType: true } } },
         });
 
         if (existingOrder) {
@@ -131,7 +134,7 @@ export class PrismaInventoryReservationRepository
               })),
             },
           },
-          include: { items: true },
+          include: { items: { include: { ticketType: true } } },
         });
 
         for (const [ticketTypeId, quantity] of requestedQuantities) {
@@ -156,7 +159,7 @@ export class PrismaInventoryReservationRepository
               idempotencyKey: order.idempotencyKey ?? '',
             },
           },
-          include: { items: true },
+          include: { items: { include: { ticketType: true } } },
         });
 
         if (existingOrder) {
@@ -172,7 +175,7 @@ export class PrismaInventoryReservationRepository
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: data.orderId },
-        include: { items: true },
+        include: { items: { include: { ticketType: true } } },
       });
 
       if (!order || order.status !== data.expectedStatus) {
@@ -229,7 +232,7 @@ export class PrismaInventoryReservationRepository
 
       const updatedOrder = await tx.order.findUnique({
         where: { id: data.orderId },
-        include: { items: true },
+        include: { items: { include: { ticketType: true } } },
       });
 
       if (!updatedOrder) {
@@ -405,6 +408,7 @@ export class PrismaInventoryReservationRepository
           new OrderItem({
             id: item.id,
             ticketTypeId: item.ticketTypeId,
+            ticketTypeName: item.ticketType.name,
             quantity: item.quantity,
             unitPriceVnd: item.unitPriceVnd,
             totalPriceVnd: item.totalPriceVnd,

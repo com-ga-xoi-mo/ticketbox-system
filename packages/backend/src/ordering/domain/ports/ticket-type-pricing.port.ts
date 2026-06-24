@@ -1,5 +1,6 @@
 export interface TicketTypePricingRecord {
   ticketTypeId: string;
+  ticketTypeName: string;
   concertId: string;
   unitPriceVnd: number;
 }

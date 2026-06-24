@@ -30,7 +30,7 @@ function buildDomainOrder(overrides: Partial<ConstructorParameters<typeof Order>
     createdAt: now,
     updatedAt: now,
     items: [
-      new OrderItem({
+      new OrderItem({ ticketTypeName: 'Mock Ticket',
         id: 'item-1',
         ticketTypeId: 'ticket-type-1',
         quantity: 2,
@@ -61,7 +61,7 @@ function buildPrismaOrder(overrides: Record<string, unknown> = {}) {
       {
         id: 'item-1',
         orderId: 'order-1',
-        ticketTypeId: 'ticket-type-1',
+        ticketTypeId: 'ticket-type-1', ticketType: { name: 'Mock Ticket' },
         quantity: 2,
         unitPriceVnd: 150000,
         totalPriceVnd: 300000,
@@ -188,7 +188,7 @@ describe('PrismaInventoryReservationRepository', () => {
             ],
           },
         }),
-        include: { items: true },
+        include: { items: { include: { ticketType: true } } },
       }),
     );
     expect(tx.ticketType.update).toHaveBeenCalledWith({
@@ -222,7 +222,7 @@ describe('PrismaInventoryReservationRepository', () => {
       idempotencyKey: 'idem-1',
       totalAmountVnd: 150000,
       items: [
-        new OrderItem({
+        new OrderItem({ ticketTypeName: 'Mock Ticket',
           id: 'item-1',
           ticketTypeId: 'ticket-type-1',
           quantity: 1,
@@ -237,7 +237,7 @@ describe('PrismaInventoryReservationRepository', () => {
       idempotencyKey: 'idem-2',
       totalAmountVnd: 150000,
       items: [
-        new OrderItem({
+        new OrderItem({ ticketTypeName: 'Mock Ticket',
           id: 'item-2',
           ticketTypeId: 'ticket-type-1',
           quantity: 1,
@@ -271,7 +271,7 @@ describe('PrismaInventoryReservationRepository', () => {
           {
             id: 'item-1',
             orderId: 'order-1',
-            ticketTypeId: 'ticket-type-1',
+            ticketTypeId: 'ticket-type-1', ticketType: { name: 'Mock Ticket' },
             quantity: 1,
             unitPriceVnd: 150000,
             totalPriceVnd: 150000,
@@ -446,14 +446,14 @@ describe('PrismaInventoryReservationRepository', () => {
     const order = buildDomainOrder({
       totalAmountVnd: 450000,
       items: [
-        new OrderItem({
+        new OrderItem({ ticketTypeName: 'Mock Ticket',
           id: 'item-1',
           ticketTypeId: 'ticket-type-1',
           quantity: 2,
           unitPriceVnd: 150000,
           totalPriceVnd: 300000,
         }),
-        new OrderItem({
+        new OrderItem({ ticketTypeName: 'Mock Ticket',
           id: 'item-2',
           ticketTypeId: 'ticket-type-2',
           quantity: 1,
@@ -468,7 +468,7 @@ describe('PrismaInventoryReservationRepository', () => {
         {
           id: 'item-1',
           orderId: 'order-1',
-          ticketTypeId: 'ticket-type-1',
+          ticketTypeId: 'ticket-type-1', ticketType: { name: 'Mock Ticket' },
           quantity: 2,
           unitPriceVnd: 150000,
           totalPriceVnd: 300000,
@@ -476,7 +476,7 @@ describe('PrismaInventoryReservationRepository', () => {
         {
           id: 'item-2',
           orderId: 'order-1',
-          ticketTypeId: 'ticket-type-2',
+          ticketTypeId: 'ticket-type-2', ticketType: { name: 'Mock Ticket' },
           quantity: 1,
           unitPriceVnd: 150000,
           totalPriceVnd: 150000,
