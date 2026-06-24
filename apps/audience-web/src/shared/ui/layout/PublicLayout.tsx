@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Menu, Sparkles, Ticket, UserRound } from 'lucide-react';
+import { LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle, UserRound } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { cn } from '../cn';
 import { Button } from '../../../components/ui/button';
@@ -13,6 +13,16 @@ import {
   SheetTrigger,
 } from '../../../components/ui/sheet';
 import { Separator } from '../../../components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { useMyProfile } from '../../api/profile';
 
 function Logo() {
   return (
@@ -35,8 +45,20 @@ function Logo() {
 }
 
 function NavLinks({ onClick }: { onClick?: () => void }) {
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: profile } = useMyProfile();
+
+  const handleSignOut = () => {
+    signOut();
+    onClick?.();
+    navigate('/login');
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   return (
     <nav className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-2">
@@ -48,14 +70,52 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
         Sự kiện
       </Link>
       {session ? (
-        <Link
-          to="/account"
-          onClick={onClick}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <UserRound className="size-4" aria-hidden="true" />
-          Tài khoản
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full focus-visible:ring-0 px-0">
+              <Avatar className="h-9 w-9 border border-border/50 hover:opacity-80 transition-opacity">
+                <AvatarImage src="" alt={profile?.displayName || 'User'} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {getInitials(profile?.displayName)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{profile?.displayName || 'Tài khoản'}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {profile?.email || 'Đang tải...'}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/account" onClick={onClick} className="cursor-pointer w-full flex items-center">
+                <UserCircle className="mr-2 h-4 w-4" />
+                <span>Hồ sơ cá nhân</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/account/orders" onClick={onClick} className="cursor-pointer w-full flex items-center">
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                <span>Đơn hàng của tôi</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/account/tickets" onClick={onClick} className="cursor-pointer w-full flex items-center">
+                <Ticket className="mr-2 h-4 w-4" />
+                <span>Vé của tôi</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Đăng xuất</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : (
         <Button
           size="sm"
