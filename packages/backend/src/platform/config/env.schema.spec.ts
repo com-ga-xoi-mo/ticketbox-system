@@ -3,6 +3,11 @@ import { validateEnv } from './env.schema';
 const base = {
   DATABASE_URL: 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox',
   JWT_SECRET: 'secret',
+  MOMO_PARTNER_CODE: 'momo-partner',
+  MOMO_ACCESS_KEY: 'momo-access',
+  MOMO_SECRET_KEY: 'momo-secret',
+  VNPAY_TMN_CODE: 'vnpay-terminal',
+  VNPAY_HASH_SECRET: 'vnpay-secret',
 };
 describe('guest-list environment configuration', () => {
   it('provides safe local defaults', () => {

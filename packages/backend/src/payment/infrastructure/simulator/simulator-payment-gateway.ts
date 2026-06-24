@@ -11,6 +11,8 @@ import type {
   PaymentRedirectSession,
   PaymentSimulatorTokenPayload,
   VerifiedMomoIpnPayload,
+  VerifiedVnpayCallbackPayload,
+  VnpayCallbackPayload,
 } from '../../domain/ports/payment-gateway.port';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 
@@ -89,6 +91,11 @@ export class SimulatorPaymentGateway implements PaymentGatewayPort {
   verifyMomoIpnPayload(_payload: MomoIpnPayload): VerifiedMomoIpnPayload {
     void _payload;
     throw new Error('Simulator gateway cannot verify MoMo IPN payloads');
+  }
+
+  verifyVnpayCallbackPayload(_payload: VnpayCallbackPayload): VerifiedVnpayCallbackPayload {
+    void _payload;
+    throw new Error('Simulator gateway cannot verify VNPay callback payloads');
   }
 
   private sign(payload: SignedSimulatorTokenPayload): string {

@@ -3,7 +3,7 @@ import type { BatchSyncResponse, OnlineScanResponse } from '@ticketbox/api-types
 import type { BatchSyncResult, OnlineScanResult } from '../../domain/checkin-scan.types';
 
 export function toBatchSyncResponse(result: BatchSyncResult): BatchSyncResponse {
-  return result.events.map((event) => {
+  const results = result.events.map((event) => {
     switch (event.status) {
       case 'accepted':
         return { ...event, checkedInAt: event.checkedInAt.toISOString() };
@@ -14,6 +14,17 @@ export function toBatchSyncResponse(result: BatchSyncResult): BatchSyncResponse 
         return { ...event };
     }
   });
+
+  if (!result.cacheUpdates) return { results };
+
+  return {
+    results,
+    cacheUpdates: {
+      upserted: result.cacheUpdates.upserted,
+      voided: result.cacheUpdates.voided,
+      syncedAt: result.cacheUpdates.syncedAt.toISOString(),
+    },
+  };
 }
 
 export function toOnlineScanResponse(result: OnlineScanResult): OnlineScanResponse {

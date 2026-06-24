@@ -78,6 +78,7 @@ describe('InitiatePaymentUseCase', () => {
       })),
       verifySimulatorToken: vi.fn(),
       verifyMomoIpnPayload: vi.fn(),
+      verifyVnpayCallbackPayload: vi.fn(),
     };
     paymentIdempotency = {
       claimPaymentInitiation: vi.fn(async () => ({ status: 'CLAIMED' as const })),
@@ -204,6 +205,39 @@ describe('InitiatePaymentUseCase', () => {
       payUrl: 'https://test-payment.momo.vn/pay',
       deeplink: 'momo://pay',
     });
+  });
+
+  it('creates a VNPay payment with the request client IP when requested', async () => {
+    getOrderUseCase.execute.mockResolvedValue(buildOrder());
+    vi.mocked(paymentGateway.createRedirectSession).mockResolvedValue({
+      provider: PaymentProvider.VNPAY,
+      providerTransactionId: 'payment-1',
+      redirectUrl: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?signed=1',
+      providerMetadata: { vnpayTxnRef: 'payment-1' },
+    });
+    vi.mocked(paymentRepository.create).mockResolvedValue(
+      buildPayment({
+        provider: PaymentProvider.VNPAY,
+        providerTransactionId: 'payment-1',
+        redirectUrl: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?signed=1',
+      }),
+    );
+
+    const result = await useCase.execute({
+      orderId: 'order-1',
+      userId: 'user-1',
+      idempotencyKey: 'vnpay-key-1',
+      provider: PaymentProvider.VNPAY,
+      clientIp: '203.0.113.10',
+    });
+
+    expect(paymentGateway.createRedirectSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: PaymentProvider.VNPAY,
+        clientIp: '203.0.113.10',
+      }),
+    );
+    expect(result.providerMetadata).toEqual({ vnpayTxnRef: 'payment-1' });
   });
 
   it('rejects non-pending orders', async () => {

@@ -23,6 +23,8 @@ import { SyncService, type SyncServiceState } from './src/features/offline-queue
 import { SyncStatusPanel } from './src/features/offline-queue/SyncStatusPanel';
 import { expoLocalIdProvider } from './src/features/offline-queue/local-id-provider';
 import { OfflineQueueBootstrap } from './src/features/offline-queue/offline-queue-bootstrap';
+import { TicketCacheRepository } from './src/features/ticket-cache/ticket-cache.repository';
+import { CacheDownloadService, type CacheDownloadStatus } from './src/features/ticket-cache/cache-download.service';
 
 const env = getMobileEnv();
 
@@ -42,6 +44,9 @@ export default function App(): React.JSX.Element {
     status: 'idle',
     counts: { accepted: 0, duplicate: 0, invalid: 0, conflict: 0, unassigned: 0 },
   });
+  const [cacheStatus, setCacheStatus] = useState<CacheDownloadStatus>('idle');
+  const ticketCacheRepoRef = useRef<TicketCacheRepository | null>(null);
+  const cacheDownloadServiceRef = useRef<CacheDownloadService | null>(null);
   const authStateRef = useRef(authState);
   const apiClient = useMemo(() => new HttpCheckinMobileApiClient({ baseUrl: env.apiBaseUrl }), []);
   const sessionStore = useMemo(() => new ExpoSecureSessionStore(), []);
@@ -74,6 +79,10 @@ export default function App(): React.JSX.Element {
       }
       if (bootstrapState.status !== 'ready') return;
       const queue = bootstrapState.queue;
+      const cacheRepo = new TicketCacheRepository(bootstrapState.database);
+      ticketCacheRepoRef.current = cacheRepo;
+      const cacheService = new CacheDownloadService(apiClient, cacheRepo);
+      cacheDownloadServiceRef.current = cacheService;
       const network = new NetInfoNetworkMonitor();
       workflow = new ScanWorkflow(
         apiClient,
@@ -83,11 +92,12 @@ export default function App(): React.JSX.Element {
         network,
         hashQrPayload,
         expoLocalIdProvider,
+        cacheRepo,
       );
       service = new SyncService(queue, apiClient, network, () => {
         const current = authStateRef.current;
         return current.status === 'authenticated' ? current.session : null;
-      });
+      }, Math.random, () => new Date(), cacheRepo);
       unsubscribeSync = service.subscribe((state) => {
         setSyncState(state);
         void refreshQueue(queue, authStateRef.current);
@@ -109,6 +119,12 @@ export default function App(): React.JSX.Element {
     if (authState.status === 'authenticated') {
       void syncService?.trigger(authState.session);
       if (offlineQueue) void refreshQueue(offlineQueue, authState);
+
+      const intervalId = setInterval(() => {
+        void syncService?.trigger(authState.session);
+      }, 30_000);
+
+      return () => clearInterval(intervalId);
     }
   }, [authState, offlineQueue, syncService]);
 
@@ -120,7 +136,16 @@ export default function App(): React.JSX.Element {
       if (!active) return;
       setAuthState(restored.auth);
       setAssignmentState(restored.assignments);
-      setRoute(restored.auth.status === 'authenticated' ? 'assignments' : 'auth');
+      const nextRoute = restored.auth.status !== 'authenticated'
+        ? 'auth'
+        : restored.assignments.status === 'loaded'
+          ? 'scanner'
+          : 'assignments';
+      setRoute(nextRoute);
+
+      if (nextRoute === 'scanner' && restored.assignments.status === 'loaded') {
+        void triggerCacheDownload(restored.assignments.selected, restored.auth);
+      }
     });
 
     return () => {
@@ -136,7 +161,22 @@ export default function App(): React.JSX.Element {
     setAssignmentState({ status: 'loading' });
     const nextAssignments = await assignmentController.load(auth.session);
     setAssignmentState(nextAssignments);
-    setRoute(nextAssignments.status === 'loaded' ? 'assignments' : 'assignments');
+    if (nextAssignments.status === 'loaded') {
+      setRoute('scanner');
+      void triggerCacheDownload(nextAssignments.selected, auth);
+    } else {
+      setRoute('assignments');
+    }
+  }
+
+  async function triggerCacheDownload(
+    assignment: { assignmentId: string; concertId: string; gate?: string; concertTitle: string; startsAt: string; status: 'ACTIVE' },
+    auth: AuthState,
+  ): Promise<void> {
+    if (auth.status !== 'authenticated' || !cacheDownloadServiceRef.current) return;
+    setCacheStatus('downloading');
+    await cacheDownloadServiceRef.current.download(assignment, auth.session);
+    setCacheStatus(cacheDownloadServiceRef.current.status);
   }
 
   async function refreshQueue(queue: SqliteOfflineScanQueue, auth: AuthState): Promise<void> {
@@ -182,10 +222,20 @@ export default function App(): React.JSX.Element {
               void loadAssignments(authState);
             }}
             onSelect={(assignmentId) => {
-              setAssignmentState(assignmentController.select(assignmentState, assignmentId));
+              const next = assignmentController.select(assignmentState, assignmentId);
+              setAssignmentState(next);
+              if (next.status === 'loaded') {
+                void triggerCacheDownload(next.selected, authState);
+              }
             }}
             state={assignmentState}
           />
+        ) : null}
+        {route === 'scanner' && cacheStatus === 'downloading' ? (
+          <Text style={styles.body}>Downloading ticket cache…</Text>
+        ) : null}
+        {route === 'scanner' && cacheStatus === 'unavailable' ? (
+          <Text style={styles.body}>⚠ Offline cache unavailable — scans will be queued</Text>
         ) : null}
         {route === 'scanner' && assignmentState.status === 'loaded' ? (
           <ScannerScreen
@@ -200,6 +250,13 @@ export default function App(): React.JSX.Element {
                 .then((state) => {
                   setScanState(state);
                   if (offlineQueue) void refreshQueue(offlineQueue, authState);
+                })
+                .catch((error: unknown) => {
+                  // Final safety net so the UI never stays stuck on "Submitting scan…".
+                  setScanState({
+                    status: 'recoverable-error',
+                    message: error instanceof Error ? error.message : 'Scan submission failed',
+                  });
                 });
               if (scanWorkflow) setScanState(scanWorkflow.state);
             }}
@@ -232,9 +289,13 @@ export default function App(): React.JSX.Element {
         {route !== 'auth' ? (
           <Button
             onPress={() => {
-              void authController.logout().then((nextAuth) => {
+              void authController.logout().then(async (nextAuth) => {
+                if (authState.status === 'authenticated' && ticketCacheRepoRef.current) {
+                  await ticketCacheRepoRef.current.clearForStaff(authState.session.profile.id);
+                }
                 setAuthState(nextAuth);
                 setAssignmentState({ status: 'idle' });
+                setCacheStatus('idle');
                 if (scanWorkflow) setScanState(scanWorkflow.reset());
                 setRoute('auth');
               });

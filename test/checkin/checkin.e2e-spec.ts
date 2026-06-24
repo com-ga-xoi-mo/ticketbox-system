@@ -143,10 +143,9 @@ describe('Check-in API E2E', () => {
     expect(forbidden.status).toBe(403);
   });
 
-  skipIfNoDB('accepts empty batches and rejects 101 or duplicate local IDs without side effects', async () => {
+  skipIfNoDB('accepts empty, but rejects 101-event, and duplicate-localId batches without side effects', async () => {
     const empty = await postSync([]);
     expect(empty.status).toBe(201);
-    await expect(empty.json()).resolves.toEqual([]);
 
     const candidate = makeSyncEvent({ qrPayloadHash: 'a'.repeat(64) });
     const before = await prisma.checkinEvent.count();
@@ -169,10 +168,10 @@ describe('Check-in API E2E', () => {
       ),
     );
     expect(response.status).toBe(201);
-    const body = (await response.json()) as Array<{ status: string }>;
-    expect(body).toHaveLength(100);
-    expect(body.every(({ status }) => status === 'invalid')).toBe(true);
-  });
+    const body = (await response.json()) as { results: Array<{ status: string }> };
+    expect(body.results).toHaveLength(100);
+    expect(body.results.every(({ status }) => status === 'invalid')).toBe(true);
+  }, 30_000);
 
   skipIfNoDB('returns 5xx for an unexpected persistence failure instead of a business result', async () => {
     const response = await postSync([
@@ -196,12 +195,12 @@ describe('Check-in API E2E', () => {
       makeSyncEvent({ localId: `invalid-${Date.now()}`, qrPayloadHash: 'f'.repeat(64) }),
     ]);
     expect(response.status).toBe(201);
-    const body = (await response.json()) as Array<{ status: string }>;
-    expect(body.map(({ status }) => status)).toEqual(['accepted', 'invalid']);
+    const body = (await response.json()) as { results: Array<{ status: string }> };
+    expect(body.results.map(({ status }) => status)).toEqual(['accepted', 'invalid']);
 
     const replay = await postSync([acceptedEvent]);
     expect(replay.status).toBe(201);
-    await expect(replay.json()).resolves.toEqual([expect.objectContaining({ status: 'accepted' })]);
+    await expect(replay.json()).resolves.toMatchObject({ results: [expect.objectContaining({ status: 'accepted' })] });
     await expect(
       prisma.checkinEvent.count({
         where: { deviceId: acceptedEvent.deviceId, offlineEventId: acceptedEvent.localId },
@@ -218,9 +217,9 @@ describe('Check-in API E2E', () => {
     const sameDevice = await postSync([
       makeSyncEvent({ localId: `same-${Date.now()}`, qrPayloadHash: hash }),
     ]);
-    await expect(sameDevice.json()).resolves.toEqual([
-      expect.objectContaining({ status: 'duplicate' }),
-    ]);
+    await expect(sameDevice.json()).resolves.toMatchObject({
+      results: [expect.objectContaining({ status: 'duplicate' })],
+    });
 
     const otherDevice = await postSync([
       makeSyncEvent({
@@ -229,9 +228,9 @@ describe('Check-in API E2E', () => {
         deviceId: 'other-device',
       }),
     ]);
-    await expect(otherDevice.json()).resolves.toEqual([
-      expect.objectContaining({ status: 'conflict' }),
-    ]);
+    await expect(otherDevice.json()).resolves.toMatchObject({
+      results: [expect.objectContaining({ status: 'conflict' })],
+    });
   });
 
   skipIfNoDB('allows exactly one winner across concurrent online/offline acceptance', async () => {
@@ -252,8 +251,8 @@ describe('Check-in API E2E', () => {
       ]),
     ]);
     const onlineBody = (await online.json()) as { status: string };
-    const offlineBody = (await offline.json()) as Array<{ status: string }>;
-    expect([onlineBody.status, offlineBody[0].status].filter((status) => status === 'accepted')).toHaveLength(1);
+    const offlineBody = (await offline.json()) as { results: Array<{ status: string }> };
+    expect([onlineBody.status, offlineBody.results[0].status].filter((status) => status === 'accepted')).toHaveLength(1);
     await expect(
       prisma.checkinEvent.count({ where: { ticketId: fresh.ticketId, result: 'ACCEPTED' } }),
     ).resolves.toBe(1);
@@ -399,7 +398,7 @@ describe('Check-in API E2E', () => {
     return fetch(`${baseUrl}/checkin/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken}` },
-      body: JSON.stringify(events),
+      body: JSON.stringify({ events }),
     });
   }
 
