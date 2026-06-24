@@ -16,7 +16,7 @@ The app shell SHALL protect authenticated routes so that an unauthenticated visi
 
 #### Scenario: Authenticated admin reaches permitted route
 
-- **WHEN** an authenticated admin navigates to `/admin/dashboard`, `/admin/concerts`, or `/admin/concerts/:id/edit`
+- **WHEN** an authenticated admin navigates to `/admin/dashboard`, `/admin/concerts`, `/admin/concerts/:id/edit`, `/admin/accounts`, or `/admin/assignments`
 - **THEN** the route's page is rendered
 
 #### Scenario: Authenticated organizer reaches permitted route
@@ -32,21 +32,23 @@ The app shell SHALL protect authenticated routes so that an unauthenticated visi
 
 ### Requirement: Sidebar configuration filtered by role
 
-The shell SHALL derive sidebar items from a single declarative `sidebar-config`, where each item lists the roles allowed to see it, and render only the items whose allowed roles include the current user's role. The Staff item is ADMIN-only and MUST be hidden from organizers. Sidebar item paths SHALL point to role-prefixed routes for admin and organizer destinations.
+The shell SHALL derive sidebar items from a single declarative `sidebar-config`, where each item lists the roles allowed to see it, and render only the items whose allowed roles include the current user's role. The account-management item and the assignment item SHALL both be ADMIN-only and MUST be hidden from organizers. Sidebar item paths SHALL point to role-prefixed routes for admin and organizer destinations.
 
 #### Scenario: Organizer sees only permitted items
 
 - **WHEN** the current user's role is `ORGANIZER`
 - **THEN** the sidebar shows Concerts and Settings
 - **AND** the Concerts item links to `/organizer/concerts`
-- **AND** the sidebar does NOT show Dashboard, Staff, or Seating Maps
+- **AND** the sidebar does NOT show Dashboard, Quản lí tài khoản, or Phân việc
 
 #### Scenario: Admin sees admin-only items
 
 - **WHEN** the current user's role is `ADMIN`
-- **THEN** the sidebar shows Dashboard, Concerts, Staff, and Settings
+- **THEN** the sidebar shows Dashboard, Concerts, Quản lí tài khoản, Phân việc, and Settings
 - **AND** the Dashboard item links to `/admin/dashboard`
 - **AND** the Concerts item links to `/admin/concerts`
+- **AND** the Quản lí tài khoản item links to `/admin/accounts`
+- **AND** the Phân việc item links to `/admin/assignments`
 
 #### Scenario: Filter is data-driven
 

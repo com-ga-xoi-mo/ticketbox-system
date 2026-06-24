@@ -36,10 +36,10 @@ export function Sidebar() {
             to={item.path}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-4 rounded-xl px-4 py-3 font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'flex items-center gap-4 rounded-xl px-4 py-3 font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0bcff]',
                 isActive
-                  ? 'text-primary bg-primary-container/10 border-r-2 border-primary'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5',
+                  ? 'text-[#d0bcff] bg-gradient-to-r from-transparent to-[#d0bcff]/10 border-r-2 border-[#d0bcff]'
+                  : 'text-[#cbc3d7] hover:text-[#dae2fd] hover:bg-white/10 hover:translate-x-1',
               )
             }
           >

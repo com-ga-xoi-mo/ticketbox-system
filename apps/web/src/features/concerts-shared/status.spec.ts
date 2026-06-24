@@ -17,7 +17,7 @@ describe('status mapping', () => {
   it('safely handles unknown or empty statuses', () => {
     const fallback = mapStatus('SOMETHING_ELSE');
     expect(fallback.label).toBe('SOMETHING_ELSE');
-    expect(fallback.badgeClass).toContain('border-white/10');
+    expect(fallback.variant).toBe('muted');
 
     const empty = mapStatus(null);
     expect(empty.label).toBe('Unknown');

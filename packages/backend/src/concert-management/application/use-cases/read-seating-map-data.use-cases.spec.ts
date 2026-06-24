@@ -41,7 +41,7 @@ describe('Read Seating Map Data Use Cases', () => {
         concertId: 'c1',
         allowAdminOverride: true,
       });
-      expect(result).toEqual({ assetId: 'a1', svgElementIds: ['path1'] });
+      expect(result).toEqual({ assetId: 'a1', svgElementIds: ['path1'], svgUrl: null });
     });
 
     it('should return successful organizer-owned read', async () => {
@@ -55,14 +55,14 @@ describe('Read Seating Map Data Use Cases', () => {
         concertId: 'c1',
         allowAdminOverride: false,
       });
-      expect(result).toEqual({ assetId: 'a1', svgElementIds: ['path1'] });
+      expect(result).toEqual({ assetId: 'a1', svgElementIds: ['path1'], svgUrl: null });
     });
 
     it('should return empty seating-map metadata when authorized concert has no seating map asset', async () => {
       concertRepo.findConcertById.mockResolvedValue({ id: 'c1', seatingMapAssetId: null });
 
       const result = await getSeatingMap.execute({ concertId: 'c1', userId: 'admin1', allowAdminOverride: true });
-      expect(result).toEqual({ assetId: null, svgElementIds: [] });
+      expect(result).toEqual({ assetId: null, svgElementIds: [], svgUrl: null });
     });
 
     it('should throw ConcertNotFoundError if concert not found', async () => {

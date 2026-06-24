@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'http';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const skipIfNoDB = process.env.SKIP_DB_TESTS === '1' || process.env.CI === 'true' ? it.skip : it;
 
 describe('Concert Admin Management E2E', () => {
@@ -54,6 +56,9 @@ describe('Concert Admin Management E2E', () => {
   });
 
   afterAll(async () => {
+    // Clean up all e2e-concert-* records accumulated across test runs
+    await prisma.concert.deleteMany({ where: { slug: { startsWith: 'e2e-concert-' } } });
+    await prisma.$disconnect();
     await app?.close();
   });
 

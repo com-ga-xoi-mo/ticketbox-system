@@ -6,6 +6,7 @@ import { registerUnauthorizedHandler } from '../../shared/api/client';
 import { useLogin } from './useLogin';
 import { validateLogin, hasErrors } from './login-validation';
 import type { LoginErrors } from './login-validation';
+import { toast } from 'sonner';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -39,7 +40,10 @@ export function LoginPage() {
     mutate(
       { email, password },
       {
-        onSuccess: (data) => login(data.accessToken),
+        onSuccess: (data) => {
+          toast.success('Đăng nhập thành công');
+          login(data.accessToken);
+        },
         onError: (err) => {
           const msg = err.message.toLowerCase();
           setApiError(

@@ -77,3 +77,7 @@ export async function postFormData<T>(path: string, formData: FormData): Promise
   });
   return handleResponse<T>(res);
 }
+
+export function getAssetUrl(assetId: string): string {
+  return `${BASE_URL}/assets/${assetId}`;
+}

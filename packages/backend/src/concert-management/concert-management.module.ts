@@ -87,9 +87,12 @@ import { ListOrganizerConcertsUseCase } from './application/use-cases/list-organ
 import { GetOrganizerConcertUseCase } from './application/use-cases/get-organizer-concert.use-case';
 import { ListAdminConcertsUseCase } from './application/use-cases/list-admin-concerts.use-case';
 import { GetAdminConcertUseCase } from './application/use-cases/get-admin-concert.use-case';
+import { GetAdminDashboardMetricsUseCase } from './application/use-cases/get-admin-dashboard-metrics.use-case';
+import { GetOrganizerDashboardMetricsUseCase } from './application/use-cases/get-organizer-dashboard-metrics.use-case';
 import { SvgSanitizer } from './application/services/svg-sanitizer';
 import { SvgElementIdExtractor } from './application/services/svg-element-id-extractor';
 import { PosterImageValidator } from './application/services/poster-image-validator';
+import { ListAdminAnalyticsReportsUseCase } from './application/use-cases/list-admin-analytics-reports.use-case';
 import { GetAssetContentUseCase } from './application/use-cases/get-asset-content.use-case';
 import { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
 import { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';
@@ -101,6 +104,8 @@ import { OrganizerConcertController } from './adapters/http/organizer-concert.co
 import { OrganizerTicketTypeController } from './adapters/http/organizer-ticket-type.controller';
 import { OrganizerPosterController } from './adapters/http/organizer-poster.controller';
 import { AdminConcertController } from './adapters/http/admin-concert.controller';
+import { AdminAnalyticsController } from './adapters/http/admin-analytics.controller';
+import { OrganizerAnalyticsController } from './adapters/http/organizer-analytics.controller';
 import { OrganizerSeatingMapController } from './adapters/http/organizer-seating-map.controller';
 import { AssetController } from './adapters/http/asset.controller';
 
@@ -113,6 +118,8 @@ import { AssetController } from './adapters/http/asset.controller';
     OrganizerPosterController,
     OrganizerSeatingMapController,
     AdminConcertController,
+    AdminAnalyticsController,
+    OrganizerAnalyticsController,
     AssetController,
   ],
   providers: [
@@ -385,6 +392,9 @@ import { AssetController } from './adapters/http/asset.controller';
         authUseCase: AuthorizeConcertManagementUseCase,
       ) => new GetAdminConcertUseCase(repo, authUseCase),
     },
+    GetAdminDashboardMetricsUseCase,
+    GetOrganizerDashboardMetricsUseCase,
+    ListAdminAnalyticsReportsUseCase,
     {
       provide: GetSeatingMapUseCase,
       inject: [
@@ -429,6 +439,8 @@ export { OrganizerTicketTypeController } from './adapters/http/organizer-ticket-
 export { OrganizerPosterController } from './adapters/http/organizer-poster.controller';
 export { OrganizerSeatingMapController } from './adapters/http/organizer-seating-map.controller';
 export { AdminConcertController } from './adapters/http/admin-concert.controller';
+export { AdminAnalyticsController } from './adapters/http/admin-analytics.controller';
+export { OrganizerAnalyticsController } from './adapters/http/organizer-analytics.controller';
 export { AssetController } from './adapters/http/asset.controller';
 export { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
 export { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
@@ -450,6 +462,9 @@ export { ListOrganizerConcertsUseCase } from './application/use-cases/list-organ
 export { GetOrganizerConcertUseCase } from './application/use-cases/get-organizer-concert.use-case';
 export { ListAdminConcertsUseCase } from './application/use-cases/list-admin-concerts.use-case';
 export { GetAdminConcertUseCase } from './application/use-cases/get-admin-concert.use-case';
+export { GetAdminDashboardMetricsUseCase } from './application/use-cases/get-admin-dashboard-metrics.use-case';
+export { GetOrganizerDashboardMetricsUseCase } from './application/use-cases/get-organizer-dashboard-metrics.use-case';
+export { ListAdminAnalyticsReportsUseCase } from './application/use-cases/list-admin-analytics-reports.use-case';
 export { GetAssetContentUseCase } from './application/use-cases/get-asset-content.use-case';
 export { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
 export { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';

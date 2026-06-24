@@ -37,7 +37,9 @@ export class LoginUseCase {
     const isValidPassword =
       user !== null && (await this.passwordHasher.compare(cmd.password, user.passwordHash));
 
-    if (!isValidPassword) {
+    const isActive = user !== null && user.status === 'ACTIVE';
+
+    if (!isValidPassword || !isActive) {
       throw new InvalidCredentialsError();
     }
 

@@ -1,3 +1,10 @@
+export class UserNotFoundError extends Error {
+  constructor(userId: string) {
+    super(`User not found: ${userId}`);
+    this.name = 'UserNotFoundError';
+  }
+}
+
 export class EmailAlreadyRegisteredError extends Error {
   constructor(email: string) {
     super(`Email is already registered: ${email}`);

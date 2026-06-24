@@ -25,8 +25,8 @@ describe('redirectFor', () => {
     expect(redirectFor(session(['ADMIN']))).toBe('/admin/dashboard');
   });
 
-  it('ORGANIZER → /organizer/concerts', () => {
-    expect(redirectFor(session(['ORGANIZER']))).toBe('/organizer/concerts');
+  it('ORGANIZER → /organizer/dashboard', () => {
+    expect(redirectFor(session(['ORGANIZER']))).toBe('/organizer/dashboard');
   });
 
   it('ADMIN + ORGANIZER → /admin/dashboard (ADMIN takes precedence)', () => {

@@ -104,9 +104,9 @@ export function TopNavbar({ breadcrumbs = [] }: { breadcrumbs?: Crumb[] }) {
               <div className="py-1">
                 <button
                   onClick={logout}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-error transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
                   Sign out
                 </button>
               </div>
