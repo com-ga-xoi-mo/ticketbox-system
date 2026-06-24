@@ -1,31 +1,31 @@
 ## 1. Backend — Cancel Pending Order Endpoint
 
-- [ ] 1.1 Add `POST /me/orders/:id/cancel` route to `OrderController` in `packages/backend/src/ordering/adapters/http/order.controller.ts`. Protect with `@UseGuards(JwtAuthGuard, RolesGuard)` and `@Roles(Role.AUDIENCE)`. Handler fetches the order via `GetOrderUseCase` to verify ownership (userId match), then delegates to `TransitionOrderStatusUseCase` with target status `CANCELLED`. Return serialized updated order. Map `OrderNotFoundError` to 404 and invalid-transition errors to 409.
-- [ ] 1.2 Add unit/integration test for the cancel endpoint: verify ownership check (404 for wrong user), verify only `PENDING_PAYMENT` orders can be cancelled (409 for `PAID`), verify successful cancellation returns updated order with `CANCELLED` status.
+- [x] 1.1 Add `POST /me/orders/:id/cancel` route to `OrderController` in `packages/backend/src/ordering/adapters/http/order.controller.ts`. Protect with `@UseGuards(JwtAuthGuard, RolesGuard)` and `@Roles(Role.AUDIENCE)`. Handler fetches the order via `GetOrderUseCase` to verify ownership (userId match), then delegates to `TransitionOrderStatusUseCase` with target status `CANCELLED`. Return serialized updated order. Map `OrderNotFoundError` to 404 and invalid-transition errors to 409.
+- [x] 1.2 Add unit/integration test for the cancel endpoint: verify ownership check (404 for wrong user), verify only `PENDING_PAYMENT` orders can be cancelled (409 for `PAID`), verify successful cancellation returns updated order with `CANCELLED` status.
 
 ## 2. API Types — Order, Ticket, and Profile Response Schemas
 
-- [ ] 2.1 Add Zod schemas and TypeScript types in `packages/api-types` for order responses: `OrderSummaryResponseSchema` (id, orderNumber, concertId, status, totalAmountVnd, reservationExpiresAt, createdAt, items), `OrderDetailResponseSchema` (extends summary with paidAt, cancelledAt, expiredAt), and list wrapper `OrderListResponseSchema`. Export from `packages/api-types/src/index.ts`.
-- [ ] 2.2 Add Zod schemas and TypeScript types for ticket responses: `TicketSummaryResponseSchema` (id, ticketNumber, orderId, concertId, ticketTypeId, status, issuedAt, checkedInAt), `TicketDetailResponseSchema` (extends summary with qrPayload, voidedAt), and list wrapper `TicketListResponseSchema`. Export from index.
-- [ ] 2.3 Add Zod schema for profile response: `MyProfileResponseSchema` (id, email, displayName, roles). Export from index.
-- [ ] 2.4 Verify schemas align with actual backend serializer output by checking `serializeOrder`, `serializeTicketSummary`, `serializeTicketDetail`, and `toStaffProfileResponse` functions.
+- [x] 2.1 Add Zod schemas and TypeScript types in `packages/api-types` for order responses: `OrderSummaryResponseSchema` (id, orderNumber, concertId, status, totalAmountVnd, reservationExpiresAt, createdAt, items), `OrderDetailResponseSchema` (extends summary with paidAt, cancelledAt, expiredAt), and list wrapper `OrderListResponseSchema`. Export from `packages/api-types/src/index.ts`.
+- [x] 2.2 Add Zod schemas and TypeScript types for ticket responses: `TicketSummaryResponseSchema` (id, ticketNumber, orderId, concertId, ticketTypeId, status, issuedAt, checkedInAt), `TicketDetailResponseSchema` (extends summary with qrPayload, voidedAt), and list wrapper `TicketListResponseSchema`. Export from index.
+- [x] 2.3 Add Zod schema for profile response: `MyProfileResponseSchema` (id, email, displayName, roles). Export from index.
+- [x] 2.4 Verify schemas align with actual backend serializer output by checking `serializeOrder`, `serializeTicketSummary`, `serializeTicketDetail`, and `toStaffProfileResponse` functions.
 
 ## 3. Frontend API Client Layer
 
-- [ ] 3.1 Create `apps/audience-web/src/shared/api/profile.ts` with `fetchMyProfile()` using `apiGet('/me/profile')` + Zod validation, `profileKeys` query key factory, and `useMyProfile()` React Query hook. Follow `catalog.ts` pattern exactly.
-- [ ] 3.2 Create `apps/audience-web/src/shared/api/orders.ts` with: `fetchMyOrders()` (GET /me/orders), `fetchOrderDetail(id)` (GET /me/orders/:id), `cancelOrder(id)` (POST /me/orders/:id/cancel), `initiatePayment(id, dto)` (POST /orders/:id/payment). Add `orderKeys` factory, `useMyOrders()` hook, `useOrderDetail(id)` hook, `useCancelOrder()` mutation with order query invalidation, `useInitiatePayment()` mutation.
-- [ ] 3.3 Create `apps/audience-web/src/shared/api/tickets.ts` with: `fetchMyTickets()` (GET /me/tickets), `fetchTicketDetail(id)` (GET /me/tickets/:id). Add `ticketKeys` factory, `useMyTickets()` hook, `useTicketDetail(id)` hook with short staleTime (30s) since qrPayload is dynamic.
+- [x] 3.1 Create `apps/audience-web/src/shared/api/profile.ts` with `fetchMyProfile()` using `apiGet('/me/profile')` + Zod validation, `profileKeys` query key factory, and `useMyProfile()` React Query hook. Follow `catalog.ts` pattern exactly.
+- [x] 3.2 Create `apps/audience-web/src/shared/api/orders.ts` with: `fetchMyOrders()` (GET /me/orders), `fetchOrderDetail(id)` (GET /me/orders/:id), `cancelOrder(id)` (POST /me/orders/:id/cancel), `initiatePayment(id, dto)` (POST /orders/:id/payment). Add `orderKeys` factory, `useMyOrders()` hook, `useOrderDetail(id)` hook, `useCancelOrder()` mutation with order query invalidation, `useInitiatePayment()` mutation.
+- [x] 3.3 Create `apps/audience-web/src/shared/api/tickets.ts` with: `fetchMyTickets()` (GET /me/tickets), `fetchTicketDetail(id)` (GET /me/tickets/:id). Add `ticketKeys` factory, `useMyTickets()` hook, `useTicketDetail(id)` hook with short staleTime (30s) since qrPayload is dynamic.
 
 ## 4. Frontend — Account Profile Page
 
-- [ ] 4.1 Rewrite `apps/audience-web/src/features/account/AccountPage.tsx` as the account landing page. Fetch profile via `useMyProfile()`. Display user displayName, email. Add navigation cards/links to "My Orders" (`/account/orders`) and "My Tickets" (`/account/tickets`). Keep `AudienceProtectedRoute` wrapper. Show skeleton during loading, error state with retry on failure.
-- [ ] 4.2 Create `apps/audience-web/src/features/account/AccountLayout.tsx` as a layout component for `/account/*` routes if needed for shared navigation (back button, breadcrumb). This is optional — can be a simple wrapper or merged into individual pages.
+- [x] 4.1 Rewrite `apps/audience-web/src/features/account/AccountPage.tsx` as the account landing page. Fetch profile via `useMyProfile()`. Display user displayName, email. Add navigation cards/links to "My Orders" (`/account/orders`) and "My Tickets" (`/account/tickets`). Keep `AudienceProtectedRoute` wrapper. Show skeleton during loading, error state with retry on failure.
+- [x] 4.2 Create `apps/audience-web/src/features/account/AccountLayout.tsx` as a layout component for `/account/*` routes if needed for shared navigation (back button, breadcrumb). This is optional — can be a simple wrapper or merged into individual pages.
 
 ## 5. Frontend — My Orders Page
 
-- [ ] 5.1 Create `apps/audience-web/src/features/account/MyOrdersPage.tsx`. Fetch orders via `useMyOrders()`. Render order cards showing: orderNumber, concert name (from concertId — may need lookup or included in serialized response), status badge, totalAmountVnd formatted as VND, createdAt date. Sort by createdAt desc. Show empty state with link to `/events` when no orders. Show skeletons during loading.
-- [ ] 5.2 Create a reusable `OrderStatusBadge` component in `apps/audience-web/src/features/account/components/OrderStatusBadge.tsx`. Map statuses to Vietnamese labels and badge variants: PENDING_PAYMENT → "Chờ thanh toán" (warning), PAID → "Đã thanh toán" (success), EXPIRED → "Hết hạn" (muted), CANCELLED → "Đã hủy" (destructive), REFUNDED → "Đã hoàn tiền" (info), FAILED → "Thất bại" (destructive).
-- [ ] 5.3 Create a `ReservationCountdown` component in `apps/audience-web/src/features/account/components/ReservationCountdown.tsx`. Accept `reservationExpiresAt` (ISO string), display mm:ss countdown, fire an `onExpired` callback when reaching zero.
+- [x] 5.1 Create `apps/audience-web/src/features/account/MyOrdersPage.tsx`. Fetch orders via `useMyOrders()`. Render order cards showing: orderNumber, concert name (from concertId — may need lookup or included in serialized response), status badge, totalAmountVnd formatted as VND, createdAt date. Sort by createdAt desc. Show empty state with link to `/events` when no orders. Show skeletons during loading.
+- [x] 5.2 Create a reusable `OrderStatusBadge` component in `apps/audience-web/src/features/account/components/OrderStatusBadge.tsx`. Map statuses to Vietnamese labels and badge variants: PENDING_PAYMENT → "Chờ thanh toán" (warning), PAID → "Đã thanh toán" (success), EXPIRED → "Hết hạn" (muted), CANCELLED → "Đã hủy" (destructive), REFUNDED → "Đã hoàn tiền" (info), FAILED → "Thất bại" (destructive).
+- [x] 5.3 Create a `ReservationCountdown` component in `apps/audience-web/src/features/account/components/ReservationCountdown.tsx`. Accept `reservationExpiresAt` (ISO string), display mm:ss countdown, fire an `onExpired` callback when reaching zero.
 
 ## 6. Frontend — Order Detail Page
 
