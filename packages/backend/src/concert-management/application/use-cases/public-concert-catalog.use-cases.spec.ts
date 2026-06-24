@@ -13,6 +13,7 @@ describe('public concert catalog use cases', () => {
   it('delegates upcoming published list reads to the catalog port with the supplied clock and filters', async () => {
     const catalog: PublicConcertCatalogPort = {
       listUpcomingPublished: vi.fn().mockResolvedValue([]),
+      listFeaturedPublished: vi.fn().mockResolvedValue([]),
       listDistinctCities: vi.fn(),
       findPublishedUpcomingDetailBySlug: vi.fn(),
       findPublishedUpcomingAvailabilityBySlug: vi.fn(),
@@ -26,6 +27,7 @@ describe('public concert catalog use cases', () => {
   it('delegates distinct cities list reads to the catalog port', async () => {
     const catalog: PublicConcertCatalogPort = {
       listUpcomingPublished: vi.fn(),
+      listFeaturedPublished: vi.fn(),
       listDistinctCities: vi.fn().mockResolvedValue(['HCMC', 'Hanoi']),
       findPublishedUpcomingDetailBySlug: vi.fn(),
       findPublishedUpcomingAvailabilityBySlug: vi.fn(),
@@ -38,9 +40,10 @@ describe('public concert catalog use cases', () => {
   it('throws a not-found error for non-public or missing detail records', async () => {
     const catalog: PublicConcertCatalogPort = {
       listUpcomingPublished: vi.fn(),
+      listFeaturedPublished: vi.fn(),
       listDistinctCities: vi.fn(),
       findPublishedUpcomingDetailBySlug: vi.fn().mockResolvedValue(null),
-      findPublishedUpcomingAvailabilityBySlug: vi.fn(),
+      findPublishedUpcomingAvailabilityBySlug: vi.fn().mockResolvedValue(null),
     };
 
     await expect(
@@ -51,6 +54,7 @@ describe('public concert catalog use cases', () => {
   it('throws a not-found error for non-public or missing availability records', async () => {
     const catalog: PublicConcertCatalogPort = {
       listUpcomingPublished: vi.fn(),
+      listFeaturedPublished: vi.fn(),
       listDistinctCities: vi.fn(),
       findPublishedUpcomingDetailBySlug: vi.fn(),
       findPublishedUpcomingAvailabilityBySlug: vi.fn().mockResolvedValue(null),

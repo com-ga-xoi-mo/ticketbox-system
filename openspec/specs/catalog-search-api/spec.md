@@ -7,11 +7,11 @@ TBD - created by syncing change implement-audience-discovery. Update Purpose aft
 ## Requirements
 
 ### Requirement: Concert list search and filter query parameters
-The `GET /concerts` endpoint SHALL accept optional query parameters for text search, city filtering, date range filtering, price range filtering, and sorting, returning filtered results while maintaining backward compatibility.
+The `GET /concerts` endpoint SHALL accept optional query parameters for text search, city filtering, date range filtering, price range filtering, event type filtering, and sorting, returning filtered results while maintaining backward compatibility.
 
 #### Scenario: No query parameters returns all upcoming published concerts
 - **WHEN** `GET /concerts` is called without any query parameters
-- **THEN** the response is identical to the current behavior: all upcoming published concerts sorted by `startsAt` ascending
+- **THEN** the response includes all upcoming published concerts of any event type, sorted by `startsAt` ascending
 
 #### Scenario: Text search by `q` parameter
 - **WHEN** `GET /concerts?q=jazz` is called
@@ -22,6 +22,18 @@ The `GET /concerts` endpoint SHALL accept optional query parameters for text sea
 - **WHEN** `GET /concerts?city=HCMC` is called
 - **THEN** the response includes only concerts whose `city` field matches "HCMC" exactly
 
+#### Scenario: EventType filter by `eventType` parameter
+- **WHEN** `GET /concerts?eventType=WORKSHOP` is called
+- **THEN** the response includes only concerts whose `eventType` field matches `WORKSHOP`
+
+#### Scenario: Invalid eventType is rejected
+- **WHEN** `GET /concerts?eventType=INVALID` is called
+- **THEN** the endpoint returns HTTP 400 with a validation error
+
+#### Scenario: EventType filter combines with other filters
+- **WHEN** `GET /concerts?eventType=CONCERT&city=HCMC&q=rock` is called
+- **THEN** all filters are applied in combination
+
 #### Scenario: Sort by date descending
 - **WHEN** `GET /concerts?sortBy=date&sortDir=desc` is called
 - **THEN** the response is sorted by `startsAt` descending
@@ -31,8 +43,8 @@ The `GET /concerts` endpoint SHALL accept optional query parameters for text sea
 - **THEN** the response is sorted by minimum ticket type price ascending
 - **AND** concerts with no ticket types appear last
 
-#### Scenario: Combined query, city, and sort
-- **WHEN** `GET /concerts?q=rock&city=Hanoi&sortBy=date&sortDir=asc` is called
+#### Scenario: Combined query, city, eventType, and sort
+- **WHEN** `GET /concerts?q=rock&city=Hanoi&eventType=CONCERT&sortBy=date&sortDir=asc` is called
 - **THEN** all filters and sort are applied in combination
 
 #### Scenario: Date range filter by dateFrom
@@ -60,7 +72,7 @@ The `GET /concerts` endpoint SHALL accept optional query parameters for text sea
 - **THEN** the response includes only concerts that have at least one ticket type with `priceVnd` between 200,000 and 500,000 VND inclusive
 
 #### Scenario: All filters combined
-- **WHEN** `GET /concerts?q=rock&city=Hanoi&dateFrom=2026-07-01&dateTo=2026-08-31&minPrice=100000&maxPrice=800000&sortBy=price&sortDir=asc` is called
+- **WHEN** `GET /concerts?q=rock&city=Hanoi&eventType=SPORT&dateFrom=2026-07-01&dateTo=2026-08-31&minPrice=100000&maxPrice=800000&sortBy=price&sortDir=asc` is called
 - **THEN** all filters and sort are applied in combination
 
 #### Scenario: Invalid sort field is ignored
@@ -79,37 +91,41 @@ The backend SHALL expose a `GET /concerts/cities` endpoint that returns distinct
 - **WHEN** `GET /concerts/cities` is called and there are no published upcoming concerts
 - **THEN** the response is an empty array `[]`
 
-### Requirement: Catalog search Zod contracts
-The `@ticketbox/api-types` package SHALL export Zod schemas for the catalog search query parameters and the cities response.
+### Requirement: Featured concerts endpoint
+The backend SHALL expose a `GET /concerts/featured` endpoint that returns featured upcoming published concerts with their banner assets, ordered by `displayOrder` ascending then `startsAt` ascending.
 
-#### Scenario: CatalogSearchParams schema validates query params
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{ q: "jazz", city: "HCMC", dateFrom: "2026-07-01", dateTo: "2026-08-31", minPrice: 200000, maxPrice: 500000, sortBy: "date", sortDir: "asc" }`
-- **THEN** parsing succeeds with all fields present
+#### Scenario: Featured endpoint returns featured events
+- **WHEN** `GET /concerts/featured` is called and there are published upcoming concerts with `isFeatured = true`
+- **THEN** the response is an array of featured concert summaries including `bannerAsset` field
+- **AND** results are ordered by `displayOrder` ascending, then `startsAt` ascending
 
-#### Scenario: CatalogSearchParams schema allows empty params
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{}`
-- **THEN** parsing succeeds with all fields undefined (all are optional)
+#### Scenario: Featured endpoint respects limit parameter
+- **WHEN** `GET /concerts/featured?limit=5` is called
+- **THEN** the response contains at most 5 featured concerts
 
-#### Scenario: CatalogSearchParams schema restricts sortBy values
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{ sortBy: "invalid" }`
-- **THEN** parsing fails with a validation error
-- **AND** only `"date"` and `"price"` are accepted values for `sortBy`
+#### Scenario: Featured endpoint default limit
+- **WHEN** `GET /concerts/featured` is called without a `limit` parameter
+- **THEN** the response contains at most 10 featured concerts
 
-#### Scenario: CatalogSearchParams schema restricts sortDir values
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{ sortDir: "invalid" }`
-- **THEN** parsing fails with a validation error
-- **AND** only `"asc"` and `"desc"` are accepted values for `sortDir`
+#### Scenario: Featured endpoint maximum limit
+- **WHEN** `GET /concerts/featured?limit=50` is called
+- **THEN** the response contains at most 20 featured concerts (capped)
 
-#### Scenario: CatalogSearchParams schema validates date fields as ISO date strings
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{ dateFrom: "not-a-date" }`
-- **THEN** parsing fails with a validation error
-- **AND** `dateFrom` and `dateTo` MUST be ISO 8601 date strings (e.g. `"2026-07-01"`)
+#### Scenario: Featured endpoint returns empty array when no featured events
+- **WHEN** `GET /concerts/featured` is called and no published upcoming concerts have `isFeatured = true`
+- **THEN** the response is an empty array `[]`
 
-#### Scenario: CatalogSearchParams schema validates price fields as non-negative integers
-- **WHEN** `CatalogSearchParamsSchema` is used to parse `{ minPrice: -1 }`
-- **THEN** parsing fails with a validation error
-- **AND** `minPrice` and `maxPrice` MUST be non-negative integers representing VND amounts
+#### Scenario: Featured endpoint excludes past events
+- **WHEN** `GET /concerts/featured` is called and some featured concerts have `startsAt` in the past
+- **THEN** only future featured concerts are included in the response
 
-#### Scenario: PublicConcertCitiesResponse schema validates string array
-- **WHEN** `PublicConcertCitiesResponseSchema` is used to parse `["HCMC", "Hanoi"]`
-- **THEN** parsing succeeds as `string[]`
+### Requirement: EventType field in concert summary response
+The `GET /concerts` list response SHALL include an `eventType` field on each concert summary.
+
+#### Scenario: Event type included in concert list items
+- **WHEN** `GET /concerts` returns concert summaries
+- **THEN** each item includes an `eventType` field with the concert's event type value
+
+#### Scenario: Event type included in concert detail
+- **WHEN** `GET /concerts/:slug` returns a concert detail
+- **THEN** the response includes an `eventType` field with the concert's event type value

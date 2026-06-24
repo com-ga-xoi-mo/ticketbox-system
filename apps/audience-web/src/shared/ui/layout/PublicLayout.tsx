@@ -47,7 +47,7 @@ function Logo() {
 function NavLinks({ onClick }: { onClick?: () => void }) {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
-  const { data: profile } = useMyProfile();
+  const { data: profile } = useMyProfile(!!session);
 
   const handleSignOut = () => {
     signOut();

@@ -71,6 +71,7 @@ import { GetConcertAvailabilityUseCase } from './application/use-cases/get-conce
 import { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
 import { ListPublicConcertsUseCase } from './application/use-cases/list-public-concerts.use-case';
 import { ListConcertCitiesUseCase } from './application/use-cases/list-concert-cities.use-case';
+import { ListFeaturedConcertsUseCase } from './application/use-cases/list-featured-concerts.use-case';
 import { CreateConcertUseCase } from './application/use-cases/create-concert.use-case';
 import { UpdateConcertUseCase } from './application/use-cases/update-concert.use-case';
 import { PublishConcertUseCase } from './application/use-cases/publish-concert.use-case';
@@ -171,6 +172,11 @@ import { AssetController } from './adapters/http/asset.controller';
       provide: ListConcertCitiesUseCase,
       inject: [PUBLIC_CONCERT_CATALOG],
       useFactory: (catalog: PublicConcertCatalogPort) => new ListConcertCitiesUseCase(catalog),
+    },
+    {
+      provide: ListFeaturedConcertsUseCase,
+      inject: [PUBLIC_CONCERT_CATALOG],
+      useFactory: (catalog: PublicConcertCatalogPort) => new ListFeaturedConcertsUseCase(catalog),
     },
     {
       provide: GetPublicConcertDetailUseCase,
@@ -427,6 +433,7 @@ export { AssetController } from './adapters/http/asset.controller';
 export { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
 export { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
 export { ListPublicConcertsUseCase } from './application/use-cases/list-public-concerts.use-case';
+export { ListFeaturedConcertsUseCase } from './application/use-cases/list-featured-concerts.use-case';
 export { ListConcertCitiesUseCase } from './application/use-cases/list-concert-cities.use-case';
 export { CreateConcertUseCase } from './application/use-cases/create-concert.use-case';
 export { UpdateConcertUseCase } from './application/use-cases/update-concert.use-case';

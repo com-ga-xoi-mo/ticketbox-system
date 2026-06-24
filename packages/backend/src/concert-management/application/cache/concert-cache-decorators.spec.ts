@@ -98,6 +98,7 @@ const sampleSummaries: ConcertSummary[] = [
     city: 'HCM',
     startsAt: new Date('2026-07-01T18:00:00.000Z'),
     endsAt: new Date('2026-07-01T22:00:00.000Z'),
+    eventType: 'CONCERT',
     posterAsset: null,
     availabilitySummary: {
       totalAvailableQuantity: 100,
@@ -120,6 +121,10 @@ const sampleDetail: ConcertDetail = {
   city: 'HCM',
   startsAt: new Date('2026-07-01T18:00:00.000Z'),
   endsAt: new Date('2026-07-01T22:00:00.000Z'),
+  eventType: 'CONCERT',
+  seoTitle: null,
+  seoDescription: null,
+  seoImageUrl: null,
   posterAsset: null,
   seatingMapAsset: null,
   seatingZones: [],

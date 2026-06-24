@@ -4,11 +4,13 @@ import {
   PublicConcertCitiesResponseSchema,
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
+  PublicFeaturedConcertListResponseSchema,
   type CatalogSearchParams,
   type PublicConcertAvailabilityResponse,
   type PublicConcertCitiesResponse,
   type PublicConcertDetailResponse,
   type PublicConcertListResponse,
+  type PublicFeaturedConcertListResponse,
 } from '@ticketbox/api-types';
 import { apiGet } from './client';
 
@@ -18,6 +20,7 @@ export const catalogKeys = {
   detail: (slug: string) => [...catalogKeys.all, 'detail', slug] as const,
   availability: (slug: string) => [...catalogKeys.all, 'availability', slug] as const,
   cities: () => [...catalogKeys.all, 'cities'] as const,
+  featured: (limit?: number) => [...catalogKeys.all, 'featured', limit ?? 10] as const,
 };
 
 export async function fetchConcertList(
@@ -57,6 +60,17 @@ export async function fetchConcertAvailability(
   return PublicConcertAvailabilityResponseSchema.parse(data);
 }
 
+export async function fetchFeaturedConcerts(
+  limit?: number,
+): Promise<PublicFeaturedConcertListResponse> {
+  let url = '/concerts/featured';
+  if (limit !== undefined) {
+    url += `?limit=${limit}`;
+  }
+  const data = await apiGet<unknown>(url);
+  return PublicFeaturedConcertListResponseSchema.parse(data);
+}
+
 export function useConcertList(params?: CatalogSearchParams) {
   return useQuery({
     queryKey: catalogKeys.list(params),
@@ -68,5 +82,12 @@ export function useConcertCities() {
   return useQuery({
     queryKey: catalogKeys.cities(),
     queryFn: fetchConcertCities,
+  });
+}
+
+export function useFeaturedConcerts(limit?: number) {
+  return useQuery({
+    queryKey: catalogKeys.featured(limit),
+    queryFn: () => fetchFeaturedConcerts(limit),
   });
 }

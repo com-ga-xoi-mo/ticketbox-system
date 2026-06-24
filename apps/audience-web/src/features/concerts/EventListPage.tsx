@@ -7,6 +7,9 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '../../components/ui/popover';
+import { SeoHead } from '../../shared/ui/seo/SeoHead';
+import { EventTypeFilter } from './components/EventTypeFilter';
 import { Search, SlidersHorizontal, MapPin, CalendarDays, Banknote, ArrowDownUp } from 'lucide-react';
 import type { CatalogSearchParams } from '@ticketbox/api-types';
 
@@ -21,6 +24,7 @@ export function EventListPage() {
     dateTo: searchParams.get('dateTo') || undefined,
     minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
     maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
+    eventType: (searchParams.get('eventType') as any) || undefined,
     sortBy: (searchParams.get('sortBy') as any) || undefined,
     sortDir: (searchParams.get('sortDir') as any) || undefined,
   };
@@ -34,6 +38,7 @@ export function EventListPage() {
   const [dateTo, setDateTo] = useState(currentParams.dateTo ? currentParams.dateTo.split('T')[0] : '');
   const [minPrice, setMinPrice] = useState(currentParams.minPrice?.toString() || '');
   const [maxPrice, setMaxPrice] = useState(currentParams.maxPrice?.toString() || '');
+  const [eventType, setEventType] = useState(currentParams.eventType || 'all');
   const [sortOption, setSortOption] = useState(() => {
     if (currentParams.sortBy === 'price' && currentParams.sortDir === 'asc') return 'price_asc';
     if (currentParams.sortBy === 'price' && currentParams.sortDir === 'desc') return 'price_desc';
@@ -49,6 +54,7 @@ export function EventListPage() {
     setDateTo(searchParams.get('dateTo') ? searchParams.get('dateTo')!.split('T')[0] : '');
     setMinPrice(searchParams.get('minPrice') || '');
     setMaxPrice(searchParams.get('maxPrice') || '');
+    setEventType(searchParams.get('eventType') || 'all');
     
     const sb = searchParams.get('sortBy');
     const sd = searchParams.get('sortDir');
@@ -68,6 +74,7 @@ export function EventListPage() {
     if (dateTo) newParams.set('dateTo', `${dateTo}T23:59:59.999Z`);
     if (minPrice && !isNaN(Number(minPrice))) newParams.set('minPrice', minPrice);
     if (maxPrice && !isNaN(Number(maxPrice))) newParams.set('maxPrice', maxPrice);
+    if (eventType && eventType !== 'all') newParams.set('eventType', eventType);
 
     if (sortOption === 'price_asc') {
       newParams.set('sortBy', 'price');
@@ -92,8 +99,22 @@ export function EventListPage() {
 
   const hasActiveFilters = Array.from(searchParams.keys()).length > 0;
 
+  const seoTitle = currentParams.eventType && currentParams.eventType !== 'CONCERT' 
+    ? `${currentParams.eventType} | Ticketbox`
+    : currentParams.city 
+      ? `Sự kiện tại ${currentParams.city} | Ticketbox` 
+      : 'Khám phá Sự kiện | Ticketbox';
+  
+  const seoDescription = currentParams.eventType
+    ? `Khám phá các ${currentParams.eventType.toLowerCase()} hấp dẫn đang mở bán trên Ticketbox.`
+    : 'Khám phá concert, festival và trải nghiệm live được tuyển chọn với hệ thống đặt vé mượt mà và an toàn.';
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <SeoHead
+        title={seoTitle}
+        description={seoDescription}
+      />
       <div className="mb-9">
         <Badge className="mb-4 rounded-full bg-primary/10 px-4 py-1.5 text-primary">Lịch mở bán</Badge>
         <h1 className="text-4xl font-black tracking-tight text-foreground">Sự kiện sắp diễn ra</h1>
@@ -102,119 +123,148 @@ export function EventListPage() {
         </p>
       </div>
 
-      <div className="mb-8 rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
-        <form onSubmit={handleApplyFilters} className="flex flex-col gap-4 lg:flex-row lg:items-end">
-          <div className="flex-1 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Search className="size-3.5" /> Tìm kiếm
-              </label>
-              <Input 
-                placeholder="Tên sự kiện, nghệ sĩ..." 
-                value={q} 
-                onChange={(e) => setQ(e.target.value)} 
-                className="bg-background"
-              />
-            </div>
-            
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <MapPin className="size-3.5" /> Địa điểm
-              </label>
-              <Select value={city} onValueChange={setCity}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Chọn thành phố" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả thành phố</SelectItem>
-                  {cities.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <CalendarDays className="size-3.5" /> Thời gian
-              </label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  type="date" 
-                  value={dateFrom} 
-                  onChange={(e) => setDateFrom(e.target.value)} 
-                  className="bg-background"
-                  aria-label="Từ ngày"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input 
-                  type="date" 
-                  value={dateTo} 
-                  onChange={(e) => setDateTo(e.target.value)} 
-                  className="bg-background"
-                  aria-label="Đến ngày"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <Banknote className="size-3.5" /> Mức giá (VND)
-              </label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  type="number" 
-                  min="0"
-                  step="100000"
-                  placeholder="Min" 
-                  value={minPrice} 
-                  onChange={(e) => setMinPrice(e.target.value)} 
-                  className="bg-background"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input 
-                  type="number" 
-                  min="0"
-                  step="100000"
-                  placeholder="Max" 
-                  value={maxPrice} 
-                  onChange={(e) => setMaxPrice(e.target.value)} 
-                  className="bg-background"
-                />
-              </div>
-            </div>
+      <div className="mb-6 rounded-2xl border bg-card p-4 shadow-sm">
+        <EventTypeFilter 
+          value={eventType} 
+          onChange={(val) => {
+            setEventType(val);
+            // Auto-apply filter when category changes
+            setTimeout(() => {
+              const form = document.getElementById('filter-form') as HTMLFormElement;
+              if (form) form.requestSubmit();
+            }, 0);
+          }} 
+        />
+        
+        <form id="filter-form" onSubmit={handleApplyFilters} className="flex flex-wrap items-center gap-3 pt-2">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input 
+              placeholder="Tìm tên sự kiện, nghệ sĩ..." 
+              value={q} 
+              onChange={(e) => setQ(e.target.value)} 
+              className="h-10 rounded-full bg-background pl-9"
+            />
           </div>
+          
+          {/* City Dropdown */}
+          <Select value={city} onValueChange={setCity}>
+            <SelectTrigger className="h-10 w-[180px] rounded-full bg-background">
+              <div className="flex items-center gap-2">
+                <MapPin className="size-4 text-muted-foreground" />
+                <SelectValue placeholder="Chọn thành phố" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả thành phố</SelectItem>
+              {cities.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="flex flex-col gap-4 sm:flex-row lg:shrink-0">
-            <div className="space-y-1.5 min-w-[180px]">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                <ArrowDownUp className="size-3.5" /> Sắp xếp
-              </label>
-              <Select value={sortOption} onValueChange={(val) => { setSortOption(val); }}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Sắp xếp theo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date_asc">Ngày gần nhất</SelectItem>
-                  <SelectItem value="date_desc">Ngày xa nhất</SelectItem>
-                  <SelectItem value="price_asc">Giá: Thấp đến Cao</SelectItem>
-                  <SelectItem value="price_desc">Giá: Cao đến Thấp</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <Button type="submit" className="flex-1 sm:flex-none">
-                <SlidersHorizontal className="mr-2 size-4" />
-                Lọc
+          {/* Date Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 rounded-full bg-background font-normal justify-start">
+                <CalendarDays className="mr-2 size-4 text-muted-foreground" />
+                {dateFrom || dateTo ? 'Đã chọn thời gian' : 'Thời gian'}
               </Button>
-              {hasActiveFilters && (
-                <Button type="button" variant="outline" onClick={handleClearFilters}>
-                  Xóa
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="start">
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold">Khoảng thời gian diễn ra</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Từ ngày</label>
+                    <Input 
+                      type="date" 
+                      value={dateFrom} 
+                      onChange={(e) => setDateFrom(e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Đến ngày</label>
+                    <Input 
+                      type="date" 
+                      value={dateTo} 
+                      onChange={(e) => setDateTo(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <Button size="sm" className="w-full" onClick={() => handleApplyFilters()}>
+                  Lưu & Áp dụng
                 </Button>
-              )}
-            </div>
-          </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Price Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 rounded-full bg-background font-normal justify-start">
+                <Banknote className="mr-2 size-4 text-muted-foreground" />
+                {minPrice || maxPrice ? 'Đã chọn mức giá' : 'Mức giá'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="start">
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold">Khoảng giá (VND)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Thấp nhất</label>
+                    <Input 
+                      type="number" min="0" step="100000"
+                      placeholder="0" 
+                      value={minPrice} 
+                      onChange={(e) => setMinPrice(e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Cao nhất</label>
+                    <Input 
+                      type="number" min="0" step="100000"
+                      placeholder="Max" 
+                      value={maxPrice} 
+                      onChange={(e) => setMaxPrice(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <Button size="sm" className="w-full" onClick={() => handleApplyFilters()}>
+                  Lưu & Áp dụng
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Sort Dropdown */}
+          <Select value={sortOption} onValueChange={(val) => { setSortOption(val); }}>
+            <SelectTrigger className="h-10 w-[180px] rounded-full bg-background">
+              <div className="flex items-center gap-2">
+                <ArrowDownUp className="size-4 text-muted-foreground" />
+                <SelectValue placeholder="Sắp xếp" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date_asc">Ngày gần nhất</SelectItem>
+              <SelectItem value="date_desc">Ngày xa nhất</SelectItem>
+              <SelectItem value="price_asc">Giá: Thấp đến Cao</SelectItem>
+              <SelectItem value="price_desc">Giá: Cao đến Thấp</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Action Buttons */}
+          <Button type="submit" className="h-10 rounded-full px-6 shadow-md">
+            <SlidersHorizontal className="mr-2 size-4" />
+            Lọc
+          </Button>
+          
+          {hasActiveFilters && (
+            <Button type="button" variant="ghost" className="h-10 rounded-full px-4 text-muted-foreground hover:bg-muted" onClick={handleClearFilters}>
+              Xóa bộ lọc
+            </Button>
+          )}
         </form>
       </div>
 
@@ -227,7 +277,9 @@ export function EventListPage() {
           onClearFilters={handleClearFilters} 
           message={
             hasActiveFilters 
-              ? "Không có sự kiện nào khớp với các điều kiện lọc của bạn."
+              ? currentParams.eventType && currentParams.eventType !== 'CONCERT' 
+                ? `Không có ${currentParams.eventType.toLowerCase()} nào khớp với các điều kiện lọc.`
+                : "Không có sự kiện nào khớp với các điều kiện lọc của bạn."
               : "Chưa có sự kiện nào đang mở bán. Hãy quay lại sau."
           }
         />
