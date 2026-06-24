@@ -56,3 +56,24 @@ export async function patch<T>(path: string, body: unknown): Promise<T> {
   });
   return handleResponse<T>(res);
 }
+
+export async function put<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(res);
+}
+
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const headers = buildHeaders() as Record<string, string>;
+  delete headers['Content-Type']; // Let browser set Content-Type with boundary
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return handleResponse<T>(res);
+}

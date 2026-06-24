@@ -206,7 +206,7 @@ The system SHALL allow authorized admins to list, read, and edit all concerts an
 - **THEN** the system SHALL mark the concert as CANCELLED
 
 ### Requirement: Ticket type configuration
-The system SHALL allow organizers to configure ticket type code, name, description, price, quantity,
+The system SHALL allow organizers and admins to configure ticket type code, name, description, price, quantity,
 sale window, maximum quantity per user, status, and seating-zone mappings per concert. Ticket-type
 validation SHALL preserve domain-level validation errors inside application use-cases and SHALL map
 those errors to HTTP validation or conflict responses at the HTTP adapter boundary.
@@ -215,24 +215,28 @@ those errors to HTTP validation or conflict responses at the HTTP adapter bounda
 - **WHEN** an organizer creates an SVIP ticket type with quantity 200 and max 2 per user
 - **THEN** the system SHALL persist those constraints and use them during checkout
 
+#### Scenario: Admin configures ticket type
+- **WHEN** an admin creates or updates a ticket type for any concert
+- **THEN** the system SHALL persist the ticket type using the same validation rules as organizer ticket-type configuration
+
 #### Scenario: Organizer configures custom ticket type
 - **WHEN** an organizer creates a custom ticket type such as Diamond, Gold, Standing, or Couple for a concert
 - **THEN** the system SHALL persist the ticket type for that concert without requiring the code or name to be one of SVIP, VIP, GA, CAT1, or CAT2
 
 #### Scenario: Invalid ticket type is rejected — negative price
-- **WHEN** an organizer submits a ticket type with a negative price
+- **WHEN** an organizer or admin submits a ticket type with a negative price
 - **THEN** the system SHALL reject the configuration with a validation error identifying the price field
 
 #### Scenario: Invalid ticket type is rejected — invalid quantity
-- **WHEN** an organizer submits a ticket type with a zero or negative quantity
+- **WHEN** an organizer or admin submits a ticket type with a zero or negative quantity
 - **THEN** the system SHALL reject the configuration with a validation error identifying the quantity field
 
 #### Scenario: Invalid ticket type is rejected — invalid sale window
-- **WHEN** an organizer submits a ticket type where sale end time is not after sale start time
+- **WHEN** an organizer or admin submits a ticket type where sale end time is not after sale start time
 - **THEN** the system SHALL reject the configuration with a validation error identifying the sale window
 
 #### Scenario: Duplicate ticket type code is rejected within a concert
-- **WHEN** an organizer creates two ticket types with the same code for the same concert
+- **WHEN** an organizer or admin creates two ticket types with the same code for the same concert
 - **THEN** the system SHALL reject the duplicate code with a conflict error
 
 #### Scenario: Same ticket type code is allowed across concerts
@@ -243,8 +247,16 @@ those errors to HTTP validation or conflict responses at the HTTP adapter bounda
 - **WHEN** an organizer submits updated fields for a ticket type on a concert they own
 - **THEN** the system SHALL apply the update; if the updated code conflicts with another ticket type code in the same concert the system SHALL reject with a conflict error
 
+#### Scenario: Admin updates ticket type
+- **WHEN** an admin submits updated fields for a ticket type on any concert
+- **THEN** the system SHALL apply the update; if the updated code conflicts with another ticket type code in the same concert the system SHALL reject with a conflict error
+
 #### Scenario: Organizer archives ticket type
 - **WHEN** an organizer archives a ticket type on a concert they own and no sold or reserved tickets exist for that type
+- **THEN** the system SHALL set the ticket type status to ARCHIVED rather than removing the record, preserving order history
+
+#### Scenario: Admin archives ticket type
+- **WHEN** an admin archives a ticket type on any concert and no sold or reserved tickets exist for that type
 - **THEN** the system SHALL set the ticket type status to ARCHIVED rather than removing the record, preserving order history
 
 #### Scenario: Application use-case exposes domain validation errors
@@ -260,30 +272,42 @@ those errors to HTTP validation or conflict responses at the HTTP adapter bounda
   HTTP response
 
 ### Requirement: Seating map zone mapping
-The system SHALL allow organizers to define seating zones from uploaded SVG element IDs and map ticket types to those zones.
+The system SHALL allow organizers and admins to define seating zones from uploaded SVG element IDs and map ticket types to those zones.
 
 #### Scenario: Organizer defines seating zones from SVG elements
-- **WHEN** an organizer uploads a seating map SVG with identifiable element IDs for a concert
+- **WHEN** an organizer uploads a seating map SVG with identifiable element IDs for a concert they own
 - **THEN** the system SHALL allow the organizer to save selected SVG element IDs as seating zones with labels, colors, display order, and status for that concert
 
+#### Scenario: Admin defines seating zones from SVG elements
+- **WHEN** an admin uploads a seating map SVG with identifiable element IDs for any concert
+- **THEN** the system SHALL allow the admin to save selected SVG element IDs as seating zones with labels, colors, display order, and status for that concert
+
 #### Scenario: Unsafe seating map SVG is rejected
-- **WHEN** an organizer uploads a seating map SVG containing scripts, event handlers, external references, unsupported content, or file size beyond the configured limit
+- **WHEN** an organizer or admin uploads a seating map SVG containing scripts, event handlers, external references, unsupported content, or file size beyond the configured limit
 - **THEN** the system SHALL reject the SVG before storing it as an active seating map asset
 
 #### Scenario: Seating zone color falls back to default
-- **WHEN** an organizer defines a seating zone without a custom color
+- **WHEN** an organizer or admin defines a seating zone without a custom color
 - **THEN** the system SHALL allow the zone and provide enough data for the frontend to render it with a default color
 
 #### Scenario: Organizer maps ticket type to multiple zones
 - **WHEN** an organizer configures a ticket type that covers more than one seating area
 - **THEN** the system SHALL allow that ticket type to be mapped to multiple seating zones from the same concert
 
+#### Scenario: Admin maps ticket type to multiple zones
+- **WHEN** an admin configures a ticket type that covers more than one seating area
+- **THEN** the system SHALL allow that ticket type to be mapped to multiple seating zones from the same concert
+
 #### Scenario: Organizer maps multiple ticket types to one zone
 - **WHEN** an organizer offers multiple ticket types for the same seating area
 - **THEN** the system SHALL allow multiple ticket types from the same concert to map to the same seating zone
 
+#### Scenario: Admin maps multiple ticket types to one zone
+- **WHEN** an admin offers multiple ticket types for the same seating area
+- **THEN** the system SHALL allow multiple ticket types from the same concert to map to the same seating zone
+
 #### Scenario: Cross-concert zone mapping is rejected
-- **WHEN** an organizer attempts to map a ticket type from one concert to a seating zone from another concert
+- **WHEN** an organizer or admin attempts to map a ticket type from one concert to a seating zone from another concert
 - **THEN** the system SHALL reject the mapping
 
 ### Requirement: Poster image multipart upload
@@ -378,15 +402,15 @@ The system SHALL expose uploaded poster metadata through existing public concert
 - **THEN** the system SHALL return the associated poster asset metadata in the existing `posterAsset` field without requiring a new public endpoint
 
 ### Requirement: Seating map SVG multipart upload
-The system SHALL allow organizers and admins to upload a seating map SVG file for a concert via `multipart/form-data` using the field name `file`, validate the file for safety before storage, store it through the shared `ObjectStoragePort`, persist asset metadata, and associate it with the concert.
+The system SHALL allow organizers and admins to upload a seating map SVG file for a DRAFT concert via `multipart/form-data` using the field name `file`, sanitize the file using an allowlist approach before storage, extract element IDs into asset metadata, store it through the shared `ObjectStoragePort`, persist asset metadata, and associate it with the concert. When replacing an existing seating map, the system SHALL delete all seating zones for that concert within the same transaction.
 
 #### Scenario: Organizer uploads valid SVG seating map
-- **WHEN** an organizer uploads a valid SVG file via `POST /organizer/concerts/:concertId/seating-map` with `multipart/form-data` for a concert they own
-- **THEN** the system SHALL validate the SVG for safety, store the file via `ObjectStoragePort`, create an `Asset` record with kind `SEATING_MAP`, and update `concert.seatingMapAssetId` to the new asset
+- **WHEN** an organizer uploads a valid SVG file via `POST /organizer/concerts/:concertId/seating-map` with `multipart/form-data` for a DRAFT concert they own
+- **THEN** the system SHALL sanitize the SVG using an allowlist, extract element IDs into `Asset.metadata.svgElementIds`, store the sanitized file via `ObjectStoragePort`, create an `Asset` record with kind `SEATING_MAP`, and update `concert.seatingMapAssetId` to the new asset
 
 #### Scenario: Admin uploads seating map for any concert
-- **WHEN** an admin uploads a valid SVG file via `POST /admin/concerts/:concertId/seating-map` with `multipart/form-data`
-- **THEN** the system SHALL authorize the admin, validate the SVG, store the file, create the asset, and associate it with the concert regardless of ownership
+- **WHEN** an admin uploads a valid SVG file via `POST /admin/concerts/:concertId/seating-map` with `multipart/form-data` for a DRAFT concert
+- **THEN** the system SHALL authorize the admin, sanitize the SVG, extract element IDs, store the file, create the asset, and associate it with the concert regardless of ownership
 
 #### Scenario: Missing file is rejected
 - **WHEN** a request to upload a seating map is sent without a file
@@ -404,21 +428,25 @@ The system SHALL allow organizers and admins to upload a seating map SVG file fo
 - **WHEN** a file exceeding `SEATING_MAP_SVG_MAX_BYTES` is uploaded as a seating map
 - **THEN** the system SHALL reject the upload with a size limit error before storing
 
-#### Scenario: Unsafe SVG is rejected before storage
-- **WHEN** a seating map SVG contains `<script>` tags, event handlers (`onclick`, `onload`, etc.), `javascript:` URLs, `<iframe>`, `<object>`, `<embed>`, `<foreignObject>`, external references (`xlink:href` or `href` pointing to external URLs), or `data:text/html` URIs
-- **THEN** the system SHALL reject the SVG with a safety validation error before storing it
+#### Scenario: Unsafe SVG content is stripped before storage
+- **WHEN** a seating map SVG contains `<script>` tags, event handlers, `javascript:` URLs, `<iframe>`, `<object>`, `<embed>`, `<foreignObject>`, external references, or `data:text/html` URIs
+- **THEN** the system SHALL strip the unsafe content using an allowlist sanitizer and store the sanitized version
 
 #### Scenario: Organizer cannot upload to non-owned concert
 - **WHEN** an organizer attempts to upload a seating map for a concert they do not own via the organizer route
 - **THEN** the system SHALL reject the request with a forbidden error
 
-#### Scenario: Re-upload replaces and deletes previous seating map asset
-- **WHEN** an organizer uploads a new valid SVG seating map for a concert that already has a seating map asset
-- **THEN** the system SHALL store the new file, create a new asset record, update `concert.seatingMapAssetId`, delete the previous seating map `Asset` record within the same transaction, and delete the previous seating map's stored object from `ObjectStoragePort` after the transaction commits
+#### Scenario: Re-upload replaces asset and resets zones
+- **WHEN** an organizer uploads a new valid SVG seating map for a concert that already has a seating map asset and seating zones
+- **THEN** the system SHALL store the new file, create a new asset record, update `concert.seatingMapAssetId`, delete the previous seating map `Asset` record, delete all `SeatingZone` rows for the concert (with `TicketTypeZone` cascade-deleted automatically), all within the same transaction, and delete the previous seating map's stored object from `ObjectStoragePort` after the transaction commits
 
 #### Scenario: Stored-object cleanup failure does not fail the seating map upload
 - **WHEN** the new seating map has been persisted and `concert.seatingMapAssetId` updated, but deleting the previous seating map's stored object from `ObjectStoragePort` fails
 - **THEN** the system SHALL still return the upload as successful and SHALL NOT roll back the new seating map asset
+
+#### Scenario: Upload is rejected for non-DRAFT concert
+- **WHEN** an organizer or admin attempts to upload a seating map SVG for a concert in PUBLISHED, CANCELLED, or ENDED status
+- **THEN** the system SHALL reject the request with an error indicating that seating map upload is only allowed for draft concerts
 
 ### Requirement: Seating map asset metadata persistence
 The system SHALL persist seating map asset metadata in the `assets` table with sufficient information to serve public catalog responses and manage lifecycle.
@@ -428,11 +456,11 @@ The system SHALL persist seating map asset metadata in the `assets` table with s
 - **THEN** the system SHALL create an `Asset` record with `kind` set to `SEATING_MAP`, `storageKey` following the convention `seating-maps/{concertId}/{assetId}.svg`, `publicUrl` built from `ObjectStoragePort.getPublicUrl(storageKey)`, `contentType` set to `image/svg+xml`, `sizeBytes` matching the file size, `checksum` as SHA-256 hash of the file content, `originalName` from the uploaded filename, and `uploadedById` as the authenticated user
 
 ### Requirement: Seating zone management
-The system SHALL allow organizers and admins to create and update seating zones for a concert by specifying SVG element IDs, labels, optional colors, display order, and optional status.
+The system SHALL allow organizers and admins to create and update seating zones for a concert by specifying SVG element IDs, labels, optional colors, display order, and optional status. The concert MUST be in DRAFT status and MUST have an uploaded seating map SVG. Every submitted `svgElementId` MUST exist in the uploaded SVG's extracted element ID set.
 
 #### Scenario: Seating zones are upserted with svgElementId
-- **WHEN** an organizer or admin submits a list of seating zones with `svgElementId`, `label`, optional `color`, `displayOrder`, and optional `status` for a concert they are authorized to manage
-- **THEN** the system SHALL upsert zones by `(concertId, svgElementId)` — creating new zones and updating existing ones
+- **WHEN** an organizer or admin submits a list of seating zones with `svgElementId`, `label`, optional `color`, `displayOrder`, and optional `status` for a DRAFT concert they are authorized to manage that has an uploaded seating map
+- **THEN** the system SHALL validate all `svgElementId` values against the SVG's extracted element IDs, and upsert zones by `(concertId, svgElementId)` — creating new zones and updating existing ones
 
 #### Scenario: Seating zone status defaults to active
 - **WHEN** an organizer or admin upserts a seating zone without specifying `status`
@@ -445,6 +473,10 @@ The system SHALL allow organizers and admins to create and update seating zones 
 #### Scenario: Zones not in request payload are preserved
 - **WHEN** an upsert request contains only a subset of existing zones for a concert
 - **THEN** the system SHALL NOT delete zones that are not included in the request — the operation is append/update only
+
+#### Scenario: Zone upsert uses PATCH method
+- **WHEN** an organizer or admin submits a zone upsert request
+- **THEN** the system SHALL accept the request via `PATCH` HTTP method on the seating-zones endpoint, not `PUT`
 
 ### Requirement: Ticket type to seating zone mapping
 The system SHALL allow organizers and admins to map ticket types to seating zones within the same concert, supporting many-to-many relationships.
@@ -550,3 +582,42 @@ The system SHALL only serve assets whose kind is `POSTER` or `SEATING_MAP` and S
 #### Scenario: Missing storage object returns 404
 - **WHEN** a servable asset row exists but its underlying object is missing from `ObjectStoragePort`
 - **THEN** the system SHALL respond with `404`
+
+### Requirement: Seating map authoring read endpoints
+The system SHALL expose read-only protected admin and organizer endpoints for loading seating-map authoring state without changing existing write behavior. Admin endpoints SHALL allow reads for any concert. Organizer endpoints SHALL allow reads only for concerts owned by the organizer.
+
+#### Scenario: Admin reads seating map metadata
+- **WHEN** an authenticated admin requests `GET /admin/concerts/:id/seating-map` for an existing concert
+- **THEN** the system SHALL return the current seating map `assetId` and extracted `svgElementIds`
+
+#### Scenario: Organizer reads owned seating map metadata
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id/seating-map` for a concert they own
+- **THEN** the system SHALL return the current seating map `assetId` and extracted `svgElementIds`
+
+#### Scenario: Missing seating map returns empty metadata
+- **WHEN** an authorized admin or organizer reads seating map metadata for a concert without an uploaded seating map
+- **THEN** the system SHALL return a safe empty authoring response with no `assetId` and an empty `svgElementIds` list
+
+#### Scenario: Admin reads seating zones
+- **WHEN** an authenticated admin requests `GET /admin/concerts/:id/seating-zones` for an existing concert
+- **THEN** the system SHALL return that concert's seating zones with `id`, `svgElementId`, `label`, `color`, `displayOrder`, and `status`
+
+#### Scenario: Organizer reads owned seating zones
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id/seating-zones` for a concert they own
+- **THEN** the system SHALL return that concert's seating zones with `id`, `svgElementId`, `label`, `color`, `displayOrder`, and `status`
+
+#### Scenario: Admin reads ticket types with mapped zones
+- **WHEN** an authenticated admin requests `GET /admin/concerts/:id/ticket-types` for an existing concert
+- **THEN** the system SHALL return that concert's ticket types with code, name, description, `priceVnd`, total quantity, sale window, max per user, status, and `mappedZones`
+
+#### Scenario: Organizer reads owned ticket types with mapped zones
+- **WHEN** an authenticated organizer requests `GET /organizer/concerts/:id/ticket-types` for a concert they own
+- **THEN** the system SHALL return that concert's ticket types with code, name, description, `priceVnd`, total quantity, sale window, max per user, status, and `mappedZones`
+
+#### Scenario: Organizer cannot read another organizer's authoring state
+- **WHEN** an authenticated organizer requests any seating-map authoring read endpoint for a concert owned by another organizer
+- **THEN** the system SHALL reject the request as forbidden
+
+#### Scenario: Non-existent concert authoring read returns not found
+- **WHEN** an authenticated admin or organizer requests any seating-map authoring read endpoint for a concert id that does not exist
+- **THEN** the system SHALL respond with a not-found error

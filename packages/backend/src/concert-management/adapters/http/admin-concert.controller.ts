@@ -30,6 +30,9 @@ import { UploadSeatingMapUseCase } from '../../application/use-cases/upload-seat
 import { UpsertSeatingZonesUseCase } from '../../application/use-cases/upsert-seating-zones.use-case';
 import { ListAdminConcertsUseCase } from '../../application/use-cases/list-admin-concerts.use-case';
 import { GetAdminConcertUseCase } from '../../application/use-cases/get-admin-concert.use-case';
+import { GetSeatingMapUseCase } from '../../application/use-cases/get-seating-map.use-case';
+import { ListSeatingZonesUseCase } from '../../application/use-cases/list-seating-zones.use-case';
+import { ListTicketTypesWithZoneMappingsUseCase } from '../../application/use-cases/list-ticket-types-with-zone-mappings.use-case';
 import { CreateConcertDto } from './dto/create-concert.dto';
 import { UpdateConcertDto } from './dto/update-concert.dto';
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
@@ -59,6 +62,9 @@ export class AdminConcertController {
     private readonly updateTicketTypeZoneMappingsUseCase: UpdateTicketTypeZoneMappingsUseCase,
     private readonly listAdminConcertsUseCase: ListAdminConcertsUseCase,
     private readonly getAdminConcertUseCase: GetAdminConcertUseCase,
+    private readonly getSeatingMapUseCase: GetSeatingMapUseCase,
+    private readonly listSeatingZonesUseCase: ListSeatingZonesUseCase,
+    private readonly listTicketTypesWithZoneMappingsUseCase: ListTicketTypesWithZoneMappingsUseCase,
   ) {}
 
   @Get('concerts')
@@ -138,6 +144,39 @@ export class AdminConcertController {
         concertId: id,
         requesterId: req.user.id,
         requesterRole: Role.ADMIN,
+        allowAdminOverride: true,
+      }),
+    );
+  }
+
+  @Get('concerts/:id/seating-map')
+  async getSeatingMap(@Param('id') concertId: string, @Request() req: { user: AuthenticatedUser }) {
+    return mapSeatingMapErrors(() =>
+      this.getSeatingMapUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+      }),
+    );
+  }
+
+  @Get('concerts/:id/seating-zones')
+  async getSeatingZones(@Param('id') concertId: string, @Request() req: { user: AuthenticatedUser }) {
+    return mapSeatingMapErrors(() =>
+      this.listSeatingZonesUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: true,
+      }),
+    );
+  }
+
+  @Get('concerts/:id/ticket-types')
+  async getTicketTypes(@Param('id') concertId: string, @Request() req: { user: AuthenticatedUser }) {
+    return mapConcertErrors(() =>
+      this.listTicketTypesWithZoneMappingsUseCase.execute({
+        concertId,
+        userId: req.user.id,
         allowAdminOverride: true,
       }),
     );
@@ -259,7 +298,7 @@ export class AdminConcertController {
     );
   }
 
-  @Put('concerts/:id/seating-zones')
+  @Patch('concerts/:id/seating-zones')
   async upsertZones(
     @Param('id') concertId: string,
     @Body() dto: UpsertSeatingZonesDto,

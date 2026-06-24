@@ -11,6 +11,7 @@ export interface CreateSeatingMapAssetData {
   sizeBytes: number;
   checksum: string;
   uploadedById: string;
+  metadata: { svgElementIds: string[] };
 }
 
 export interface SeatingMapWriteRepositoryPort {

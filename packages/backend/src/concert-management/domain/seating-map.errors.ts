@@ -46,3 +46,24 @@ export class CrossConcertZoneMappingError extends Error {
     this.name = 'CrossConcertZoneMappingError';
   }
 }
+
+export class SeatingMapRequiredError extends Error {
+  constructor() {
+    super('Seating map is required for this operation');
+    this.name = 'SeatingMapRequiredError';
+  }
+}
+
+export class InvalidSvgElementIdError extends Error {
+  constructor(readonly invalidIds: string[]) {
+    super(`Invalid SVG element IDs: ${invalidIds.join(', ')}`);
+    this.name = 'InvalidSvgElementIdError';
+  }
+}
+
+export class ConcertNotDraftError extends Error {
+  constructor() {
+    super('Concert must be in DRAFT status to perform this action');
+    this.name = 'ConcertNotDraftError';
+  }
+}
