@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Appbar, Icon, PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { paperTheme, ui } from './src/theme/paper-theme';
+import { BottomTabBar, type AppTab } from './src/features/navigation/BottomTabBar';
 import { getMobileEnv } from './src/config/mobile-env';
 import { HttpCheckinMobileApiClient } from './src/api/http-checkin-mobile-api-client';
 import { LoginScreen } from './src/features/auth/LoginScreen';
@@ -21,10 +25,12 @@ import { NetInfoNetworkMonitor } from './src/features/offline-queue/netinfo-netw
 import { hashQrPayload } from './src/features/offline-queue/qr-hasher';
 import { SyncService, type SyncServiceState } from './src/features/offline-queue/sync-service';
 import { SyncStatusPanel } from './src/features/offline-queue/SyncStatusPanel';
+import { shouldShowSyncControls } from './src/features/offline-queue/sync-panel-state';
 import { expoLocalIdProvider } from './src/features/offline-queue/local-id-provider';
 import { OfflineQueueBootstrap } from './src/features/offline-queue/offline-queue-bootstrap';
 import { TicketCacheRepository } from './src/features/ticket-cache/ticket-cache.repository';
 import { CacheDownloadService, type CacheDownloadStatus } from './src/features/ticket-cache/cache-download.service';
+import { shouldRefreshCache } from './src/features/ticket-cache/cache-refresh-state';
 
 const env = getMobileEnv();
 
@@ -33,6 +39,7 @@ export default function App(): React.JSX.Element {
   const [assignmentState, setAssignmentState] = useState<AssignmentState>({ status: 'idle' });
   const [scanState, setScanState] = useState<ScanWorkflowState>({ status: 'initializing' });
   const [route, setRoute] = useState<'auth' | 'assignments' | 'scanner'>('auth');
+  const [tab, setTab] = useState<AppTab>('scan');
   const [scanWorkflow, setScanWorkflow] = useState<ScanWorkflow | null>(null);
   const [syncService, setSyncService] = useState<SyncService | null>(null);
   const [offlineQueue, setOfflineQueue] = useState<SqliteOfflineScanQueue | null>(null);
@@ -45,6 +52,7 @@ export default function App(): React.JSX.Element {
     counts: { accepted: 0, duplicate: 0, invalid: 0, conflict: 0, unassigned: 0 },
   });
   const [cacheStatus, setCacheStatus] = useState<CacheDownloadStatus>('idle');
+  const [online, setOnline] = useState(true);
   const ticketCacheRepoRef = useRef<TicketCacheRepository | null>(null);
   const cacheDownloadServiceRef = useRef<CacheDownloadService | null>(null);
   const authStateRef = useRef(authState);
@@ -65,6 +73,7 @@ export default function App(): React.JSX.Element {
     let workflow: ScanWorkflow | null = null;
     let service: SyncService | null = null;
     let unsubscribeSync: (() => void) | null = null;
+    let unsubscribeNetwork: (() => void) | null = null;
     setOfflineBootstrapError(null);
     setOfflineQueue(null);
     setScanWorkflow(null);
@@ -84,6 +93,8 @@ export default function App(): React.JSX.Element {
       const cacheService = new CacheDownloadService(apiClient, cacheRepo);
       cacheDownloadServiceRef.current = cacheService;
       const network = new NetInfoNetworkMonitor();
+      setOnline(network.isOnline());
+      unsubscribeNetwork = network.onStatusChange(setOnline);
       workflow = new ScanWorkflow(
         apiClient,
         getOrCreateInstallationId,
@@ -110,6 +121,7 @@ export default function App(): React.JSX.Element {
     return () => {
       active = false;
       unsubscribeSync?.();
+      unsubscribeNetwork?.();
       service?.dispose();
       workflow?.dispose();
     };
@@ -127,6 +139,31 @@ export default function App(): React.JSX.Element {
       return () => clearInterval(intervalId);
     }
   }, [authState, offlineQueue, syncService]);
+
+  // Keep the offline ticket cache fresh while online: refresh on a recurring interval
+  // and immediately on reconnect (the `online` dep re-runs the effect, firing tick()).
+  useEffect(() => {
+    if (route !== 'scanner' || authState.status !== 'authenticated') return;
+    if (assignmentState.status !== 'loaded') return;
+    const assignment = assignmentState.selected;
+    const auth = authState;
+    const tick = (): void => {
+      if (
+        !shouldRefreshCache({
+          onScanner: true,
+          authenticated: true,
+          online,
+          downloading: cacheDownloadServiceRef.current?.status === 'downloading',
+        })
+      ) {
+        return;
+      }
+      void triggerCacheDownload(assignment, auth);
+    };
+    tick();
+    const intervalId = setInterval(tick, 25_000);
+    return () => clearInterval(intervalId);
+  }, [route, authState, assignmentState, online]);
 
   useEffect(() => {
     let active = true;
@@ -189,22 +226,10 @@ export default function App(): React.JSX.Element {
     setFailedEvents(failed);
   }
 
-  return (
-    <SafeAreaView style={styles.root}>
-      <View style={styles.panel}>
-        <Text style={styles.eyebrow}>TicketBox</Text>
-        <Text style={styles.title}>Check-in Staff</Text>
-        <Text style={styles.body}>API: {env.apiBaseUrl}</Text>
-        {offlineBootstrapError ? (
-          <View>
-            <Text>{offlineBootstrapError}</Text>
-            <Button
-              onPress={() => setOfflineBootstrapAttempt((attempt) => attempt + 1)}
-              title="Retry offline storage"
-            />
-          </View>
-        ) : null}
-        {route === 'auth' ? (
+  if (route === 'auth') {
+    return (
+      <SafeAreaProvider>
+        <PaperProvider theme={paperTheme}>
           <LoginScreen
             onSubmit={(email, password) => {
               void authController.login({ email, password }).then((nextAuth) => {
@@ -214,123 +239,179 @@ export default function App(): React.JSX.Element {
             }}
             state={authState}
           />
-        ) : null}
-        {route === 'assignments' ? (
-          <AssignmentScreen
-            onOpenScanner={() => setRoute('scanner')}
-            onRetry={() => {
-              void loadAssignments(authState);
-            }}
-            onSelect={(assignmentId) => {
-              const next = assignmentController.select(assignmentState, assignmentId);
-              setAssignmentState(next);
-              if (next.status === 'loaded') {
-                void triggerCacheDownload(next.selected, authState);
-              }
-            }}
-            state={assignmentState}
-          />
-        ) : null}
-        {route === 'scanner' && cacheStatus === 'downloading' ? (
-          <Text style={styles.body}>Downloading ticket cache…</Text>
-        ) : null}
-        {route === 'scanner' && cacheStatus === 'unavailable' ? (
-          <Text style={styles.body}>⚠ Offline cache unavailable — scans will be queued</Text>
-        ) : null}
-        {route === 'scanner' && assignmentState.status === 'loaded' ? (
-          <ScannerScreen
-            assignment={assignmentState.selected}
-            onDecodedPayload={(payload) => {
-              if (authState.status !== 'authenticated') {
-                return;
-              }
+        </PaperProvider>
+      </SafeAreaProvider>
+    );
+  }
 
-              void scanWorkflow
-                ?.submitDecodedPayload(payload, assignmentState.selected, authState.session)
-                .then((state) => {
-                  setScanState(state);
-                  if (offlineQueue) void refreshQueue(offlineQueue, authState);
-                })
-                .catch((error: unknown) => {
-                  // Final safety net so the UI never stays stuck on "Submitting scan…".
-                  setScanState({
-                    status: 'recoverable-error',
-                    message: error instanceof Error ? error.message : 'Scan submission failed',
-                  });
-                });
-              if (scanWorkflow) setScanState(scanWorkflow.state);
-            }}
-            onReset={() => scanWorkflow && setScanState(scanWorkflow.reset())}
-            onRetryInitialization={() => {
-              setScanState({ status: 'initializing' });
-              void scanWorkflow?.initialize().then(setScanState);
-            }}
-            state={scanState}
-          />
-        ) : null}
-        {route === 'scanner' && authState.status === 'authenticated' && offlineQueue ? (
-          <SyncStatusPanel
-            failedEvents={failedEvents}
-            onClearSynced={() => {
-              void offlineQueue.clearSynced(authState.session.profile.id).then(() =>
-                refreshQueue(offlineQueue, authState),
-              );
-            }}
-            onClearTerminalResults={() => {
-              void offlineQueue.clearTerminalResults(authState.session.profile.id).then(() =>
-                refreshQueue(offlineQueue, authState),
-              );
-            }}
-            onSync={() => void syncService?.trigger(authState.session)}
-            pendingCount={pendingCount}
-            state={syncState}
-          />
-        ) : null}
-        {route !== 'auth' ? (
-          <Button
-            onPress={() => {
-              void authController.logout().then(async (nextAuth) => {
-                if (authState.status === 'authenticated' && ticketCacheRepoRef.current) {
-                  await ticketCacheRepoRef.current.clearForStaff(authState.session.profile.id);
-                }
-                setAuthState(nextAuth);
-                setAssignmentState({ status: 'idle' });
-                setCacheStatus('idle');
-                if (scanWorkflow) setScanState(scanWorkflow.reset());
-                setRoute('auth');
-              });
-            }}
-            title="Log out"
-          />
-        ) : null}
-      </View>
-    </SafeAreaView>
+  const handleLogout = (): void => {
+    void authController.logout().then(async (nextAuth) => {
+      if (authState.status === 'authenticated' && ticketCacheRepoRef.current) {
+        await ticketCacheRepoRef.current.clearForStaff(authState.session.profile.id);
+      }
+      setAuthState(nextAuth);
+      setAssignmentState({ status: 'idle' });
+      setCacheStatus('idle');
+      setTab('scan');
+      if (scanWorkflow) setScanState(scanWorkflow.reset());
+      setRoute('auth');
+    });
+  };
+
+  const syncPanel =
+    authState.status === 'authenticated' && offlineQueue ? (
+      <SyncStatusPanel
+        failedEvents={failedEvents}
+        online={online}
+        onClearSynced={() => {
+          void offlineQueue
+            .clearSynced(authState.session.profile.id)
+            .then(() => refreshQueue(offlineQueue, authState));
+        }}
+        onClearTerminalResults={() => {
+          void offlineQueue
+            .clearTerminalResults(authState.session.profile.id)
+            .then(() => refreshQueue(offlineQueue, authState));
+        }}
+        onSync={() => void syncService?.trigger(authState.session)}
+        pendingCount={pendingCount}
+        showControls={shouldShowSyncControls({
+          online,
+          pendingCount,
+          failedCount: failedEvents.length,
+        })}
+        state={syncState}
+      />
+    ) : null;
+
+  return (
+    <SafeAreaProvider>
+      <PaperProvider theme={paperTheme}>
+        <SafeAreaView style={styles.root}>
+          <Appbar.Header style={styles.appbar} statusBarHeight={0}>
+            <View style={styles.brand}>
+              <Icon source="ticket-confirmation" size={22} color={ui.primary} />
+              <Text style={styles.brandText}>TicketBox</Text>
+            </View>
+            <Appbar.Action icon="logout" onPress={handleLogout} accessibilityLabel="Logout" />
+          </Appbar.Header>
+
+          <ScrollView contentContainerStyle={styles.content}>
+            {offlineBootstrapError ? (
+              <View style={styles.errorBlock}>
+                <Text style={styles.warn}>{offlineBootstrapError}</Text>
+                <Button
+                  onPress={() => setOfflineBootstrapAttempt((attempt) => attempt + 1)}
+                  title="Retry offline storage"
+                />
+              </View>
+            ) : null}
+
+            {route === 'assignments' ? (
+              <AssignmentScreen
+                onOpenScanner={() => setRoute('scanner')}
+                onRetry={() => {
+                  void loadAssignments(authState);
+                }}
+                onSelect={(assignmentId) => {
+                  const next = assignmentController.select(assignmentState, assignmentId);
+                  setAssignmentState(next);
+                  if (next.status === 'loaded') {
+                    void triggerCacheDownload(next.selected, authState);
+                  }
+                }}
+                state={assignmentState}
+              />
+            ) : null}
+
+            {route === 'scanner' && tab === 'scan' ? (
+              <View style={styles.tabContent}>
+                {cacheStatus === 'unavailable' ? (
+                  <Text style={styles.warn}>⚠ Offline cache unavailable — scans will be queued</Text>
+                ) : null}
+                {assignmentState.status === 'loaded' ? (
+                  <ScannerScreen
+                    assignment={assignmentState.selected}
+                    onDecodedPayload={(payload) => {
+                      if (authState.status !== 'authenticated') {
+                        return;
+                      }
+                      void scanWorkflow
+                        ?.submitDecodedPayload(payload, assignmentState.selected, authState.session)
+                        .then((state) => {
+                          setScanState(state);
+                          if (offlineQueue) void refreshQueue(offlineQueue, authState);
+                        })
+                        .catch((error: unknown) => {
+                          // Final safety net so the UI never stays stuck on "Submitting scan…".
+                          setScanState({
+                            status: 'recoverable-error',
+                            message:
+                              error instanceof Error ? error.message : 'Scan submission failed',
+                          });
+                        });
+                      if (scanWorkflow) setScanState(scanWorkflow.state);
+                    }}
+                    onReset={() => scanWorkflow && setScanState(scanWorkflow.reset())}
+                    onRetryInitialization={() => {
+                      setScanState({ status: 'initializing' });
+                      void scanWorkflow?.initialize().then(setScanState);
+                    }}
+                    state={scanState}
+                  />
+                ) : null}
+                {syncPanel}
+              </View>
+            ) : null}
+
+            {route === 'scanner' && tab === 'sync' ? (
+              <View style={styles.tabContent}>{syncPanel}</View>
+            ) : null}
+          </ScrollView>
+
+          {route === 'scanner' ? (
+            <BottomTabBar tab={tab} syncBadge={pendingCount > 0} onChange={setTab} />
+          ) : null}
+        </SafeAreaView>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#101418',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: ui.bg,
   },
-  panel: {
-    gap: 12,
+  appbar: {
+    backgroundColor: ui.card,
+    borderBottomWidth: 1,
+    borderBottomColor: ui.border,
   },
-  eyebrow: {
-    color: '#6ee7b7',
+  brand: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 8,
+  },
+  brandText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: ui.textPrimary,
+  },
+  content: {
+    padding: 16,
+    gap: 16,
+  },
+  tabContent: {
+    gap: 16,
+  },
+  errorBlock: {
+    gap: 8,
+  },
+  warn: {
+    color: ui.danger,
     fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: '#f8fafc',
-    fontSize: 30,
-    fontWeight: '700',
-  },
-  body: {
-    color: '#cbd5e1',
-    fontSize: 16,
   },
 });

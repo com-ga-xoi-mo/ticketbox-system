@@ -21,6 +21,6 @@
     "test": "vitest --root ../.. run packages/api-types/src/contracts.spec.ts --config vitest.config.mts"
   },
   "dependencies": {
-    "zod": "^3.23.0"
+    "zod": "^3.25.76"
   }
 }

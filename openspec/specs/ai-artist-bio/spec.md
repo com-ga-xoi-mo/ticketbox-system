@@ -89,6 +89,10 @@ The system SHALL require organizer review before a generated artist bio becomes 
 - **WHEN** an organizer approves a ready-for-review generated bio for a concert they own
 - **THEN** the system SHALL mark the bio as published, persist the public bio text, reviewer, and publication timestamp
 
+#### Scenario: Organizer rejects generated bio
+- **WHEN** an organizer rejects a ready-for-review generated bio for a concert they own
+- **THEN** the system SHALL mark the bio as rejected, keeping it for historical record without publishing it
+
 #### Scenario: Organizer cannot approve another organizer's bio
 - **WHEN** an organizer attempts to approve an artist bio for a concert they do not own
 - **THEN** the system SHALL reject the action and SHALL NOT publish the bio

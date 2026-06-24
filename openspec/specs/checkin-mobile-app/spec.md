@@ -80,17 +80,27 @@ The mobile app SHALL load the authenticated check-in staff user's active assignm
 
 ### Requirement: QR scan UI foundation
 
-The mobile app SHALL provide a QR scan UI foundation that can accept decoded QR payloads, prevent duplicate local submissions while one scan is in flight, validate successful API responses using the shared online scan contract, and render clear local scan result states.
+The mobile app SHALL provide a QR scan UI foundation that acquires decoded QR payloads from the device camera, requests and reflects camera-permission state before scanning, prevents duplicate local submissions while one scan is in flight or its result is displayed, validates successful API responses using the shared online scan contract, and renders clear local scan result states. The UI SHALL NOT provide a manual free-text QR payload entry field as a scan input source.
 
 #### Scenario: Scanner opens with selected assignment
 
-- **WHEN** staff opens the scanner with an active selected assignment
-- **THEN** the app SHALL show the scanner-ready state for that assignment
+- **WHEN** staff opens the scanner with an active selected assignment and camera permission already granted
+- **THEN** the app SHALL show the scanner-ready state for that assignment with the live camera preview active
 
-#### Scenario: Decoded QR starts online submission
+#### Scenario: Camera permission is requested before scanning
 
-- **WHEN** the scanner receives a decoded QR payload while no scan submission is in flight
-- **THEN** the app SHALL create a shared online scan request containing the selected assignment, concert context, QR payload, device ID, and scan timestamp
+- **WHEN** staff opens the scanner and camera permission status is undetermined
+- **THEN** the app SHALL present a permission request action, SHALL NOT activate barcode decoding until permission is granted, and SHALL NOT expose a manual payload-entry fallback
+
+#### Scenario: Denied camera permission is recoverable
+
+- **WHEN** camera permission has been denied
+- **THEN** the app SHALL show a recoverable permission-blocked state explaining the camera is required, SHALL NOT activate scanning or accept any scan input, and SHALL offer a way to re-request or open system settings
+
+#### Scenario: Decoded camera QR starts online submission
+
+- **WHEN** the camera decodes a QR barcode while the scan workflow is `ready` and no scan submission is in flight
+- **THEN** the app SHALL create a shared online scan request containing the selected assignment, concert context, the decoded QR payload, device ID, and scan timestamp
 
 #### Scenario: Stable installation identifier is included
 
@@ -117,10 +127,10 @@ The mobile app SHALL provide a QR scan UI foundation that can accept decoded QR 
 - **WHEN** installation-ID initialization previously failed and staff selects the retry action
 - **THEN** the app SHALL call the asynchronous scan-workflow initialization again, show `initializing` while it runs, enter `ready` only on success, and SHALL NOT use a state-only reset as the retry operation
 
-#### Scenario: Duplicate local decode is ignored while submitting
+#### Scenario: Duplicate camera decode is ignored while submitting or showing a result
 
-- **WHEN** another QR decode event fires while the previous scan submission is still in flight
-- **THEN** the app SHALL disable scanner submission and ignore or debounce the repeated decode event until the current submission finishes
+- **WHEN** the camera emits another barcode decode event while the previous scan submission is still in flight or its result is still displayed
+- **THEN** the app SHALL suspend camera barcode handling and ignore or debounce the repeated decode event until staff resets to scan another ticket
 
 #### Scenario: Business scan result is displayed
 
@@ -193,16 +203,31 @@ The mobile app SHALL route auth, profile, assignment, online scan, and batch syn
 
 ### Requirement: Checkin staff active assignment query
 
-The Checkin bounded context SHALL expose `GET /checkin/assignments` for authenticated `CHECKIN_STAFF` users to list their own active concert and gate assignments using the shared assignment response contract.
+The Checkin bounded context SHALL expose `GET /checkin/assignments` for authenticated `CHECKIN_STAFF` users to list their own active concert and gate assignments using the shared assignment response contract. The listing SHALL include only assignments whose concert has not yet ended beyond a grace window, and SHALL order results by concert start time (soonest first).
 
 #### Scenario: Staff lists own active assignments
 
 - **WHEN** an authenticated `CHECKIN_STAFF` user calls `GET /checkin/assignments`
 - **THEN** the system SHALL derive the staff identity from the verified JWT and return only that user's active assignments as a raw JSON array with assignment ID, concert ID, concert title, optional gate, optional start time, and `ACTIVE` status
 
+#### Scenario: Assignments for ended concerts are excluded
+
+- **WHEN** an authenticated `CHECKIN_STAFF` user has an `ACTIVE` assignment whose concert ended more than the grace window ago
+- **THEN** `GET /checkin/assignments` SHALL NOT return that assignment, even though its stored status remains `ACTIVE`
+
+#### Scenario: Recently ended concert stays within the grace window
+
+- **WHEN** a concert ended less than the grace window ago (default 6 hours after `endsAt`)
+- **THEN** the staff's `ACTIVE` assignment for that concert SHALL still be returned so late check-in can continue
+
+#### Scenario: Results are ordered by concert start time
+
+- **WHEN** the staff has multiple eligible active assignments
+- **THEN** `GET /checkin/assignments` SHALL order them by concert start time ascending so the first element is the soonest live or upcoming concert
+
 #### Scenario: Empty assignment result preserves raw-array compatibility
 
-- **WHEN** the authenticated staff user has no active assignments
+- **WHEN** the authenticated staff user has no eligible active assignments
 - **THEN** `GET /checkin/assignments` SHALL return `[]` and SHALL NOT wrap the result in an envelope such as `{ assignments: [] }`
 
 #### Scenario: Client cannot select another staff identity
@@ -238,3 +263,29 @@ The staff assignment listing SHALL be implemented as a Checkin application query
 
 - **WHEN** the assignment read model includes concert title or start time
 - **THEN** Identity SHALL continue to own role and assignment authorization/management, Concert Management SHALL continue to own concert business behavior, and the Checkin projection SHALL NOT relocate or expose those domain entities
+
+### Requirement: Prominent scan result banner
+
+The mobile scan UI SHALL present a resolved scan outcome as a prominent, visually
+distinct banner that is legible at arm's length, encodes the outcome category, and is
+dismissed only by the staff member choosing to scan another ticket. The banner SHALL NOT
+auto-advance the workflow.
+
+#### Scenario: Resolved scan is shown as a prominent banner
+
+- **WHEN** an online or offline scan resolves to a business result (`accepted`,
+  `duplicate`, `invalid`, `unassigned`, or `queued`)
+- **THEN** the app SHALL display the result as a prominent banner whose visual treatment
+  distinguishes the outcome category, in addition to the human-readable message
+
+#### Scenario: Banner persists until staff scans again
+
+- **WHEN** the result banner is displayed
+- **THEN** the app SHALL keep showing it and SHALL NOT decode or submit a new scan until
+  the staff member triggers the manual "scan another ticket" reset action
+
+#### Scenario: Camera stays locked while the banner is shown
+
+- **WHEN** a result banner is displayed after a scan
+- **THEN** the app SHALL keep camera barcode handling suspended (consistent with the
+  in-flight duplicate-decode protection) until the staff member resets to scan again

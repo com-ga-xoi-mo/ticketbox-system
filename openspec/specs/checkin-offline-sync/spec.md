@@ -364,6 +364,39 @@ The system SHALL sync offline scan events in batches and return a per-event resu
 - **WHEN** an offline scan syncs after the same ticket was already accepted elsewhere
 - **THEN** the server SHALL reject the event with `duplicate` status (same device) or `conflict` status (different device) including a `conflictReason`
 
+### Requirement: Mode-aware sync control visibility
+
+The mobile sync status UI SHALL present the manual sync and queue-maintenance controls
+(manual sync trigger, clear synced events, clear terminal results) only when they are
+actionable — that is, when the device is offline or there are pending or failed offline
+events — and SHALL hide them while the device is online with an empty queue. Hiding the
+controls SHALL NOT remove the underlying capability; the same actions remain available
+whenever the conditions to show them are met.
+
+#### Scenario: Sync controls are hidden when online with an empty queue
+
+- **WHEN** the device is online and there are no pending or failed offline events
+- **THEN** the sync status UI SHALL hide the manual sync, clear-synced, and
+  clear-terminal controls
+
+#### Scenario: Sync controls appear when offline
+
+- **WHEN** the device is offline
+- **THEN** the sync status UI SHALL show the manual sync and queue-maintenance controls
+
+#### Scenario: Sync controls appear when there is queued or failed work
+
+- **WHEN** there are pending offline events awaiting sync or failed events with reasons,
+  regardless of connectivity
+- **THEN** the sync status UI SHALL show the relevant controls so the staff member can
+  trigger sync or clear results
+
+#### Scenario: Hidden controls preserve the sync capability
+
+- **WHEN** the controls are hidden because the device is online with an empty queue
+- **THEN** automatic sync on connectivity change and on the existing schedule SHALL
+  continue unaffected, and the controls SHALL reappear when they become actionable
+
 ### Requirement: Assigned staff required for check-in acceptance
 
 The system SHALL require an authenticated check-in staff user with an active assignment for the ticket's concert before accepting online check-in or offline sync events.
@@ -502,3 +535,45 @@ The system SHALL return stable mobile-facing online scan business result values 
 #### Scenario: Backend and mobile validate one response contract
 - **WHEN** backend and mobile compatibility tests exercise `POST /checkin/scan`
 - **THEN** the backend response mapper and mobile response parser SHALL both conform to the same `@ticketbox/api-types` schema
+
+### Requirement: Mobile ticket cache freshness
+
+The mobile app SHALL keep the local ticket cache as current as possible while online by
+refreshing it incrementally on a recurring schedule and on connectivity restore, using
+the delta endpoint with the last successful sync timestamp, so that tickets issued or
+voided before the device loses connectivity are reflected in the local cache.
+
+#### Scenario: First cache load for an assignment is a full download
+
+- **WHEN** the staff selects an assignment and no successful cache sync timestamp exists yet for it
+- **THEN** the app SHALL request the full ticket cache and store it locally, recording the server-provided sync timestamp
+
+#### Scenario: Subsequent refresh uses an incremental delta
+
+- **WHEN** the app refreshes a cache that already has a recorded last-sync timestamp
+- **THEN** the app SHALL request the cache with `since` set to that timestamp and apply the returned upserted and voided entries to the local cache without re-downloading the full set
+
+#### Scenario: Cache refreshes on a recurring schedule while online
+
+- **WHEN** the device is online, authenticated, and on the scanning context
+- **THEN** the app SHALL re-refresh the ticket cache on a recurring interval so the local snapshot tracks server changes up to the moment connectivity is lost
+
+#### Scenario: Cache refreshes immediately on reconnect
+
+- **WHEN** connectivity is restored after being offline
+- **THEN** the app SHALL trigger a cache refresh so newly issued or voided tickets are reflected as soon as the network returns
+
+#### Scenario: Refresh is single-flight
+
+- **WHEN** a recurring or reconnect refresh is requested while a cache download is already in progress
+- **THEN** the app SHALL NOT start an overlapping download and SHALL reuse or skip in favor of the active refresh
+
+#### Scenario: Failed refresh preserves the existing cache
+
+- **WHEN** a cache refresh request fails (network or server error)
+- **THEN** the app SHALL keep the previously cached entries and SHALL NOT clear or corrupt the local cache, retrying on the next scheduled refresh or reconnect
+
+#### Scenario: Offline evaluation is unchanged
+
+- **WHEN** the device is offline and evaluates a scan against the local cache
+- **THEN** the cache freshness behavior SHALL NOT change how an offline scan is evaluated; it only affects how current the cached data is

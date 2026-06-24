@@ -54,6 +54,18 @@ export interface DeliveryRequest {
   toEmail?: string;
   subject: string;
   body: string;
+  attachments?: DeliveryAttachment[];
+}
+
+export interface DeliveryAttachment {
+  filename: string;
+  contentType: string;
+  content: Buffer;
+  contentId?: string;
+}
+
+export interface NotificationDeliveryContext {
+  orderId?: string;
 }
 
 export interface DeliveryResult {

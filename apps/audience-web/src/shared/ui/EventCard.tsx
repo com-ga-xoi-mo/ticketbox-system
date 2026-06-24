@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, MapPin, Music2, Ticket } from 'lucide-react';
 import type { PublicConcertSummary } from '@ticketbox/api-types';
 import { cn } from './cn';
+import { EVENT_TYPE_LABELS } from '../utils/event-types';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardFooter } from '../../components/ui/card';
@@ -35,7 +37,8 @@ function formatPrice(vnd: number | null): string {
 }
 
 export function EventCard({ concert, className }: EventCardProps) {
-  const { slug, title, artistName, venueName, city, startsAt, posterAsset, availabilitySummary } =
+  const [imgError, setImgError] = useState(false);
+  const { slug, title, artistName, venueName, city, startsAt, posterAsset, availabilitySummary, eventType } =
     concert;
   const isSoldOut = availabilitySummary.totalAvailableQuantity === 0;
 
@@ -50,11 +53,12 @@ export function EventCard({ concert, className }: EventCardProps) {
     >
       <Card className="h-full gap-0 overflow-hidden border-white/70 bg-card/85 py-0 shadow-[0_18px_55px_rgb(15_23_42/0.08)] backdrop-blur transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-[0_26px_70px_rgb(37_99_235/0.16)]">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {posterAsset?.publicUrl ? (
+          {posterAsset?.publicUrl && !imgError ? (
             <img
               src={resolveImageUrl(posterAsset.publicUrl)}
               alt={title}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,oklch(0.88_0.14_220),transparent_16rem),linear-gradient(135deg,oklch(0.5_0.2_260),oklch(0.74_0.18_240))] text-5xl text-white">
@@ -76,10 +80,15 @@ export function EventCard({ concert, className }: EventCardProps) {
 
         <CardContent className="flex flex-1 flex-col gap-4 p-5">
           <div>
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              <Music2 className="size-3.5" aria-hidden="true" />
-              {artistName}
-            </p>
+            <div className="mb-2 flex items-center gap-2">
+              <Badge variant="outline" className="text-xs uppercase tracking-wider text-muted-foreground border-primary/20">
+                {EVENT_TYPE_LABELS[eventType] || eventType}
+              </Badge>
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary flex items-center gap-1">
+                <Music2 className="size-3.5" aria-hidden="true" />
+                {artistName}
+              </span>
+            </div>
             <h3 className="line-clamp-2 text-xl font-black leading-tight tracking-tight text-foreground">
               {title}
             </h3>

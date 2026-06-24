@@ -1,9 +1,11 @@
 import { GuestListBatchStatus, GuestListRowDisposition } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GuestListBatchNotCompletedError } from '../../domain/errors';
 import type { GuestListBatchRecord, ImportRowOutcome } from '../../domain/guest-list.types';
 import { GuestListCsvParser } from '../../infrastructure/csv/guest-list-csv.parser';
 import { ClaimGuestListImportUseCase } from './claim-guest-list-import.use-case';
 import { DiscoverGuestListFilesUseCase } from './discover-guest-list-files.use-case';
+import { GetGuestListBatchesUseCase } from './get-guest-list-batches.use-case';
 import { ProcessGuestListImportUseCase } from './process-guest-list-import.use-case';
 import { ReconcileGuestListJobsUseCase } from './reconcile-guest-list-jobs.use-case';
 
@@ -155,5 +157,67 @@ describe('guest-list import use cases', () => {
     expect(source.archive).toHaveBeenCalledTimes(1);
     await expect(new ReconcileGuestListJobsUseCase(repository, queue).execute()).resolves.toBe(1);
     expect(queue.ensureImportJob).toHaveBeenCalledWith('batch');
+  });
+});
+
+import { Role } from '../../../identity/domain/role.enum';
+
+describe('GetGuestListBatchesUseCase.report', () => {
+  const actor = { userId: 'user', roles: [Role.ADMIN] };
+  const concertId = 'concert';
+  const batchId = 'batch';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let repository: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let storage: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let authorizeAdmin: any;
+  let useCase: GetGuestListBatchesUseCase;
+
+  beforeEach(() => {
+    repository = {
+      concertExists: vi.fn().mockResolvedValue(true),
+      findBatch: vi.fn(),
+    };
+    storage = {
+      get: vi.fn().mockResolvedValue(Buffer.from('{"totalRows":1}')),
+    };
+    authorizeAdmin = { execute: vi.fn() };
+    useCase = new GetGuestListBatchesUseCase(repository, storage, authorizeAdmin);
+  });
+
+  it.each([
+    GuestListBatchStatus.FAILED,
+    GuestListBatchStatus.PENDING,
+    GuestListBatchStatus.PROCESSING,
+  ])('throws GuestListBatchNotCompletedError for %s batch', async (status) => {
+    repository.findBatch.mockResolvedValue({
+      id: batchId,
+      concertId,
+      status,
+      reportStorageKey: null,
+    });
+    await expect(useCase.report(actor, concertId, batchId)).rejects.toThrow(
+      GuestListBatchNotCompletedError,
+    );
+    await expect(useCase.report(actor, concertId, batchId)).rejects.toMatchObject({
+      batchId,
+      batchStatus: status,
+    });
+  });
+
+  it.each([
+    GuestListBatchStatus.COMPLETED,
+    GuestListBatchStatus.COMPLETED_WITH_ERRORS,
+  ])('returns report content for %s batch', async (status) => {
+    repository.findBatch.mockResolvedValue({
+      id: batchId,
+      concertId,
+      status,
+      reportStorageKey: 'reports/batch.json',
+    });
+    const result = await useCase.report(actor, concertId, batchId);
+    expect(storage.get).toHaveBeenCalledWith('reports/batch.json');
+    expect(result).toEqual(Buffer.from('{"totalRows":1}'));
   });
 });

@@ -1,9 +1,12 @@
 import type { NotificationChannelPort } from '../../domain/ports/notification-channel.port';
 import type { NotificationRepositoryPort } from '../../domain/ports/notification-repository.port';
+import type { PurchaseConfirmationEmailComposer } from '../services/purchase-confirmation-email-composer';
 import {
   NotificationAttemptStatus,
   NotificationChannel,
   NotificationStatus,
+  NotificationType,
+  type NotificationDeliveryContext,
   type DeliveryOutcome,
   type NotificationRecord,
 } from '../../domain/notification.types';
@@ -13,9 +16,14 @@ export class DeliverNotificationUseCase {
     private readonly notificationRepository: NotificationRepositoryPort,
     private readonly emailChannel: NotificationChannelPort,
     private readonly maxAttempts: number,
+    private readonly purchaseConfirmationComposer?: PurchaseConfirmationEmailComposer,
   ) {}
 
-  async execute(notificationId: string, toEmail?: string): Promise<DeliveryOutcome> {
+  async execute(
+    notificationId: string,
+    toEmail?: string,
+    context?: NotificationDeliveryContext,
+  ): Promise<DeliveryOutcome> {
     const notification = await this.notificationRepository.findById(notificationId);
 
     if (!notification) {
@@ -46,12 +54,13 @@ export class DeliverNotificationUseCase {
       return { notificationId, status: sent.status, shouldRetry: false };
     }
 
-    return this.deliverEmail(notification, toEmail);
+    return this.deliverEmail(notification, toEmail, context);
   }
 
   private async deliverEmail(
     notification: NotificationRecord,
     toEmail?: string,
+    context?: NotificationDeliveryContext,
   ): Promise<DeliveryOutcome> {
     if (!toEmail) {
       const attempt = await this.notificationRepository.recordDeliveryAttempt({
@@ -86,13 +95,21 @@ export class DeliverNotificationUseCase {
     }
 
     try {
+      const content =
+        notification.type === NotificationType.PURCHASE_CONFIRMATION &&
+        context?.orderId &&
+        this.purchaseConfirmationComposer
+          ? await this.purchaseConfirmationComposer.compose(context.orderId, notification.body)
+          : { body: notification.body, attachments: undefined };
+
       const result = await this.emailChannel.send({
         notificationId: notification.id,
         channel: NotificationChannel.EMAIL,
         toUserId: notification.userId,
         toEmail,
         subject: notification.subject ?? 'TicketBox notification',
-        body: notification.body,
+        body: content.body,
+        attachments: content.attachments,
       });
 
       const attempt = await this.notificationRepository.recordDeliveryAttempt({

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { NotificationChannel } from '../../domain/notification.types';
 import {
+  formatSmtpMessage,
   SmtpEmailChannelAdapter,
   type SmtpEmailMessage,
   type SmtpEmailTransport,
@@ -32,11 +33,44 @@ describe('SmtpEmailChannelAdapter', () => {
       to: 'audience@ticketbox.test',
       subject: 'TicketBox confirmation',
       body: 'View your e-tickets: https://ticketbox.test/me/tickets/order-1',
+      attachments: undefined,
     });
     expect(result).toEqual({
       provider: 'smtp',
       providerMessageId: 'smtp:notification-1',
     });
+  });
+
+  it('passes multiple QR attachments and formats multipart MIME safely', async () => {
+    const attachments = [
+      {
+        filename: 'TCK-001.png',
+        contentType: 'image/png',
+        content: Buffer.from('first-png'),
+      },
+      {
+        filename: 'TCK-002\r\nbad.png',
+        contentType: 'image/png',
+        content: Buffer.from('second-png'),
+      },
+    ];
+    const message = {
+      from: 'no-reply@ticketbox.test',
+      to: 'audience@ticketbox.test',
+      subject: 'Tickets\r\nBcc: attacker@example.com',
+      body: 'Your QR tickets',
+      attachments,
+    };
+
+    const formatted = formatSmtpMessage(message);
+
+    expect(formatted).toContain('Content-Type: multipart/mixed');
+    expect(formatted).toContain('Subject: Tickets Bcc: attacker@example.com');
+    expect(formatted).toContain('filename="TCK-001.png"');
+    expect(formatted).toContain('filename="TCK-002-bad.png"');
+    expect(formatted).toContain(Buffer.from('first-png').toString('base64'));
+    expect(formatted).toContain(Buffer.from('second-png').toString('base64'));
+    expect(formatted).toMatch(/\r\n\.\r\n$/);
   });
 
   it('rejects requests without recipient email', async () => {

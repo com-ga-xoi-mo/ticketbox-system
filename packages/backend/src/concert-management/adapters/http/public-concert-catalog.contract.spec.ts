@@ -2,6 +2,7 @@ import {
   PublicConcertAvailabilityResponseSchema,
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
+  PublicFeaturedConcertListResponseSchema,
 } from '@ticketbox/api-types';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -40,27 +41,31 @@ describe('public concert catalog HTTP contracts', () => {
     city: 'Ho Chi Minh City',
     startsAt,
     endsAt,
+    eventType: 'CONCERT',
     posterAsset,
     availabilitySummary: {
-      totalAvailableQuantity: 120,
-      minPriceVnd: 450000,
-      maxPriceVnd: 1250000,
+      totalAvailableQuantity: 100,
+      minPriceVnd: 500000,
+      maxPriceVnd: 1500000,
       ticketTypeCount: 2,
     },
   };
 
   const detail = {
     ...summary,
-    description: 'A summer concert.',
-    publishedArtistBio: 'The Suns are a live act.',
-    venueAddress: '1 Nguyen Hue',
-    seatingMapAsset: { ...posterAsset, kind: 'SEATING_MAP' },
+    description: 'A great summer concert',
+    publishedArtistBio: 'The Suns are a jazz band',
+    venueAddress: '123 Main St',
+    seoTitle: 'Summer Beats Concert',
+    seoDescription: 'A great summer concert',
+    seoImageUrl: null,
+    seatingMapAsset: null,
     seatingZones: [
       {
         id: seatingZoneId,
-        svgElementId: 'zone-ga',
-        label: 'GA',
-        color: '#00aaff',
+        svgElementId: 'zone-a',
+        label: 'VIP',
+        color: '#ff0000',
         displayOrder: 1,
         status: 'ACTIVE',
       },
@@ -68,12 +73,12 @@ describe('public concert catalog HTTP contracts', () => {
     ticketTypes: [
       {
         id: ticketTypeId,
-        code: 'GA',
-        name: 'General Admission',
-        description: 'Standing zone',
-        priceVnd: 450000,
-        totalQuantity: 200,
-        availableQuantity: 120,
+        code: 'VIP',
+        name: 'VIP Ticket',
+        description: 'Best seats',
+        priceVnd: 1500000,
+        totalQuantity: 50,
+        availableQuantity: 50,
         maxPerUser: 4,
         saleStartsAt,
         saleEndsAt,
@@ -81,20 +86,25 @@ describe('public concert catalog HTTP contracts', () => {
         zoneIds: [seatingZoneId],
       },
     ],
-    ticketTypeZoneMappings: [{ ticketTypeId, seatingZoneId }],
+    ticketTypeZoneMappings: [
+      {
+        ticketTypeId,
+        seatingZoneId,
+      },
+    ],
   };
 
-  const availability = {
+  const availabilitySnapshot = {
     concertId,
     slug: 'summer-beats',
-    generatedAt: new Date('2026-06-01T12:00:00.000Z'),
+    generatedAt: new Date(),
     ticketTypes: [
       {
         ticketTypeId,
-        code: 'GA',
-        name: 'General Admission',
-        totalQuantity: 200,
-        availableQuantity: 120,
+        code: 'VIP',
+        name: 'VIP Ticket',
+        totalQuantity: 50,
+        availableQuantity: 50,
         status: 'ACTIVE',
         saleStartsAt,
         saleEndsAt,
@@ -103,15 +113,28 @@ describe('public concert catalog HTTP contracts', () => {
     ],
   };
 
+  const featured = {
+    ...summary,
+    bannerAsset: posterAsset,
+    displayOrder: 1,
+  };
+
   const controller = new PublicConcertCatalogController(
     { execute: vi.fn().mockResolvedValue([summary]) } as any,
     { execute: vi.fn().mockResolvedValue(detail) } as any,
-    { execute: vi.fn().mockResolvedValue(availability) } as any,
+    { execute: vi.fn().mockResolvedValue(availabilitySnapshot) } as any,
+    { execute: vi.fn().mockResolvedValue(['Ho Chi Minh City']) } as any,
+    { execute: vi.fn().mockResolvedValue([featured]) } as any,
   );
 
   it('returns a public list response compatible with the shared schema', async () => {
-    const payload = toHttpPayload(await controller.listConcerts());
+    const payload = toHttpPayload(await controller.listConcerts({ eventType: 'CONCERT' }));
     expect(PublicConcertListResponseSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('returns a public featured list response compatible with the shared schema', async () => {
+    const payload = toHttpPayload(await controller.listFeatured({ limit: 5 }));
+    expect(PublicFeaturedConcertListResponseSchema.parse(payload)).toEqual(payload);
   });
 
   it('returns a public detail response compatible with the shared schema', async () => {

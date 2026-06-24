@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { QrTicketTokenService } from '../ordering/domain/qr-ticket-token.service';
 import { DatabaseModule } from '../platform/database/database.module';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
@@ -8,6 +9,7 @@ import { CreatePurchaseConfirmationNotificationsUseCase } from './application/us
 import { DeliverNotificationUseCase } from './application/use-cases/deliver-notification.use-case';
 import { EnqueuePurchaseConfirmationUseCase } from './application/use-cases/enqueue-purchase-confirmation.use-case';
 import { SendConcertRemindersUseCase } from './application/use-cases/send-concert-reminders.use-case';
+import { PurchaseConfirmationEmailComposer } from './application/services/purchase-confirmation-email-composer';
 import {
   CONCERT_REMINDER_READ_PORT,
   type ConcertReminderReadPort,
@@ -28,10 +30,17 @@ import {
   PURCHASE_CONFIRMATION_READ_PORT,
   type PurchaseConfirmationReadPort,
 } from './domain/ports/purchase-confirmation-read.port';
+import {
+  PURCHASE_CONFIRMATION_TICKET_READ_PORT,
+  type PurchaseConfirmationTicketReadPort,
+} from './domain/ports/purchase-confirmation-ticket-read.port';
+import { QR_IMAGE_RENDERER, type QrImageRendererPort } from './domain/ports/qr-image-renderer.port';
 import { PrismaConcertReminderReadAdapter } from './infrastructure/database/prisma-concert-reminder-read.adapter';
 import { PrismaNotificationRepository } from './infrastructure/database/prisma-notification.repository';
 import { PrismaPurchaseConfirmationReadAdapter } from './infrastructure/database/prisma-purchase-confirmation-read.adapter';
+import { PrismaPurchaseConfirmationTicketReadAdapter } from './infrastructure/database/prisma-purchase-confirmation-ticket-read.adapter';
 import { createEmailChannelAdapter } from './infrastructure/email/email-channel.provider';
+import { QrcodePngRenderer } from './infrastructure/qr/qrcode-png-renderer';
 import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue/purchase-confirmation-notification.producer';
 
 @Module({
@@ -55,6 +64,33 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
       useClass: PrismaPurchaseConfirmationReadAdapter,
     },
     {
+      provide: PURCHASE_CONFIRMATION_TICKET_READ_PORT,
+      useClass: PrismaPurchaseConfirmationTicketReadAdapter,
+    },
+    {
+      provide: QR_IMAGE_RENDERER,
+      useClass: QrcodePngRenderer,
+    },
+    {
+      provide: QrTicketTokenService,
+      inject: [PlatformConfigService],
+      useFactory: (config: PlatformConfigService) => new QrTicketTokenService(config.qrTokenSecret),
+    },
+    {
+      provide: PurchaseConfirmationEmailComposer,
+      inject: [PURCHASE_CONFIRMATION_TICKET_READ_PORT, QrTicketTokenService, QR_IMAGE_RENDERER],
+      useFactory: (
+        ticketReadPort: PurchaseConfirmationTicketReadPort,
+        qrTicketTokenService: QrTicketTokenService,
+        qrImageRenderer: QrImageRendererPort,
+      ) =>
+        new PurchaseConfirmationEmailComposer(
+          ticketReadPort,
+          qrTicketTokenService,
+          qrImageRenderer,
+        ),
+    },
+    {
       provide: PURCHASE_CONFIRMATION_QUEUE_PORT,
       useExisting: PurchaseConfirmationNotificationProducer,
     },
@@ -66,16 +102,23 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
     },
     {
       provide: DeliverNotificationUseCase,
-      inject: [NOTIFICATION_REPOSITORY, EMAIL_NOTIFICATION_CHANNEL, PlatformConfigService],
+      inject: [
+        NOTIFICATION_REPOSITORY,
+        EMAIL_NOTIFICATION_CHANNEL,
+        PlatformConfigService,
+        PurchaseConfirmationEmailComposer,
+      ],
       useFactory: (
         notificationRepository: NotificationRepositoryPort,
         emailChannel: NotificationChannelPort,
         config: PlatformConfigService,
+        purchaseConfirmationComposer: PurchaseConfirmationEmailComposer,
       ) =>
         new DeliverNotificationUseCase(
           notificationRepository,
           emailChannel,
           config.emailMaxAttempts,
+          purchaseConfirmationComposer,
         ),
     },
     {
@@ -89,8 +132,7 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
         readPort: PurchaseConfirmationReadPort,
         queue: PurchaseConfirmationQueuePort,
         config: PlatformConfigService,
-      ) =>
-        new EnqueuePurchaseConfirmationUseCase(readPort, queue, config.ticketAccessBaseUrl),
+      ) => new EnqueuePurchaseConfirmationUseCase(readPort, queue, config.ticketAccessBaseUrl),
     },
     {
       provide: SendConcertRemindersUseCase,

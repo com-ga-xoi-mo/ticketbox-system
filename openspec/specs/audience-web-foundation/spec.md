@@ -112,6 +112,11 @@ The audience web app SHALL define a modern, polished, responsive design baseline
 - **THEN** the app provides local owned components following shadcn/Radix-style composition and accessibility patterns
 - **AND** those components are customized in the source tree rather than treated as opaque third-party widgets
 
+#### Scenario: Additional shadcn primitives for discovery surfaces
+- **WHEN** discovery pages need tabs, select dropdowns, popovers, or dialog components
+- **THEN** the app installs and configures the required shadcn/ui primitives (`tabs`, `select`, `popover`, `dialog`) in `components/ui/`
+- **AND** only primitives actively used by discovery surfaces are added
+
 #### Scenario: Tailwind is not the primary component styling strategy
 - **WHEN** audience UI components are implemented
 - **THEN** Tailwind CSS v4 utilities are limited to layout, spacing, responsive wrappers, and small composition helpers
@@ -126,6 +131,11 @@ The audience web app SHALL define a modern, polished, responsive design baseline
 - **WHEN** data-dependent audience pages are loading, empty, or failed
 - **THEN** the app renders reusable loading, empty, and error states that match the audience design baseline
 - **AND** those states use Ant Design primitives where they fit or local shadcn-style page-state wrappers where brand expression is needed
+
+#### Scenario: Extended page states for discovery
+- **WHEN** discovery pages encounter no-results, sold-out, or unavailable states
+- **THEN** the app renders context-specific state components that extend the existing `PageStates` module
+- **AND** each state includes an actionable next step (clear filters, browse other events, go back)
 
 #### Scenario: Typography and tokens are defined
 - **WHEN** the audience app renders public and account pages

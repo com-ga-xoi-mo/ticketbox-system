@@ -72,6 +72,7 @@ export type ConcertSummary = {
   city: string;
   startsAt: Date;
   endsAt: Date;
+  eventType: string;
   posterAsset: AssetMetadata | null;
   availabilitySummary: ConcertAvailabilitySummary;
 };
@@ -88,9 +89,30 @@ export type ConcertDetail = {
   city: string;
   startsAt: Date;
   endsAt: Date;
+  eventType: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoImageUrl: string | null;
   posterAsset: AssetMetadata | null;
   seatingMapAsset: AssetMetadata | null;
   seatingZones: SeatingZoneCatalogItem[];
   ticketTypes: TicketTypeCatalogItem[];
   ticketTypeZoneMappings: TicketTypeZoneMapping[];
+};
+
+export type CatalogSearchFilters = {
+  q?: string;
+  city?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  minPrice?: number;
+  maxPrice?: number;
+  eventType?: string;
+  sortBy?: 'date' | 'price';
+  sortDir?: 'asc' | 'desc';
+};
+
+export type FeaturedConcert = ConcertSummary & {
+  bannerAsset: AssetMetadata | null;
+  displayOrder: number;
 };

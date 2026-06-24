@@ -62,4 +62,51 @@ describe('CacheDownloadService', () => {
     await service.download(assignment, session);
     expect(service.status).toBe('unavailable');
   });
+
+  it('refreshes incrementally with since after the first full load', async () => {
+    vi.mocked(api.fetchTicketCache)
+      .mockResolvedValueOnce({ entries: [{ hash, status: 'valid' }], syncedAt: timestamp })
+      .mockResolvedValueOnce({ upserted: [], voided: [], syncedAt: '2026-07-01T12:01:00.000Z' });
+
+    await service.download(assignment, session);
+    await service.download(assignment, session);
+
+    expect(api.fetchTicketCache).toHaveBeenNthCalledWith(
+      1,
+      session.accessToken,
+      expect.not.objectContaining({ since: expect.anything() }),
+    );
+    expect(api.fetchTicketCache).toHaveBeenNthCalledWith(
+      2,
+      session.accessToken,
+      expect.objectContaining({ since: timestamp }),
+    );
+  });
+
+  it('preserves the existing cache when a later refresh fails', async () => {
+    vi.mocked(api.fetchTicketCache)
+      .mockResolvedValueOnce({ entries: [{ hash, status: 'valid' }], syncedAt: timestamp })
+      .mockRejectedValueOnce(new Error('network error'));
+
+    await service.download(assignment, session);
+    await service.download(assignment, session);
+
+    expect(service.status).toBe('ready');
+  });
+
+  it('is single-flight: concurrent calls issue one request', async () => {
+    let resolve!: (value: { entries: never[]; syncedAt: string }) => void;
+    vi.mocked(api.fetchTicketCache).mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+
+    const a = service.download(assignment, session);
+    const b = service.download(assignment, session);
+    resolve({ entries: [], syncedAt: timestamp });
+    await Promise.all([a, b]);
+
+    expect(api.fetchTicketCache).toHaveBeenCalledTimes(1);
+  });
 });

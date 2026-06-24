@@ -6,10 +6,12 @@ import { calculateAvailableQuantity } from '../../domain/catalog-availability';
 import type {
   AssetMetadata,
   AvailabilityTicketTypeSnapshot,
+  CatalogSearchFilters,
   ConcertAvailabilitySnapshot,
   ConcertAvailabilitySummary,
   ConcertDetail,
   ConcertSummary,
+  FeaturedConcert,
   SeatingZoneCatalogItem,
   TicketTypeCatalogItem,
   TicketTypeZoneMapping,
@@ -71,13 +73,22 @@ type ConcertSummaryRecord = {
   city: string;
   startsAt: Date;
   endsAt: Date;
+  eventType: any;
   posterAsset: AssetRecord | null;
   ticketTypes: TicketTypeRecord[];
+};
+
+type FeaturedConcertRecord = ConcertSummaryRecord & {
+  bannerAsset: AssetRecord | null;
+  displayOrder: number;
 };
 
 type ConcertDetailRecord = ConcertSummaryRecord & {
   description: string | null;
   venueAddress: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  seoImageUrl: string | null;
   seatingMapAsset: AssetRecord | null;
   seatingZones: SeatingZoneRecord[];
   artistBios: { publishedBio: string | null }[];
@@ -87,19 +98,117 @@ type ConcertDetailRecord = ConcertSummaryRecord & {
 export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalogPort {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listUpcomingPublished(now: Date): Promise<ConcertSummary[]> {
+  async listUpcomingPublished(now: Date, filters?: CatalogSearchFilters): Promise<ConcertSummary[]> {
+    const whereClause: any = {
+      ...this.publicConcertWhere(now),
+    };
+
+    if (filters?.q) {
+      whereClause.OR = [
+        { title: { contains: filters.q, mode: 'insensitive' } },
+        { artistName: { contains: filters.q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters?.city) {
+      whereClause.city = filters.city;
+    }
+
+    if (filters?.eventType) {
+      whereClause.eventType = filters.eventType;
+    }
+
+    if (filters?.dateFrom || filters?.dateTo) {
+      const startsAtFilter: any = {};
+      if (filters.dateFrom) {
+        startsAtFilter.gte = filters.dateFrom > now ? filters.dateFrom : now;
+      } else {
+        startsAtFilter.gte = now;
+      }
+      
+      if (filters.dateTo) {
+        startsAtFilter.lte = filters.dateTo;
+      }
+      whereClause.startsAt = startsAtFilter;
+    }
+
+    if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+      const priceFilter: any = {};
+      if (filters.minPrice !== undefined) priceFilter.gte = filters.minPrice;
+      if (filters.maxPrice !== undefined) priceFilter.lte = filters.maxPrice;
+      
+      whereClause.ticketTypes = {
+        some: {
+          priceVnd: priceFilter,
+        },
+      };
+    }
+
+    let orderByClause: any = { startsAt: 'asc' };
+    if (filters?.sortBy === 'date') {
+      orderByClause = { startsAt: filters.sortDir === 'desc' ? 'desc' : 'asc' };
+    } else if (filters?.sortBy === 'price') {
+      // For price, we fetch and sort in memory
+    }
+
     const concerts = await this.prisma.concert.findMany({
-      where: this.publicConcertWhere(now),
-      orderBy: { startsAt: 'asc' },
+      where: whereClause,
+      orderBy: orderByClause,
       include: {
         posterAsset: true,
         ticketTypes: {
           orderBy: { code: 'asc' },
         },
       },
-    });
+    }) as any[];
 
-    return concerts.map((concert) => this.toConcertSummary(concert));
+    let summaries = concerts.map((concert) => this.toConcertSummary(concert));
+
+    if (filters?.sortBy === 'price') {
+      const dir = filters.sortDir === 'desc' ? -1 : 1;
+      summaries.sort((a, b) => {
+        const aMin = a.availabilitySummary.minPriceVnd ?? Infinity;
+        const bMin = b.availabilitySummary.minPriceVnd ?? Infinity;
+        if (aMin < bMin) return -1 * dir;
+        if (aMin > bMin) return 1 * dir;
+        return 0;
+      });
+    }
+
+    return summaries;
+  }
+
+  async listFeaturedPublished(now: Date, limit: number): Promise<FeaturedConcert[]> {
+    const concerts = await this.prisma.concert.findMany({
+      where: {
+        ...this.publicConcertWhere(now),
+        isFeatured: true,
+      } as any,
+      orderBy: [
+        { displayOrder: 'asc' },
+        { startsAt: 'asc' },
+      ] as any,
+      take: limit,
+      include: {
+        posterAsset: true,
+        bannerAsset: true,
+        ticketTypes: {
+          orderBy: { code: 'asc' },
+        },
+      } as any,
+    }) as any[];
+
+    return concerts.map((concert) => this.toFeaturedConcert(concert));
+  }
+
+  async listDistinctCities(now: Date): Promise<string[]> {
+    const results = await this.prisma.concert.findMany({
+      where: this.publicConcertWhere(now),
+      select: { city: true },
+      distinct: ['city'],
+      orderBy: { city: 'asc' },
+    });
+    return results.map((r) => r.city);
   }
 
   async findPublishedUpcomingDetailBySlug(slug: string, now: Date): Promise<ConcertDetail | null> {
@@ -146,7 +255,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
           },
         },
       },
-    });
+    }) as any;
 
     if (!concert) return null;
     return this.toConcertDetail(concert);
@@ -211,8 +320,17 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       city: concert.city,
       startsAt: concert.startsAt,
       endsAt: concert.endsAt,
+      eventType: concert.eventType,
       posterAsset: this.toAssetMetadata(concert.posterAsset),
       availabilitySummary: this.toAvailabilitySummary(concert.ticketTypes),
+    };
+  }
+
+  private toFeaturedConcert(concert: FeaturedConcertRecord): FeaturedConcert {
+    return {
+      ...this.toConcertSummary(concert),
+      bannerAsset: this.toAssetMetadata(concert.bannerAsset),
+      displayOrder: concert.displayOrder,
     };
   }
 
@@ -226,6 +344,9 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       description: concert.description,
       publishedArtistBio: concert.artistBios[0]?.publishedBio ?? null,
       venueAddress: concert.venueAddress,
+      seoTitle: concert.seoTitle,
+      seoDescription: concert.seoDescription,
+      seoImageUrl: concert.seoImageUrl,
       seatingMapAsset: this.toAssetMetadata(concert.seatingMapAsset),
       seatingZones: concert.seatingZones
         .filter((zone) => zone.status === SeatingZoneStatus.ACTIVE)

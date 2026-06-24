@@ -14,13 +14,27 @@
         "projectId": "f3b789db-93f8-4a85-a3a5-4ef95f3b7039"
       }
     },
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "TicketBox cần dùng camera để quét mã QR vé khi soát vé."
+      }
+    },
     "android": {
-      "package": "test.ticketbox.checkin"
+      "package": "test.ticketbox.checkin",
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       "expo-asset",
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TicketBox cần dùng camera để quét mã QR vé khi soát vé."
+        }
+      ]
     ],
     "owner": "zinn1401"
   }
