@@ -94,3 +94,14 @@ export type ConcertDetail = {
   ticketTypes: TicketTypeCatalogItem[];
   ticketTypeZoneMappings: TicketTypeZoneMapping[];
 };
+
+export type CatalogSearchFilters = {
+  q?: string;
+  city?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: 'date' | 'price';
+  sortDir?: 'asc' | 'desc';
+};

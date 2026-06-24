@@ -9,6 +9,6 @@ export class InitiatePaymentDto {
   idempotencyKey!: string;
 
   @IsOptional()
-  @IsIn([PaymentProvider.SIMULATOR, PaymentProvider.MOMO])
+  @IsIn([PaymentProvider.SIMULATOR, PaymentProvider.MOMO, PaymentProvider.VNPAY])
   provider?: PaymentProvider;
 }

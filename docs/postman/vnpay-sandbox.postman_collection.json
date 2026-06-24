@@ -1,0 +1,299 @@
+{
+  "info": {
+    "_postman_id": "0e04a1c3-91d7-4b37-83d2-faf829c7a661",
+    "name": "TicketBox VNPay Sandbox",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "VNPay sandbox flow: authenticate, create pending order, initiate a signed VNPay payment, then verify order and ticket state after VNPay IPN."
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "1.1 Register Audience",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('email', `vnpay-aud-${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('register succeeds', () => pm.expect([201, 409]).to.include(pm.response.code));",
+                  "if (pm.response.code === 201) pm.environment.set('accessToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"displayName\": \"VNPay Sandbox Audience\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "1.2 Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login succeeds', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('accessToken', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Order And VNPay",
+      "item": [
+        {
+          "name": "2.1 Create Pending Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('orderIdempotencyKey', `vnpay-order-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('order is created', () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('orderId', body.id);",
+                  "pm.expect(body.status).to.eql('PENDING_PAYMENT');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concertId\": \"{{concertId}}\",\n  \"idempotencyKey\": \"{{orderIdempotencyKey}}\",\n  \"items\": [\n    {\n      \"ticketTypeId\": \"{{ticketTypeId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/checkout/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["checkout", "orders"]
+            }
+          }
+        },
+        {
+          "name": "2.2 Initiate VNPay Payment",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('paymentIdempotencyKey')) pm.environment.set('paymentIdempotencyKey', `vnpay-payment-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('VNPay payment URL is created', () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('paymentId', body.payment.id);",
+                  "pm.environment.set('vnpayRedirectUrl', body.redirectUrl);",
+                  "pm.expect(body.payment.provider).to.eql('VNPAY');",
+                  "pm.expect(body.payment.status).to.eql('PENDING');",
+                  "pm.expect(body.redirectUrl).to.include('sandbox.vnpayment.vn/paymentv2/vpcpay.html');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"VNPAY\",\n  \"idempotencyKey\": \"{{paymentIdempotencyKey}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "payment"]
+            },
+            "description": "Open the returned vnpayRedirectUrl in a browser and complete the VNPay sandbox transaction."
+          }
+        },
+        {
+          "name": "2.3 Initiate Again - Same Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('same idempotency key replays result', () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "pm.expect(pm.response.json().payment.id).to.eql(pm.environment.get('paymentId'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"VNPAY\",\n  \"idempotencyKey\": \"{{paymentIdempotencyKey}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "payment"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Verify After VNPay IPN",
+      "item": [
+        {
+          "name": "3.1 Get My Order",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "orders", "{{orderId}}"]
+            },
+            "description": "After a successful VNPay IPN, status should be PAID. After a failed final IPN, status should be FAILED."
+          }
+        },
+        {
+          "name": "3.2 List My Tickets",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "tickets"]
+            },
+            "description": "A successful payment should issue exactly one ticket for quantity 1. Refreshing or duplicate IPN delivery must not add another ticket."
+          }
+        }
+      ]
+    }
+  ]
+}

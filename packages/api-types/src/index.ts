@@ -13,6 +13,47 @@ export type {
 } from './auth/auth.contract';
 
 export {
+  AssetKindCodeSchema,
+  AssetStatusCodeSchema,
+  CatalogSearchParamsSchema,
+  CatalogSortBySchema,
+  CatalogSortDirSchema,
+  PublicAssetSchema,
+  PublicAvailabilityTicketTypeSchema,
+  PublicConcertAvailabilityResponseSchema,
+  PublicConcertAvailabilitySummarySchema,
+  PublicConcertCitiesResponseSchema,
+  PublicConcertDetailResponseSchema,
+  PublicConcertListResponseSchema,
+  PublicConcertSummarySchema,
+  PublicSeatingZoneSchema,
+  PublicTicketTypeSchema,
+  PublicTicketTypeZoneMappingSchema,
+  SeatingZoneStatusCodeSchema,
+  TicketTypeStatusCodeSchema,
+} from './catalog/public-concert.contract';
+export type {
+  AssetKindCode,
+  AssetStatusCode,
+  CatalogSearchParams,
+  CatalogSortBy,
+  CatalogSortDir,
+  PublicAsset,
+  PublicAvailabilityTicketType,
+  PublicConcertAvailabilityResponse,
+  PublicConcertAvailabilitySummary,
+  PublicConcertCitiesResponse,
+  PublicConcertDetailResponse,
+  PublicConcertListResponse,
+  PublicConcertSummary,
+  PublicSeatingZone,
+  PublicTicketType,
+  PublicTicketTypeZoneMapping,
+  SeatingZoneStatusCode,
+  TicketTypeStatusCode,
+} from './catalog/public-concert.contract';
+
+export {
   StaffAssignmentSchema,
   StaffAssignmentsResponseSchema,
 } from './checkin/assignment.contract';

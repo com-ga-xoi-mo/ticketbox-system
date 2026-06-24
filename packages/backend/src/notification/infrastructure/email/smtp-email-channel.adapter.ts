@@ -1,13 +1,18 @@
 import { Socket } from 'node:net';
 
 import type { NotificationChannelPort } from '../../domain/ports/notification-channel.port';
-import type { DeliveryRequest, DeliveryResult } from '../../domain/notification.types';
+import type {
+  DeliveryAttachment,
+  DeliveryRequest,
+  DeliveryResult,
+} from '../../domain/notification.types';
 
 export interface SmtpEmailMessage {
   from: string;
   to: string;
   subject: string;
   body: string;
+  attachments?: DeliveryAttachment[];
 }
 
 export interface SmtpEmailTransport {
@@ -44,6 +49,7 @@ export class SmtpEmailChannelAdapter implements NotificationChannelPort {
       to: request.toEmail,
       subject: request.subject,
       body: request.body,
+      attachments: request.attachments,
     });
 
     return {
@@ -150,19 +156,86 @@ class SimpleSmtpClient {
   }
 
   private formatMessage(message: SmtpEmailMessage): string {
+    return formatSmtpMessage(message);
+  }
+}
+
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').trim();
+}
+
+function sanitizeFilename(value: string): string {
+  return value.replace(/[\r\n"\\]+/g, '-').trim() || 'attachment';
+}
+
+function wrapBase64(content: Buffer): string {
+  return (
+    content
+      .toString('base64')
+      .match(/.{1,76}/g)
+      ?.join('\r\n') ?? ''
+  );
+}
+
+export function formatSmtpMessage(message: SmtpEmailMessage): string {
+  const headers = [
+    `From: ${message.from}`,
+    `To: ${message.to}`,
+    `Subject: ${sanitizeHeader(message.subject)}`,
+    'MIME-Version: 1.0',
+  ];
+  const attachments = message.attachments ?? [];
+
+  if (attachments.length === 0) {
     return [
-      `From: ${message.from}`,
-      `To: ${message.to}`,
-      `Subject: ${sanitizeHeader(message.subject)}`,
-      'MIME-Version: 1.0',
+      ...headers,
       'Content-Type: text/plain; charset=utf-8',
       '',
       message.body.replace(/\r?\n\./g, '\n..'),
       '.',
     ].join('\r\n');
   }
+
+  const boundary = `ticketbox-${createBoundary(message)}`;
+  const parts = [
+    ...headers,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    message.body.replace(/\r?\n\./g, '\n..'),
+  ];
+
+  for (const attachment of attachments) {
+    const filename = sanitizeFilename(attachment.filename);
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${sanitizeHeader(attachment.contentType)}; name="${filename}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${filename}"`,
+      ...(attachment.contentId ? [`Content-ID: <${sanitizeHeader(attachment.contentId)}>`] : []),
+      '',
+      wrapBase64(attachment.content),
+    );
+  }
+
+  parts.push(`--${boundary}--`, '.', '');
+  return parts.join('\r\n');
 }
 
-function sanitizeHeader(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').trim();
+function createBoundary(message: SmtpEmailMessage): string {
+  const seed = [
+    message.from,
+    message.to,
+    message.subject,
+    ...(message.attachments ?? []).map((attachment) => attachment.filename),
+  ].join('|');
+  let hash = 2166136261;
+  for (const character of seed) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
 }

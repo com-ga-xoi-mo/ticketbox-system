@@ -14,6 +14,16 @@ export class LocalEmailChannelAdapter implements NotificationChannelPort {
 
     const digest = createHash('sha256')
       .update(`${request.toEmail}|${request.subject}|${request.body}`)
+      .update(
+        request.attachments
+          ?.map(
+            (attachment) =>
+              `${attachment.filename}|${attachment.contentType}|${createHash('sha256')
+                .update(attachment.content)
+                .digest('hex')}`,
+          )
+          .join('|') ?? '',
+      )
       .digest('hex')
       .slice(0, 24);
 

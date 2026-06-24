@@ -5,6 +5,11 @@ import { validateEnv } from '../env.schema';
 const baseEnv = {
   DATABASE_URL: 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox?schema=public',
   JWT_SECRET: 'test-secret',
+  MOMO_PARTNER_CODE: 'momo-partner',
+  MOMO_ACCESS_KEY: 'momo-access',
+  MOMO_SECRET_KEY: 'momo-secret',
+  VNPAY_TMN_CODE: 'vnpay-terminal',
+  VNPAY_HASH_SECRET: 'vnpay-secret',
 };
 
 describe('storage env validation', () => {

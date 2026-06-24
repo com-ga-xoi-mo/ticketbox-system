@@ -90,6 +90,32 @@ export class InvalidMomoIpnSignatureError extends Error {
   }
 }
 
+export class InvalidVnpaySignatureError extends Error {
+  constructor() {
+    super('Invalid VNPay callback signature');
+    this.name = 'InvalidVnpaySignatureError';
+  }
+}
+
+export class InvalidVnpayTerminalError extends Error {
+  constructor() {
+    super('VNPay callback terminal code does not match configuration');
+    this.name = 'InvalidVnpayTerminalError';
+  }
+}
+
+export class VnpayAmountMismatchError extends Error {
+  constructor(
+    public readonly expectedAmountVnd: number,
+    public readonly actualAmountVnd: number,
+  ) {
+    super(
+      `VNPay callback amount mismatch: expected ${expectedAmountVnd}, received ${actualAmountVnd}`,
+    );
+    this.name = 'VnpayAmountMismatchError';
+  }
+}
+
 export class PaymentIdempotencyKeyMismatchError extends Error {
   constructor() {
     super('Payment initiation idempotency key was reused with a different request');

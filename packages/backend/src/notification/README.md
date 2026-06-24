@@ -26,8 +26,16 @@ order.paid queue job
   -> notification.delivery queue job
   -> NotificationDeliveryProcessor
   -> DeliverNotificationUseCase
+  -> PurchaseConfirmationEmailComposer (purchase confirmations only)
+  -> issued-ticket read port + QR payload recreation + in-memory PNG rendering
   -> NotificationChannelPort
 ```
+
+Purchase confirmation delivery jobs contain the order ID, notification ID, and
+recipient email. Raw QR payloads and PNG bytes are not written to BullMQ or the
+notification database. Each delivery attempt reads the already-issued tickets,
+recreates their signed payloads with the configured QR secret, and renders the
+attachments in memory. Retrying email delivery never issues tickets.
 
 ## Payment/Order Integration Boundary
 

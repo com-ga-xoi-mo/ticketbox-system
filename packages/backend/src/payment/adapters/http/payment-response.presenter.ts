@@ -3,6 +3,7 @@ import type { PaymentSimulatorOutcome } from '../../domain/payment-simulator-out
 import type {
   PaymentProviderMetadata,
   VerifiedMomoIpnPayload,
+  VerifiedVnpayCallbackPayload,
 } from '../../domain/ports/payment-gateway.port';
 
 export function serializePayment(payment: Payment) {
@@ -66,5 +67,19 @@ export function serializeMomoIpnResult(params: {
     payment: serializePayment(params.payment),
     duplicate: params.duplicate,
     orderTransitioned: params.orderTransitioned,
+  };
+}
+
+export function serializeVnpayReturnResult(vnpay: VerifiedVnpayCallbackPayload) {
+  return {
+    verified: true,
+    authoritative: false,
+    transactionReference: vnpay.providerTransactionId,
+    providerTransactionId: vnpay.providerPaymentId,
+    amountVnd: vnpay.amountVnd,
+    responseCode: vnpay.responseCode,
+    transactionStatus: vnpay.transactionStatus,
+    success: vnpay.success,
+    message: 'VNPay return verified. Query the order status for the authoritative IPN result.',
   };
 }

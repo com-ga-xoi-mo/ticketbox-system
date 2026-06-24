@@ -91,6 +91,46 @@ export class PlatformConfigService {
     return this.configService.get('MOMO_IPN_URL');
   }
 
+  get vnpayTmnCode(): string {
+    return this.configService.get('VNPAY_TMN_CODE');
+  }
+
+  get vnpayHashSecret(): string {
+    return this.configService.get('VNPAY_HASH_SECRET');
+  }
+
+  get vnpayPaymentUrl(): string {
+    return this.configService.get('VNPAY_PAYMENT_URL');
+  }
+
+  get vnpayReturnUrl(): string {
+    return this.configService.get('VNPAY_RETURN_URL');
+  }
+
+  get vnpayIpnUrl(): string {
+    return this.configService.get('VNPAY_IPN_URL');
+  }
+
+  get vnpayVersion(): string {
+    return this.configService.get('VNPAY_VERSION');
+  }
+
+  get vnpayCommand(): string {
+    return this.configService.get('VNPAY_COMMAND');
+  }
+
+  get vnpayLocale(): PlatformEnv['VNPAY_LOCALE'] {
+    return this.configService.get('VNPAY_LOCALE');
+  }
+
+  get vnpayOrderType(): string {
+    return this.configService.get('VNPAY_ORDER_TYPE');
+  }
+
+  get vnpayExpireMinutes(): number {
+    return this.configService.get('VNPAY_EXPIRE_MINUTES');
+  }
+
   get emailProvider(): PlatformEnv['EMAIL_PROVIDER'] {
     return this.configService.get('EMAIL_PROVIDER');
   }
