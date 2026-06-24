@@ -71,3 +71,4 @@ docker-compose.override.yml
 .agent/
 .codex/
 .agents/skills
+.opencode/
