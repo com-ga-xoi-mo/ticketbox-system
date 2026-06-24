@@ -56,6 +56,7 @@ describe('public concert catalog contracts', () => {
     city: 'Ho Chi Minh City',
     startsAt: timestamp,
     endsAt: '2026-07-01T15:00:00.000Z',
+    eventType: 'CONCERT',
     posterAsset,
     availabilitySummary,
   };
@@ -84,6 +85,9 @@ describe('public concert catalog contracts', () => {
         description: 'A summer concert.',
         publishedArtistBio: 'The Suns are a live act.',
         venueAddress: '1 Nguyen Hue',
+        seoTitle: null,
+        seoDescription: null,
+        seoImageUrl: null,
         seatingMapAsset: { ...posterAsset, kind: 'SEATING_MAP' },
         seatingZones: [
           {
