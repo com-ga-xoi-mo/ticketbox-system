@@ -1,30 +1,30 @@
 ## 1. Shared API Contracts (packages/api-types)
 
-- [ ] 1.1 Add `CatalogSearchParamsSchema` to `packages/api-types/src/catalog/public-concert.contract.ts` with optional fields: `q` (string), `city` (string), `sortBy` (enum: `date`, `price`), `sortDir` (enum: `asc`, `desc`). Export the schema and inferred type from the package index.
+- [ ] 1.1 Add `CatalogSearchParamsSchema` to `packages/api-types/src/catalog/public-concert.contract.ts` with optional fields: `q` (string), `city` (string), `dateFrom` (ISO date string), `dateTo` (ISO date string), `minPrice` (non-negative integer, VND), `maxPrice` (non-negative integer, VND), `sortBy` (enum: `date`, `price`), `sortDir` (enum: `asc`, `desc`). Export the schema and inferred type from the package index.
 - [ ] 1.2 Add `PublicConcertCitiesResponseSchema` (`z.array(z.string())`) to the same contract file. Export the schema and inferred type from the package index.
 - [ ] 1.3 Run `npm run build:api-types` and verify the new schemas are exported without type errors.
 
 ## 2. Backend Catalog Search API (packages/backend)
 
-- [ ] 2.1 Add a `CatalogSearchFilters` type to `packages/backend/src/concert-management/domain/catalog.types.ts` with optional fields: `q`, `city`, `sortBy`, `sortDir`.
+- [ ] 2.1 Add a `CatalogSearchFilters` type to `packages/backend/src/concert-management/domain/catalog.types.ts` with optional fields: `q`, `city`, `dateFrom` (Date), `dateTo` (Date), `minPrice` (number), `maxPrice` (number), `sortBy`, `sortDir`.
 - [ ] 2.2 Update `PublicConcertCatalogPort.listUpcomingPublished` signature to accept `(now: Date, filters?: CatalogSearchFilters)` in `packages/backend/src/concert-management/domain/ports/public-concert-catalog.port.ts`.
 - [ ] 2.3 Add `listDistinctCities(now: Date): Promise<string[]>` method to `PublicConcertCatalogPort`.
-- [ ] 2.4 Update `PrismaPublicConcertCatalogRepository.listUpcomingPublished` to apply Prisma `where` conditions for `q` (case-insensitive `contains` on `title` OR `artistName`) and `city` (exact match), and `orderBy` for `sortBy`/`sortDir` (date maps to `startsAt`, price maps to min ticket type price via a subquery or post-sort).
+- [ ] 2.4 Update `PrismaPublicConcertCatalogRepository.listUpcomingPublished` to apply Prisma `where` conditions for: `q` (case-insensitive `contains` on `title` OR `artistName`), `city` (exact match), `dateFrom` (`startsAt >= dateFrom`), `dateTo` (`startsAt <= dateTo`), `minPrice` and `maxPrice` (filter concerts that have at least one ticket type with `priceVnd` in range via `ticketTypes.some`). Apply `orderBy` for `sortBy`/`sortDir` (date → `startsAt`, price → post-fetch sort by `availabilitySummary.minPriceVnd`).
 - [ ] 2.5 Implement `PrismaPublicConcertCatalogRepository.listDistinctCities` using Prisma `findMany` with `distinct: ['city']` and `select: { city: true }`, filtered by `publicConcertWhere(now)`, ordered alphabetically.
 - [ ] 2.6 Update `ListPublicConcertsUseCase.execute` to accept and pass through the optional `CatalogSearchFilters` parameter to the port.
 - [ ] 2.7 Create `ListConcertCitiesUseCase` in `packages/backend/src/concert-management/application/use-cases/` that calls `catalog.listDistinctCities(now)`.
-- [ ] 2.8 Update `PublicConcertCatalogController.listConcerts` to accept `@Query()` parameters (`q`, `city`, `sortBy`, `sortDir`), validate with `CatalogSearchParamsSchema`, and pass to the use case.
+- [ ] 2.8 Update `PublicConcertCatalogController.listConcerts` to accept `@Query()` parameters (`q`, `city`, `dateFrom`, `dateTo`, `minPrice`, `maxPrice`, `sortBy`, `sortDir`), validate with `CatalogSearchParamsSchema`, parse date strings to `Date` objects, and pass to the use case.
 - [ ] 2.9 Add `GET /concerts/cities` route to `PublicConcertCatalogController` that calls `ListConcertCitiesUseCase` and returns `string[]`.
 - [ ] 2.10 Register `ListConcertCitiesUseCase` as a provider in the concert management module.
-- [ ] 2.11 Write unit tests for `ListPublicConcertsUseCase` with filter params and `ListConcertCitiesUseCase`.
-- [ ] 2.12 Write integration/e2e test for `GET /concerts?q=...&city=...&sortBy=...&sortDir=...` and `GET /concerts/cities`.
+- [ ] 2.11 Write unit tests for `ListPublicConcertsUseCase` with all filter params (q, city, dateFrom, dateTo, minPrice, maxPrice, sortBy, sortDir) and `ListConcertCitiesUseCase`.
+- [ ] 2.12 Write integration/e2e test for `GET /concerts` with each filter type individually and combined, and `GET /concerts/cities`.
 
 ## 3. Audience Web — New shadcn/ui Primitives
 
-- [ ] 3.1 Install shadcn `tabs` component into `apps/audience-web/src/components/ui/tabs.tsx`.
-- [ ] 3.2 Install shadcn `select` component into `apps/audience-web/src/components/ui/select.tsx`.
-- [ ] 3.3 Install shadcn `popover` component into `apps/audience-web/src/components/ui/popover.tsx`.
-- [ ] 3.4 Install shadcn `dialog` component into `apps/audience-web/src/components/ui/dialog.tsx`.
+- [ ] 3.1 Install shadcn `tabs` component: `npx shadcn@latest add tabs -c apps/audience-web` (style `radix-nova` is read from `components.json` automatically). Output: `apps/audience-web/src/components/ui/tabs.tsx`.
+- [ ] 3.2 Install shadcn `select` component: `npx shadcn@latest add select -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/select.tsx`.
+- [ ] 3.3 Install shadcn `popover` component: `npx shadcn@latest add popover -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/popover.tsx`.
+- [ ] 3.4 Install shadcn `dialog` component: `npx shadcn@latest add dialog -c apps/audience-web`. Output: `apps/audience-web/src/components/ui/dialog.tsx`.
 - [ ] 3.5 Verify all new primitives render without errors by running `npm run verify:audience-web`.
 
 ## 4. Audience Web — API Client & Query Hooks
@@ -56,13 +56,13 @@
 
 ## 7. Audience Web — Event Listing with Search/Filter/Sort
 
-- [ ] 7.1 Add a filter toolbar to `EventListPage.tsx` with: text search input, city filter (shadcn `select` populated from `useConcertCities()`), sort dropdown (shadcn `select` with date/price options).
-- [ ] 7.2 Sync filter/sort state to URL search params using `useSearchParams` from react-router-dom. Restore state from URL on mount.
-- [ ] 7.3 Replace the current `fetchConcertList()` call with `useConcertList(params)` that passes URL search params as API query parameters.
-- [ ] 7.4 Render `PageNoResults` when the filtered query returns zero results, with the search term or city name in the message and a "Clear filters" action.
+- [ ] 7.1 Add a filter toolbar to `EventListPage.tsx` with: text search input, city filter (shadcn `select` populated from `useConcertCities()`), date range picker (shadcn `popover` + two date inputs for `dateFrom`/`dateTo`), price range inputs (two number inputs for `minPrice`/`maxPrice` in VND), and sort dropdown (shadcn `select` with date/price options).
+- [ ] 7.2 Sync filter/sort state to URL search params using `useSearchParams` from react-router-dom. Restore state from URL on mount. Params: `q`, `city`, `dateFrom`, `dateTo`, `minPrice`, `maxPrice`, `sortBy`, `sortDir`.
+- [ ] 7.3 Replace the current `fetchConcertList()` call with `useConcertList(params)` that passes all URL search params as API query parameters.
+- [ ] 7.4 Render `PageNoResults` when the filtered query returns zero results, with contextual message (mentions search term, city, or date range when applicable) and a "Clear filters" action.
 - [ ] 7.5 Ensure the existing `PageLoading` and `PageError` states work correctly with filtered queries.
-- [ ] 7.6 Ensure responsive layout: stacked filter controls on mobile, inline horizontal toolbar on desktop.
-- [ ] 7.7 Write tests for EventListPage: filter/sort URL sync, API calls with params, no-results state, clearing filters.
+- [ ] 7.6 Ensure responsive layout: stacked filter controls on mobile (search + city on row 1, date + price on row 2, sort on row 3), inline horizontal toolbar on desktop.
+- [ ] 7.7 Write tests for EventListPage: filter/sort URL sync, API calls with all params (including dateFrom/dateTo/minPrice/maxPrice), no-results state, clearing filters.
 
 ## 8. Audience Web — Event Detail Enrichment
 
@@ -83,7 +83,8 @@
 
 - [ ] 9.1 Run `npm run verify:audience-web` (typecheck + tests) and fix any failures.
 - [ ] 9.2 Run `npm run dev:audience-web` and manually verify: homepage search bar navigates to `/events?q=...`, city tabs filter events, featured hero uses real data.
-- [ ] 9.3 Manually verify event listing: search/city/sort filters work, URL params sync, no-results state displays correctly.
+- [ ] 9.3 Manually verify event listing: search/city/date-range/price-range/sort filters work, URL params sync, no-results state displays correctly.
 - [ ] 9.4 Manually verify event detail: artist bio renders, seating zones/map display, sale window badges show correctly, quantity selector respects bounds, sold-out state works.
 - [ ] 9.5 Test responsive behavior at mobile (375px), tablet (768px), and desktop (1440px) viewport widths for all three pages.
-- [ ] 9.6 Run backend API tests to ensure `GET /concerts` with query params and `GET /concerts/cities` pass.
+- [ ] 9.6 Run backend API tests to ensure `GET /concerts` with all query params (q, city, dateFrom, dateTo, minPrice, maxPrice, sortBy, sortDir) and `GET /concerts/cities` pass.
+- [ ] 9.7 Audit font tokens in `apps/audience-web/src/styles/global.css`: `global.css` declares `--font-family-display: "Be Vietnam Pro"` and `--font-family-body: "Inter"` but these fonts are not imported. Decide whether to keep Geist (which is already imported via `@fontsource-variable/geist`) or add `@import` for Be Vietnam Pro and Inter. Update the token declarations to match whichever fonts are actually loaded.

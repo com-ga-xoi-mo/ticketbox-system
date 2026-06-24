@@ -32,6 +32,45 @@ The event listing page SHALL provide a city filter dropdown populated from the `
 - **WHEN** a user has both a search term and a city selected
 - **THEN** the page calls `GET /concerts?q=<term>&city=<city>` applying both filters
 
+### Requirement: Date range filter on event listing
+The event listing page SHALL provide a date range filter that restricts concerts to those starting within a selected date range, using the backend `dateFrom` and `dateTo` query parameters.
+
+#### Scenario: User selects a start date
+- **WHEN** a user selects a `dateFrom` value in the date range picker
+- **THEN** the page calls `GET /concerts?dateFrom=<ISO-date>` and displays only concerts starting on or after that date
+- **AND** the URL updates to include `?dateFrom=<ISO-date>`
+
+#### Scenario: User selects a full date range
+- **WHEN** a user selects both `dateFrom` and `dateTo` values
+- **THEN** the page calls `GET /concerts?dateFrom=<ISO-date>&dateTo=<ISO-date>` and displays only concerts within that range
+
+#### Scenario: Clearing the date range shows all events
+- **WHEN** a user clears the date range filter
+- **THEN** the page fetches concerts without `dateFrom` or `dateTo` parameters
+
+#### Scenario: Date filter combines with other filters
+- **WHEN** a user has an active city or search filter and also selects a date range
+- **THEN** all active filters are sent as query params in the same request
+
+### Requirement: Price range filter on event listing
+The event listing page SHALL provide a price range filter that restricts concerts to those with at least one ticket type priced within a selected range, using the backend `minPrice` and `maxPrice` query parameters.
+
+#### Scenario: User selects a minimum price
+- **WHEN** a user sets a `minPrice` value in the price range control
+- **THEN** the page calls `GET /concerts?minPrice=<vnd>` and displays only concerts with at least one ticket type priced at or above that value
+
+#### Scenario: User selects a full price range
+- **WHEN** a user sets both `minPrice` and `maxPrice` values
+- **THEN** the page calls `GET /concerts?minPrice=<vnd>&maxPrice=<vnd>` and displays only concerts with at least one ticket type in that price range
+
+#### Scenario: Clearing the price range shows all events
+- **WHEN** a user clears the price range filter
+- **THEN** the page fetches concerts without `minPrice` or `maxPrice` parameters
+
+#### Scenario: Price filter combines with other filters
+- **WHEN** a user has active search, city, or date filters and also sets a price range
+- **THEN** all active filters are sent as query params in the same request
+
 ### Requirement: Sort controls on event listing
 The event listing page SHALL provide sort controls allowing the user to sort concerts by date or price.
 
@@ -52,9 +91,9 @@ The event listing page SHALL provide sort controls allowing the user to sort con
 The event listing page SHALL sync all filter and sort state to URL search params so that filtered views are shareable and survive page refresh.
 
 #### Scenario: Filter state is restored from URL
-- **WHEN** a user navigates to `/events?q=rock&city=HCMC&sortBy=price`
-- **THEN** the search input shows "rock", the city filter shows "HCMC", and the sort is set to price
-- **AND** the API call includes all three parameters
+- **WHEN** a user navigates to `/events?q=rock&city=HCMC&dateFrom=2026-07-01&minPrice=200000&sortBy=price`
+- **THEN** the search input shows "rock", the city filter shows "HCMC", the date picker shows the start date, the price filter shows the minimum price, and the sort is set to price
+- **AND** the API call includes all active parameters
 
 #### Scenario: Browser back restores previous filter state
 - **WHEN** a user changes filters and then presses browser back
@@ -93,4 +132,4 @@ The event listing page SHALL use a responsive grid that adapts from 1 column on 
 
 #### Scenario: Desktop three-column grid with inline filters
 - **WHEN** the event listing is viewed on desktop (>= 1024px)
-- **THEN** event cards display in a 3-column grid with search, city filter, and sort controls in a horizontal toolbar
+- **THEN** event cards display in a 3-column grid with search, city filter, date range, price range, and sort controls in a horizontal toolbar
