@@ -1,52 +1,52 @@
 ## 1. Database Schema & Migration
 
-- [ ] 1.1 Add `EventType` enum to Prisma schema with values `CONCERT`, `WORKSHOP`, `SPORT`, `MOVIE`, `THEATRE`, `VOUCHER` mapped to `event_type`
-- [ ] 1.2 Add `eventType` field to Concert model with `@default(CONCERT)` and `@map("event_type")`
-- [ ] 1.3 Add `isFeatured` boolean field to Concert model with `@default(false)` and `@map("is_featured")`
-- [ ] 1.4 Add `bannerAssetId` optional UUID field to Concert model with FK relation to Asset (`onDelete: SetNull`) and `@map("banner_asset_id")`
-- [ ] 1.5 Add `displayOrder` integer field to Concert model with `@default(0)` and `@map("display_order")`
-- [ ] 1.6 Add `seoTitle` optional varchar(160) field to Concert model with `@map("seo_title")`
-- [ ] 1.7 Add `seoDescription` optional varchar(320) field to Concert model with `@map("seo_description")`
-- [ ] 1.8 Add `seoImageUrl` optional text field to Concert model with `@map("seo_image_url")`
-- [ ] 1.9 Add composite index `@@index([isFeatured, displayOrder, startsAt])` for featured queries
-- [ ] 1.10 Run `npx prisma migrate dev` to generate and apply the migration; verify it is additive-only (no drops/renames)
+- [x] 1.1 Add `EventType` enum to Prisma schema with values `CONCERT`, `WORKSHOP`, `SPORT`, `MOVIE`, `THEATRE`, `VOUCHER` mapped to `event_type`
+- [x] 1.2 Add `eventType` field to Concert model with `@default(CONCERT)` and `@map("event_type")`
+- [x] 1.3 Add `isFeatured` boolean field to Concert model with `@default(false)` and `@map("is_featured")`
+- [x] 1.4 Add `bannerAssetId` optional UUID field to Concert model with FK relation to Asset (`onDelete: SetNull`) and `@map("banner_asset_id")`
+- [x] 1.5 Add `displayOrder` integer field to Concert model with `@default(0)` and `@map("display_order")`
+- [x] 1.6 Add `seoTitle` optional varchar(160) field to Concert model with `@map("seo_title")`
+- [x] 1.7 Add `seoDescription` optional varchar(320) field to Concert model with `@map("seo_description")`
+- [x] 1.8 Add `seoImageUrl` optional text field to Concert model with `@map("seo_image_url")`
+- [x] 1.9 Add composite index `@@index([isFeatured, displayOrder, startsAt])` for featured queries
+- [x] 1.10 Run `npx prisma migrate dev` to generate and apply the migration; verify it is additive-only (no drops/renames)
 
 ## 2. Shared API Contracts (`packages/api-types`)
 
-- [ ] 2.1 Add `EventTypeCodeSchema` Zod enum (`CONCERT`, `WORKSHOP`, `SPORT`, `MOVIE`, `THEATRE`, `VOUCHER`) and export `EventTypeCode` type
-- [ ] 2.2 Add `eventType` field (`EventTypeCodeSchema`) to `PublicConcertSummarySchema`
-- [ ] 2.3 Add `seoTitle` (nullable string), `seoDescription` (nullable string), `seoImageUrl` (nullable string) to `PublicConcertDetailResponseSchema`
-- [ ] 2.4 Add `eventType` field to `PublicConcertDetailResponseSchema` (inherited from summary extension)
-- [ ] 2.5 Create `PublicFeaturedConcertSchema` extending `PublicConcertSummarySchema` with `bannerAsset` (nullable `PublicAssetSchema`), `displayOrder` (int)
-- [ ] 2.6 Create `PublicFeaturedConcertListResponseSchema` as `z.array(PublicFeaturedConcertSchema)` and export types
-- [ ] 2.7 Create `FeaturedConcertParamsSchema` with optional `limit` (positive integer, coerced) and export
-- [ ] 2.8 Add optional `eventType` field (`EventTypeCodeSchema.optional()`) to `CatalogSearchParamsSchema`
-- [ ] 2.9 Export all new schemas and types from the package entrypoint (`index.ts`)
-- [ ] 2.10 Build the package (`npm run build -w @ticketbox/api-types`) and verify no type errors
+- [x] 2.1 Add `EventTypeCodeSchema` Zod enum (`CONCERT`, `WORKSHOP`, `SPORT`, `MOVIE`, `THEATRE`, `VOUCHER`) and export `EventTypeCode` type
+- [x] 2.2 Add `eventType` field (`EventTypeCodeSchema`) to `PublicConcertSummarySchema`
+- [x] 2.3 Add `seoTitle` (nullable string), `seoDescription` (nullable string), `seoImageUrl` (nullable string) to `PublicConcertDetailResponseSchema`
+- [x] 2.4 Add `eventType` field to `PublicConcertDetailResponseSchema` (inherited from summary extension)
+- [x] 2.5 Create `PublicFeaturedConcertSchema` extending `PublicConcertSummarySchema` with `bannerAsset` (nullable `PublicAssetSchema`), `displayOrder` (int)
+- [x] 2.6 Create `PublicFeaturedConcertListResponseSchema` as `z.array(PublicFeaturedConcertSchema)` and export types
+- [x] 2.7 Create `FeaturedConcertParamsSchema` with optional `limit` (positive integer, coerced) and export
+- [x] 2.8 Add optional `eventType` field (`EventTypeCodeSchema.optional()`) to `CatalogSearchParamsSchema`
+- [x] 2.9 Export all new schemas and types from the package entrypoint (`index.ts`)
+- [x] 2.10 Build the package (`npm run build -w @ticketbox/api-types`) and verify no type errors
 
 ## 3. Backend Catalog Domain & Use Cases
 
-- [ ] 3.1 Add `eventType` to `CatalogSearchFilters` domain type in `catalog.types.ts`
-- [ ] 3.2 Update `ListPublicConcertsUseCase` to accept and apply `eventType` filter in Prisma query (where clause)
-- [ ] 3.3 Update the public concert list mapper to include `eventType` in the summary response
-- [ ] 3.4 Update the public concert detail mapper to include `eventType`, `seoTitle`, `seoDescription`, `seoImageUrl` in the detail response
-- [ ] 3.5 Create `ListFeaturedConcertsUseCase` — query published upcoming concerts where `isFeatured = true`, ordered by `displayOrder` asc then `startsAt` asc, with configurable limit (default 10, max 20)
-- [ ] 3.6 Create a featured concert mapper that maps Concert + banner Asset relation to `PublicFeaturedConcert` response shape
+- [x] 3.1 Add `eventType` to `CatalogSearchFilters` domain type in `catalog.types.ts`
+- [x] 3.2 Update `ListPublicConcertsUseCase` to accept and apply `eventType` filter in Prisma query (where clause)
+- [x] 3.3 Update the public concert list mapper to include `eventType` in the summary response
+- [x] 3.4 Update the public concert detail mapper to include `eventType`, `seoTitle`, `seoDescription`, `seoImageUrl` in the detail response
+- [x] 3.5 Create `ListFeaturedConcertsUseCase` — query published upcoming concerts where `isFeatured = true`, ordered by `displayOrder` asc then `startsAt` asc, with configurable limit (default 10, max 20)
+- [x] 3.6 Create a featured concert mapper that maps Concert + banner Asset relation to `PublicFeaturedConcert` response shape
 
 ## 4. Backend HTTP Controller Updates
 
-- [ ] 4.1 Update `PublicConcertCatalogController.listConcerts` to parse and pass `eventType` from query params to use case
-- [ ] 4.2 Add `GET /concerts/featured` route to `PublicConcertCatalogController` — parse `FeaturedConcertParamsSchema`, call `ListFeaturedConcertsUseCase`, return response
-- [ ] 4.3 Ensure the `featured` route is registered before the `:slug` param route to avoid route conflict
-- [ ] 4.4 Register `ListFeaturedConcertsUseCase` in the concert-management NestJS module providers
+- [x] 4.1 Update `PublicConcertCatalogController.listConcerts` to parse and pass `eventType` from query params to use case
+- [x] 4.2 Add `GET /concerts/featured` route to `PublicConcertCatalogController` — parse `FeaturedConcertParamsSchema`, call `ListFeaturedConcertsUseCase`, return response
+- [x] 4.3 Ensure the `featured` route is registered before the `:slug` param route to avoid route conflict
+- [x] 4.4 Register `ListFeaturedConcertsUseCase` in the concert-management NestJS module providers
 
 ## 5. Backend Contract Tests
 
-- [ ] 5.1 Add contract test for `GET /concerts?eventType=CONCERT` — verify response validates against updated `PublicConcertListResponseSchema`
-- [ ] 5.2 Add contract test for `GET /concerts/featured` — verify response validates against `PublicFeaturedConcertListResponseSchema`
-- [ ] 5.3 Add contract test for `GET /concerts/:slug` — verify response includes `eventType` and SEO fields, validates against updated `PublicConcertDetailResponseSchema`
-- [ ] 5.4 Add unit tests for `ListFeaturedConcertsUseCase` (featured filter, ordering, limit capping)
-- [ ] 5.5 Verify existing catalog tests still pass after schema changes
+- [x] 5.1 Add contract test for `GET /concerts?eventType=CONCERT` — verify response validates against updated `PublicConcertListResponseSchema`
+- [x] 5.2 Add contract test for `GET /concerts/featured` — verify response validates against `PublicFeaturedConcertListResponseSchema`
+- [x] 5.3 Add contract test for `GET /concerts/:slug` — verify response includes `eventType` and SEO fields, validates against updated `PublicConcertDetailResponseSchema`
+- [x] 5.4 Add unit tests for `ListFeaturedConcertsUseCase` (featured filter, ordering, limit capping)
+- [x] 5.5 Verify existing catalog tests still pass after schema changes
 
 ## 6. Audience Web — API Client & Hooks
 
