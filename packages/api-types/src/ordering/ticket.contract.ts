@@ -13,18 +13,18 @@ export const TicketSummaryResponseSchema = z.object({
   userId: z.string(),
   concertId: z.string(),
   concertTitle: z.string(),
-  concertStartsAt: z.union([z.string().datetime(), z.date()]),
+  concertStartsAt: z.union([z.string(), z.date()]),
   ticketTypeId: z.string(),
   ticketTypeName: z.string(),
   ticketTypeCode: z.string(),
   status: TicketStatusSchema,
-  issuedAt: z.union([z.string().datetime(), z.date()]),
-  checkedInAt: z.union([z.string().datetime(), z.date()]).nullable(),
+  issuedAt: z.union([z.string(), z.date()]),
+  checkedInAt: z.union([z.string(), z.date()]).nullable().optional(),
 });
 export type TicketSummaryResponse = z.infer<typeof TicketSummaryResponseSchema>;
 
 export const TicketDetailResponseSchema = TicketSummaryResponseSchema.extend({
-  qrPayload: z.string(),
+  qrPayload: z.string().nullable().optional(),
 });
 export type TicketDetailResponse = z.infer<typeof TicketDetailResponseSchema>;
 
