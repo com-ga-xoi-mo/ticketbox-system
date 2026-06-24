@@ -30,6 +30,7 @@ import { expoLocalIdProvider } from './src/features/offline-queue/local-id-provi
 import { OfflineQueueBootstrap } from './src/features/offline-queue/offline-queue-bootstrap';
 import { TicketCacheRepository } from './src/features/ticket-cache/ticket-cache.repository';
 import { CacheDownloadService, type CacheDownloadStatus } from './src/features/ticket-cache/cache-download.service';
+import { shouldRefreshCache } from './src/features/ticket-cache/cache-refresh-state';
 
 const env = getMobileEnv();
 
@@ -138,6 +139,31 @@ export default function App(): React.JSX.Element {
       return () => clearInterval(intervalId);
     }
   }, [authState, offlineQueue, syncService]);
+
+  // Keep the offline ticket cache fresh while online: refresh on a recurring interval
+  // and immediately on reconnect (the `online` dep re-runs the effect, firing tick()).
+  useEffect(() => {
+    if (route !== 'scanner' || authState.status !== 'authenticated') return;
+    if (assignmentState.status !== 'loaded') return;
+    const assignment = assignmentState.selected;
+    const auth = authState;
+    const tick = (): void => {
+      if (
+        !shouldRefreshCache({
+          onScanner: true,
+          authenticated: true,
+          online,
+          downloading: cacheDownloadServiceRef.current?.status === 'downloading',
+        })
+      ) {
+        return;
+      }
+      void triggerCacheDownload(assignment, auth);
+    };
+    tick();
+    const intervalId = setInterval(tick, 25_000);
+    return () => clearInterval(intervalId);
+  }, [route, authState, assignmentState, online]);
 
   useEffect(() => {
     let active = true;
