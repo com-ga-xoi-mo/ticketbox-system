@@ -8,6 +8,9 @@ import {
   LoginResponseSchema,
   OnlineScanRequestSchema,
   OnlineScanResponseSchema,
+  PublicConcertAvailabilityResponseSchema,
+  PublicConcertDetailResponseSchema,
+  PublicConcertListResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
   TicketCacheDeltaResponseSchema,
@@ -20,8 +23,131 @@ const assignmentId = '11111111-1111-4111-8111-111111111111';
 const concertId = '22222222-2222-4222-8222-222222222222';
 const ticketId = '33333333-3333-4333-8333-333333333333';
 const eventId = '44444444-4444-4444-8444-444444444444';
+const assetId = '55555555-5555-4555-8555-555555555555';
+const seatingZoneId = '66666666-6666-4666-8666-666666666666';
+const ticketTypeId = '77777777-7777-4777-8777-777777777777';
 const timestamp = '2026-07-01T12:00:00.000Z';
 const qrPayloadHash = 'a'.repeat(64);
+
+describe('public concert catalog contracts', () => {
+  const availabilitySummary = {
+    totalAvailableQuantity: 120,
+    minPriceVnd: 450000,
+    maxPriceVnd: 1250000,
+    ticketTypeCount: 2,
+  };
+
+  const posterAsset = {
+    id: assetId,
+    kind: 'POSTER',
+    status: 'ACTIVE',
+    publicUrl: 'https://cdn.ticketbox.test/poster.jpg',
+    originalName: 'poster.jpg',
+    contentType: 'image/jpeg',
+    sizeBytes: 2048,
+  };
+
+  const summary = {
+    id: concertId,
+    slug: 'summer-beats',
+    title: 'Summer Beats',
+    artistName: 'The Suns',
+    venueName: 'TicketBox Arena',
+    city: 'Ho Chi Minh City',
+    startsAt: timestamp,
+    endsAt: '2026-07-01T15:00:00.000Z',
+    posterAsset,
+    availabilitySummary,
+  };
+
+  const ticketType = {
+    id: ticketTypeId,
+    code: 'GA',
+    name: 'General Admission',
+    description: 'Standing zone',
+    priceVnd: 450000,
+    totalQuantity: 200,
+    availableQuantity: 120,
+    maxPerUser: 4,
+    saleStartsAt: '2026-06-01T12:00:00.000Z',
+    saleEndsAt: '2026-06-30T12:00:00.000Z',
+    status: 'ACTIVE',
+    zoneIds: [seatingZoneId],
+  };
+
+  it('accepts public concert list, detail, and availability responses', () => {
+    expect(PublicConcertListResponseSchema.parse([summary])).toEqual([summary]);
+
+    expect(
+      PublicConcertDetailResponseSchema.parse({
+        ...summary,
+        description: 'A summer concert.',
+        publishedArtistBio: 'The Suns are a live act.',
+        venueAddress: '1 Nguyen Hue',
+        seatingMapAsset: { ...posterAsset, kind: 'SEATING_MAP' },
+        seatingZones: [
+          {
+            id: seatingZoneId,
+            svgElementId: 'zone-ga',
+            label: 'GA',
+            color: '#00aaff',
+            displayOrder: 1,
+            status: 'ACTIVE',
+          },
+        ],
+        ticketTypes: [ticketType],
+        ticketTypeZoneMappings: [{ ticketTypeId, seatingZoneId }],
+      }),
+    ).toMatchObject({ slug: 'summer-beats', ticketTypes: [ticketType] });
+
+    expect(
+      PublicConcertAvailabilityResponseSchema.parse({
+        concertId,
+        slug: 'summer-beats',
+        generatedAt: timestamp,
+        ticketTypes: [
+          {
+            ticketTypeId,
+            code: 'GA',
+            name: 'General Admission',
+            totalQuantity: 200,
+            availableQuantity: 120,
+            status: 'ACTIVE',
+            saleStartsAt: '2026-06-01T12:00:00.000Z',
+            saleEndsAt: '2026-06-30T12:00:00.000Z',
+            zoneIds: [seatingZoneId],
+          },
+        ],
+      }),
+    ).toMatchObject({ concertId, ticketTypes: [{ ticketTypeId }] });
+  });
+
+  it('rejects malformed public catalog payloads', () => {
+    expect(PublicConcertListResponseSchema.safeParse({ concerts: [summary] }).success).toBe(false);
+    expect(PublicConcertListResponseSchema.safeParse([{ ...summary, startsAt: new Date() }]).success)
+      .toBe(false);
+    expect(
+      PublicConcertDetailResponseSchema.safeParse({
+        ...summary,
+        description: null,
+        publishedArtistBio: null,
+        venueAddress: null,
+        seatingMapAsset: null,
+        seatingZones: [],
+        ticketTypes: [{ ...ticketType, status: 'UNKNOWN' }],
+        ticketTypeZoneMappings: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      PublicConcertAvailabilityResponseSchema.safeParse({
+        concertId,
+        slug: 'summer-beats',
+        generatedAt: timestamp,
+        ticketTypes: [{ ticketTypeId, availableQuantity: -1 }],
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe('batch sync contracts', () => {
   const event = {
