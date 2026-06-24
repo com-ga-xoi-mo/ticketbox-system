@@ -78,3 +78,61 @@ The system SHALL allow organizers to manage check-in staff assignments for conce
 #### Scenario: Admin assigns staff for any concert
 - **WHEN** an authenticated admin assigns a check-in staff user to any concert
 - **THEN** the system SHALL create an active assignment for that concert or gate
+## ADDED Requirements
+
+### Requirement: Admin user account management
+The system SHALL allow authenticated ADMIN users to create, list, read, update, deactivate, and reactivate user accounts with any supported role. Admin-created accounts SHALL use an admin-supplied password and SHALL NOT issue an authentication token from the create endpoint.
+
+#### Scenario: Admin creates user with roles
+- **WHEN** an authenticated ADMIN submits email, password, display name, and one or more roles to `POST /admin/users`
+- **THEN** the system SHALL hash the supplied password, create the user, assign the requested roles, and return a safe user projection with `id`, `email`, `displayName`, `roles`, and `status`
+- **AND** the response SHALL NOT include `passwordHash` or an access token
+
+#### Scenario: Non-admin cannot create user
+- **WHEN** an authenticated user without ADMIN role submits `POST /admin/users`
+- **THEN** the system SHALL reject the request as forbidden
+
+#### Scenario: Duplicate email is rejected
+- **WHEN** an admin creates a user with an email already registered to another account
+- **THEN** the system SHALL reject the request with a conflict error
+
+#### Scenario: Admin lists users by role and status
+- **WHEN** an authenticated ADMIN requests `GET /admin/users` with optional `role` or `status` filters
+- **THEN** the system SHALL return safe user projections matching the filters
+
+#### Scenario: Admin reads user detail
+- **WHEN** an authenticated ADMIN requests `GET /admin/users/:id` for an existing user
+- **THEN** the system SHALL return a safe user projection with roles and status
+
+#### Scenario: Missing user returns not found
+- **WHEN** an authenticated ADMIN requests `GET /admin/users/:id` for a missing user
+- **THEN** the system SHALL return a not-found error
+
+#### Scenario: Admin updates user profile and roles
+- **WHEN** an authenticated ADMIN submits `PATCH /admin/users/:id` with `displayName` or `roles`
+- **THEN** the system SHALL update the user's profile fields and role assignments atomically
+- **AND** the system SHALL validate all submitted roles against supported role values
+
+#### Scenario: Removing check-in role revokes active assignments
+- **WHEN** an authenticated ADMIN updates a user so their roles no longer include `CHECKIN_STAFF`
+- **THEN** the system SHALL revoke that user's active check-in staff assignments without deleting assignment history
+
+#### Scenario: Admin deactivates user
+- **WHEN** an authenticated ADMIN submits `PATCH /admin/users/:id/status` with a non-active status such as `DISABLED`
+- **THEN** the system SHALL set the user's status without hard-deleting the user
+- **AND** the system SHALL revoke that user's active check-in staff assignments
+
+#### Scenario: Admin reactivates user
+- **WHEN** an authenticated ADMIN submits `PATCH /admin/users/:id/status` with `ACTIVE`
+- **THEN** the system SHALL reactivate the user without automatically restoring previously revoked check-in assignments
+
+### Requirement: Soft-delete-only user lifecycle
+The system SHALL NOT hard-delete user accounts through account management operations. User deactivation SHALL preserve historical relationships for concerts, orders, payments, tickets, check-in events, and assignment history.
+
+#### Scenario: Deactivation preserves history
+- **WHEN** an admin deactivates a user who created concerts, purchased tickets, made payments, owns orders, or performed check-in events
+- **THEN** the system SHALL preserve those records and only change user status plus active assignment state
+
+#### Scenario: No hard-delete endpoint
+- **WHEN** the account management API is exposed
+- **THEN** it SHALL NOT provide an endpoint that hard-deletes a user row

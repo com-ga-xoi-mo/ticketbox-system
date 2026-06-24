@@ -18,3 +18,19 @@ The system SHALL allow a registered user to log in by submitting their email and
 #### Scenario: Unregistered email is rejected
 - **WHEN** a client sends `POST /auth/login` with an email that does not exist in the system
 - **THEN** the system SHALL return a `401 Unauthorized` error with the same response shape as an incorrect password rejection
+## ADDED Requirements
+
+### Requirement: Non-active users cannot log in
+The system SHALL reject login attempts for users whose account status is not `ACTIVE`. This rejection SHALL use the same unauthorized response shape as invalid credentials so clients cannot distinguish disabled accounts from wrong email or password.
+
+#### Scenario: Disabled user login is rejected
+- **WHEN** a user with status `DISABLED` submits correct email and password to `POST /auth/login`
+- **THEN** the system SHALL return a `401 Unauthorized` error without issuing a JWT
+
+#### Scenario: Active user login still succeeds
+- **WHEN** a user with status `ACTIVE` submits correct email and password to `POST /auth/login`
+- **THEN** the system SHALL return a signed JWT access token as before
+
+#### Scenario: Disabled status is not revealed
+- **WHEN** login is rejected because the account is not active
+- **THEN** the response SHALL NOT reveal that the email exists or that the account is disabled
