@@ -76,3 +76,6 @@ CLAUDE.md
 docs/manual-tests/
 DECISIONS.md
 press-kit.pdf
+
+skills-lock.json
+.opencode/
