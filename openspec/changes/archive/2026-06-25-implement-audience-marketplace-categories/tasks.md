@@ -50,47 +50,47 @@
 
 ## 6. Audience Web — API Client & Hooks
 
-- [ ] 6.1 Add `fetchFeaturedConcerts` function to `apps/audience-web/src/shared/api/catalog.ts` calling `GET /concerts/featured` and validating with `PublicFeaturedConcertListResponseSchema`
-- [ ] 6.2 Add `useFeaturedConcerts` TanStack Query hook with appropriate query key
-- [ ] 6.3 Update `CatalogSearchParams` type usage to include `eventType` in `fetchConcertList` params
-- [ ] 6.4 Add `catalogKeys.featured` query key to the catalog keys factory
+- [x] 6.1 Add `fetchFeaturedConcerts` function to `apps/audience-web/src/shared/api/catalog.ts` calling `GET /concerts/featured` and validating with `PublicFeaturedConcertListResponseSchema`
+- [x] 6.2 Add `useFeaturedConcerts` TanStack Query hook with appropriate query key
+- [x] 6.3 Update `CatalogSearchParams` type usage to include `eventType` in `fetchConcertList` params
+- [x] 6.4 Add `catalogKeys.featured` query key to the catalog keys factory
 
 ## 7. Audience Web — SEO Integration
 
-- [ ] 7.1 Install `react-helmet-async` dependency in `apps/audience-web`
-- [ ] 7.2 Wrap the app root (in `main.tsx` or around `RouterProvider`) with `HelmetProvider`
-- [ ] 7.3 Create a reusable `SeoHead` component that accepts title, description, image, url, type props and renders `<Helmet>` with Open Graph and Twitter Card meta tags
-- [ ] 7.4 Add `<SeoHead>` to `EventDetailPage` with SEO field values and fallbacks to title/description/posterAsset
-- [ ] 7.5 Add `<SeoHead>` to `EventListPage` with dynamic title/description based on active filters (eventType, city)
-- [ ] 7.6 Add `<SeoHead>` to `HomePage` with marketplace landing page meta tags
+- [x] 7.1 Install `react-helmet-async` dependency in `apps/audience-web`
+- [x] 7.2 Wrap the app root (in `main.tsx` or around `RouterProvider`) with `HelmetProvider`
+- [x] 7.3 Create a reusable `SeoHead` component that accepts title, description, image, url, type props and renders `<Helmet>` with Open Graph and Twitter Card meta tags
+- [x] 7.4 Add `<SeoHead>` to `EventDetailPage` with SEO field values and fallbacks to title/description/posterAsset
+- [x] 7.5 Add `<SeoHead>` to `EventListPage` with dynamic title/description based on active filters (eventType, city)
+- [x] 7.6 Add `<SeoHead>` to `HomePage` with marketplace landing page meta tags
 
 ## 8. Audience Web — Homepage Marketplace Redesign
 
-- [ ] 8.1 Create `HeroBannerCarousel` component — fetches from `useFeaturedConcerts`, renders carousel slides with banner/poster images, event info overlay, CTA links, auto-advance (5s), navigation dots, skeleton/fallback states
-- [ ] 8.2 Create `CategoryNavBar` component — horizontal bar with icon + label for each `EventTypeCode`, links to `/events?eventType=<TYPE>`, horizontally scrollable on mobile, centered row on desktop
-- [ ] 8.3 Create `FeaturedEventRail` component — horizontally scrollable rail of up to 10 event cards from `useConcertList`, with event type badge on each card, navigation arrows on desktop, swipe on mobile, skeleton/error states
-- [ ] 8.4 Create `PopularCategoriesGrid` component — grid of category cards (icon, name, description) linking to `/events?eventType=<TYPE>`, responsive 2/3/6-column layout
-- [ ] 8.5 Create `CityDiscoverySection` component — city pills from `useConcertCities` linking to `/events?city=<CITY>`, date shortcut buttons ("This weekend", "This month", "Next month") computing ISO date ranges, skeleton states
-- [ ] 8.6 Refactor `HomePage` to compose: `HeroBannerCarousel`, `CategoryNavBar`, `FeaturedEventRail`, `PopularCategoriesGrid`, `CityDiscoverySection` in order, replacing the current single-hero + flat-featured layout
-- [ ] 8.7 Ensure each homepage section loads independently with isolated loading/error boundaries
+- [x] 8.1 Create `HeroBannerCarousel` component — fetches from `useFeaturedConcerts`, renders carousel slides with banner/poster images, event info overlay, CTA links, auto-advance (5s), navigation dots, skeleton/fallback states
+- [x] 8.2 Create `CategoryNavBar` component — horizontal bar with icon + label for each `EventTypeCode`, links to `/events?eventType=<TYPE>`, horizontally scrollable on mobile, centered row on desktop
+- [x] 8.3 Create `FeaturedEventRail` component — horizontally scrollable rail of up to 10 event cards from `useConcertList`, with event type badge on each card, navigation arrows on desktop, swipe on mobile, skeleton/error states
+- [x] 8.4 Create `PopularCategoriesGrid` component — grid of category cards (icon, name, description) linking to `/events?eventType=<TYPE>`, responsive 2/3/6-column layout
+- [x] 8.5 Create `CityDiscoverySection` component — city pills from `useConcertCities` linking to `/events?city=<CITY>`, date shortcut buttons ("This weekend", "This month", "Next month") computing ISO date ranges, skeleton states
+- [x] 8.6 Refactor `HomePage` to compose: `HeroBannerCarousel`, `CategoryNavBar`, `FeaturedEventRail`, `PopularCategoriesGrid`, `CityDiscoverySection` in order, replacing the current single-hero + flat-featured layout
+- [x] 8.7 Ensure each homepage section loads independently with isolated loading/error boundaries
 
 ## 9. Audience Web — Event Listing Updates
 
-- [ ] 9.1 Add `EventTypeFilter` component — horizontal chip/tab bar with "All" + each event type, active chip styling, click handler that updates URL `eventType` param
-- [ ] 9.2 Integrate `EventTypeFilter` into `EventListPage` filter toolbar, above or alongside existing search/city/date/price filters
-- [ ] 9.3 Update `EventListPage` URL sync logic to read/write `eventType` search param and include in API calls
-- [ ] 9.4 Update event card component to display an `eventType` badge (colored pill with category label)
-- [ ] 9.5 Update no-results empty state to mention the active event type filter (e.g., "No workshops found")
+- [x] 9.1 Add `EventTypeFilter` component — horizontal chip/tab bar with "All" + each event type, active chip styling, click handler that updates URL `eventType` param
+- [x] 9.2 Integrate `EventTypeFilter` into `EventListPage` filter toolbar, above or alongside existing search/city/date/price filters
+- [x] 9.3 Update `EventListPage` URL sync logic to read/write `eventType` search param and include in API calls
+- [x] 9.4 Update event card component to display an `eventType` badge (colored pill with category label)
+- [x] 9.5 Update no-results empty state to mention the active event type filter (e.g., "No workshops found")
 
 ## 10. Audience Web — Event Detail Updates
 
-- [ ] 10.1 Display event type badge near the event title on `EventDetailPage`
-- [ ] 10.2 Verify `EventDetailPage` correctly renders the new `eventType` field from the updated detail response
+- [x] 10.1 Display event type badge near the event title on `EventDetailPage`
+- [x] 10.2 Verify `EventDetailPage` correctly renders the new `eventType` field from the updated detail response
 
 ## 11. Verification & Cleanup
 
-- [ ] 11.1 Run full backend test suite and verify all tests pass (`npm test` in backend workspace)
-- [ ] 11.2 Run `npm run build` for `@ticketbox/api-types`, backend, and audience-web — verify no type errors
-- [ ] 11.3 Run audience-web dev server and manually verify: homepage marketplace layout, category navigation, featured carousel, event listing with eventType filter, event detail with SEO meta tags and type badge
-- [ ] 11.4 Verify responsive behavior: mobile (< 640px), tablet (640-1023px), desktop (>= 1024px) for homepage and event listing
-- [ ] 11.5 Verify URL-based filter state: navigate to `/events?eventType=WORKSHOP&city=HCMC` and confirm all filters are restored and applied
+- [x] 11.1 Run full backend test suite and verify all tests pass (`npm test` in backend workspace)
+- [x] 11.2 Run `npm run build` for `@ticketbox/api-types`, backend, and audience-web — verify no type errors
+- [x] 11.3 Run audience-web dev server and manually verify: homepage marketplace layout, category navigation, featured carousel, event listing with eventType filter, event detail with SEO meta tags and type badge
+- [x] 11.4 Verify responsive behavior: mobile (< 640px), tablet (640-1023px), desktop (>= 1024px) for homepage and event listing
+- [x] 11.5 Verify URL-based filter state: navigate to `/events?eventType=WORKSHOP&city=HCMC` and confirm all filters are restored and applied
