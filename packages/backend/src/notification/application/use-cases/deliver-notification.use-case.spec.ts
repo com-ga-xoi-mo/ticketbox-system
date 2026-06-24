@@ -14,6 +14,7 @@ import {
   type NotificationRecord,
 } from '../../domain/notification.types';
 import { FailingEmailChannelAdapter } from '../../testing/failing-email-channel.adapter';
+import type { PurchaseConfirmationEmailComposer } from '../services/purchase-confirmation-email-composer';
 import { DeliverNotificationUseCase } from './deliver-notification.use-case';
 
 function emailNotification(overrides: Partial<NotificationRecord> = {}): NotificationRecord {
@@ -116,6 +117,68 @@ describe('DeliverNotificationUseCase', () => {
       status: NotificationAttemptStatus.FAILED,
       errorMessage: 'SMTP unavailable',
     });
+  });
+
+  it('recreates purchase-confirmation attachments for each retry attempt', async () => {
+    const compose = vi.fn(async () => ({
+      body: 'Confirmed\nTCK-001 | VIP',
+      attachments: [
+        {
+          filename: 'TCK-001.png',
+          contentType: 'image/png',
+          content: Buffer.from('png'),
+        },
+      ],
+    }));
+    const composer = { compose } as unknown as PurchaseConfirmationEmailComposer;
+    const emailChannel: NotificationChannelPort = {
+      send: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('SMTP unavailable'))
+        .mockResolvedValueOnce({ provider: 'smtp', providerMessageId: 'message-1' }),
+    };
+    const useCase = new DeliverNotificationUseCase(repository, emailChannel, 3, composer);
+
+    const first = await useCase.execute('notification-1', 'audience@ticketbox.test', {
+      orderId: 'order-1',
+    });
+    const second = await useCase.execute('notification-1', 'audience@ticketbox.test', {
+      orderId: 'order-1',
+    });
+
+    expect(first.shouldRetry).toBe(true);
+    expect(second.status).toBe(NotificationStatus.SENT);
+    expect(compose).toHaveBeenCalledTimes(2);
+    expect(emailChannel.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        body: 'Confirmed\nTCK-001 | VIP',
+        attachments: [
+          expect.objectContaining({
+            filename: 'TCK-001.png',
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('does not compose QR attachments for non-purchase email', async () => {
+    repository.notification = emailNotification({ type: 'CONCERT_REMINDER' });
+    const compose = vi.fn();
+    const emailChannel: NotificationChannelPort = {
+      send: vi.fn(async () => ({ provider: 'local' })),
+    };
+    const useCase = new DeliverNotificationUseCase(repository, emailChannel, 3, {
+      compose,
+    } as unknown as PurchaseConfirmationEmailComposer);
+
+    await useCase.execute('notification-1', 'audience@ticketbox.test', {
+      orderId: 'order-1',
+    });
+
+    expect(compose).not.toHaveBeenCalled();
+    expect(emailChannel.send).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Confirmed', attachments: undefined }),
+    );
   });
 
   it('marks notification failed when retry attempts are exhausted', async () => {

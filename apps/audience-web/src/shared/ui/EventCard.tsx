@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, MapPin, Music2, Ticket } from 'lucide-react';
 import type { PublicConcertSummary } from '@ticketbox/api-types';
@@ -35,6 +36,7 @@ function formatPrice(vnd: number | null): string {
 }
 
 export function EventCard({ concert, className }: EventCardProps) {
+  const [imgError, setImgError] = useState(false);
   const { slug, title, artistName, venueName, city, startsAt, posterAsset, availabilitySummary } =
     concert;
   const isSoldOut = availabilitySummary.totalAvailableQuantity === 0;
@@ -50,11 +52,12 @@ export function EventCard({ concert, className }: EventCardProps) {
     >
       <Card className="h-full gap-0 overflow-hidden border-white/70 bg-card/85 py-0 shadow-[0_18px_55px_rgb(15_23_42/0.08)] backdrop-blur transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-[0_26px_70px_rgb(37_99_235/0.16)]">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {posterAsset?.publicUrl ? (
+          {posterAsset?.publicUrl && !imgError ? (
             <img
               src={resolveImageUrl(posterAsset.publicUrl)}
               alt={title}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,oklch(0.88_0.14_220),transparent_16rem),linear-gradient(135deg,oklch(0.5_0.2_260),oklch(0.74_0.18_240))] text-5xl text-white">
