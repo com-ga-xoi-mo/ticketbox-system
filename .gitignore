@@ -70,4 +70,6 @@ docker-compose.override.yml
 
 .agent/
 .codex/
+.opencode/
 .agents/skills
+skills-lock.json
