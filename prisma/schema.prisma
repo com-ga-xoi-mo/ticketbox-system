@@ -192,6 +192,7 @@ enum ArtistBioStatus {
   READY_FOR_REVIEW
   PUBLISHED
   FAILED
+  REJECTED
 
   @@map("artist_bio_status")
 }
