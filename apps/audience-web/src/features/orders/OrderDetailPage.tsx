@@ -81,8 +81,8 @@ export function OrderDetailPage() {
         returnUrl,
       });
 
-      if (res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+      if (res.redirectUrl) {
+        window.location.href = res.redirectUrl;
       }
     } catch (err) {
       setErrorMsg(parseOrderError(err));

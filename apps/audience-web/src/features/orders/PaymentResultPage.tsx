@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Result, Skeleton } from 'antd';
 import { Loader2 } from 'lucide-react';
 import { useOrderDetail } from '../../shared/api/orders';
 import { Button } from '../../components/ui/button';
 import { PageError, PageLoading } from '../../shared/ui/PageStates';
+import { apiGet } from '../../shared/api/client';
 
 export function PaymentResultPage() {
   const { id } = useParams<{ id: string }>();
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  const location = useLocation();
 
   const { data: order, isLoading, isError } = useOrderDetail(
     id ?? '',
@@ -26,6 +28,17 @@ export function PaymentResultPage() {
 
     return () => clearTimeout(timeout);
   }, [id, hasTimedOut, order]);
+
+  // Tự động đồng bộ IPN nếu URL có query params từ VNPay/MOMO (Mẹo dùng cho Local Dev)
+  useEffect(() => {
+    if (location.search && order?.status === 'PENDING_PAYMENT') {
+      if (location.search.includes('vnp_')) {
+        apiGet(`/payments/vnpay/ipn${location.search}`).catch(console.error);
+      } else if (location.search.includes('resultCode=')) {
+        // MOMO IPN (hoặc check params của MoMo)
+      }
+    }
+  }, [location.search, order?.status]);
 
   useEffect(() => {
     if (isTerminal && !hasTimedOut) {

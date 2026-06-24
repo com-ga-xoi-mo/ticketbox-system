@@ -157,9 +157,9 @@ export class PaymentController {
         return { RspCode: '01', Message: 'Order not found' };
       }
       if (err instanceof VnpayAmountMismatchError) {
-        return { RspCode: '04', Message: 'Invalid Amount' };
+        return { RspCode: '04', Message: 'Invalid amount' };
       }
-
+      console.error('[VNPay IPN Error]', err);
       return { RspCode: '99', Message: 'Unknown error' };
     }
   }

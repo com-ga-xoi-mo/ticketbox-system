@@ -81,11 +81,10 @@ export function CheckoutPage() {
         returnUrl,
       });
 
-      if (res.redirectUrl) {
-        window.location.href = res.redirectUrl;
-      } else {
-        throw new Error('No payment URL returned');
+      if (!res.redirectUrl) {
+        throw new Error('No redirect URL returned');
       }
+      window.location.href = res.redirectUrl;
     } catch (error) {
       setErrorMsg(parseOrderError(error));
       setIsSubmitting(false);
