@@ -6,6 +6,7 @@ export enum ArtistBioStatus {
   READY_FOR_REVIEW = 'READY_FOR_REVIEW',
   PUBLISHED = 'PUBLISHED',
   FAILED = 'FAILED',
+  REJECTED = 'REJECTED',
 }
 
 export interface ArtistBioActor {

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { InvalidPressKitError } from '../domain/errors';
 import type { PressKitUpload } from '../domain/artist-bio.types';
@@ -40,5 +40,5 @@ export function validatePressKitUpload(
 }
 
 export function buildPressKitStorageKey(concertId: string, checksum: string): string {
-  return `artist-bio/${concertId}/${checksum}.pdf`;
+  return `artist-bio/${concertId}/${checksum}-${randomUUID()}.pdf`;
 }
