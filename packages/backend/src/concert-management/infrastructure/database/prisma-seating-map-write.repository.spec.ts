@@ -34,11 +34,12 @@ function makeAssetData(assetId = 'asset-new') {
     sizeBytes: 512,
     checksum: 'sha256:def',
     uploadedById: 'user-1',
+    metadata: { svgElementIds: [] },
   };
 }
 
-function createRepository(txAsset: unknown, txConcert: unknown): PrismaSeatingMapWriteRepository {
-  const tx = { asset: txAsset, concert: txConcert };
+function createRepository(txAsset: unknown, txConcert: unknown, txSeatingZone: unknown): PrismaSeatingMapWriteRepository {
+  const tx = { asset: txAsset, concert: txConcert, seatingZone: txSeatingZone };
   return new PrismaSeatingMapWriteRepository({
     $transaction: vi.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
   } as unknown as PrismaService);
@@ -57,7 +58,8 @@ describe('PrismaSeatingMapWriteRepository', () => {
         findUnique: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: null }),
         update: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: newAsset.id }),
       };
-      const repo = createRepository(txAsset, txConcert);
+      const txSeatingZone = { deleteMany: vi.fn() };
+      const repo = createRepository(txAsset, txConcert, txSeatingZone);
 
       const result = await repo.createAssetAndAssociateConcertSeatingMap(
         makeAssetData(),
@@ -68,6 +70,7 @@ describe('PrismaSeatingMapWriteRepository', () => {
       expect(txAsset.delete).not.toHaveBeenCalled();
       expect(result.asset.id).toBe('asset-new');
       expect(result.concert.id).toBe('concert-1');
+      expect(txSeatingZone.deleteMany).toHaveBeenCalledWith({ where: { concertId: 'concert-1' } });
     });
 
     it('re-upload: deletes the previous Asset row inside the transaction and returns its storageKey', async () => {
@@ -82,7 +85,8 @@ describe('PrismaSeatingMapWriteRepository', () => {
         findUnique: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: 'asset-old' }),
         update: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: 'asset-new' }),
       };
-      const repo = createRepository(txAsset, txConcert);
+      const txSeatingZone = { deleteMany: vi.fn() };
+      const repo = createRepository(txAsset, txConcert, txSeatingZone);
 
       const result = await repo.createAssetAndAssociateConcertSeatingMap(
         makeAssetData('asset-new'),
@@ -95,6 +99,7 @@ describe('PrismaSeatingMapWriteRepository', () => {
         select: { storageKey: true },
       });
       expect(txAsset.delete).toHaveBeenCalledWith({ where: { id: 'asset-old' } });
+      expect(txSeatingZone.deleteMany).toHaveBeenCalledWith({ where: { concertId: 'concert-1' } });
     });
 
     it('re-upload: does not call updateMany with ARCHIVED status', async () => {
@@ -111,11 +116,38 @@ describe('PrismaSeatingMapWriteRepository', () => {
         findUnique: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: 'asset-old' }),
         update: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: 'asset-new' }),
       };
-      const repo = createRepository(txAsset, txConcert);
+      const txSeatingZone = { deleteMany: vi.fn() };
+      const repo = createRepository(txAsset, txConcert, txSeatingZone);
 
       await repo.createAssetAndAssociateConcertSeatingMap(makeAssetData('asset-new'), 'concert-1');
 
       expect(txAsset.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('persists metadata to asset', async () => {
+      const newAsset = makeAssetRow({ id: 'asset-new', metadata: { svgElementIds: ['z1'] } });
+      const txAsset = {
+        create: vi.fn().mockResolvedValue(newAsset),
+        findUnique: vi.fn().mockResolvedValue(null),
+        delete: vi.fn(),
+      };
+      const txConcert = {
+        findUnique: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: null }),
+        update: vi.fn().mockResolvedValue({ id: 'concert-1', seatingMapAssetId: 'asset-new' }),
+      };
+      const txSeatingZone = { deleteMany: vi.fn() };
+      const repo = createRepository(txAsset, txConcert, txSeatingZone);
+
+      const assetData = makeAssetData('asset-new');
+      assetData.metadata = { svgElementIds: ['z1'] } as any;
+      
+      const result = await repo.createAssetAndAssociateConcertSeatingMap(assetData, 'concert-1');
+      
+      expect(txAsset.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          metadata: { svgElementIds: ['z1'] } as any
+        })
+      }));
     });
   });
 });

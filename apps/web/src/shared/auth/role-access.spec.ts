@@ -21,16 +21,16 @@ describe('canAccess', () => {
 });
 
 describe('redirectFor', () => {
-  it('ADMIN → /dashboard', () => {
-    expect(redirectFor(session(['ADMIN']))).toBe('/dashboard');
+  it('ADMIN → /admin/dashboard', () => {
+    expect(redirectFor(session(['ADMIN']))).toBe('/admin/dashboard');
   });
 
-  it('ORGANIZER → /concerts', () => {
-    expect(redirectFor(session(['ORGANIZER']))).toBe('/concerts');
+  it('ORGANIZER → /organizer/concerts', () => {
+    expect(redirectFor(session(['ORGANIZER']))).toBe('/organizer/concerts');
   });
 
-  it('ADMIN + ORGANIZER → /dashboard (ADMIN takes precedence)', () => {
-    expect(redirectFor(session(['ORGANIZER', 'ADMIN']))).toBe('/dashboard');
+  it('ADMIN + ORGANIZER → /admin/dashboard (ADMIN takes precedence)', () => {
+    expect(redirectFor(session(['ORGANIZER', 'ADMIN']))).toBe('/admin/dashboard');
   });
 
   it('CHECKIN_STAFF → /no-access', () => {

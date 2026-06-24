@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthorizeConcertManagementUseCase } from '../../../identity/application/use-cases/authorize-concert-management.use-case';
 import type { PlatformConfigService } from '../../../platform/config/platform-config.service';
 import type { ObjectStoragePort } from '../../../platform/storage';
+import type { ConcertWriteRepositoryPort } from '../../domain/ports/concert-write.port';
 import type { SeatingMapWriteRepositoryPort } from '../../domain/ports/seating-map-write.port';
+import { ConcertNotDraftError } from '../../domain/seating-map.errors';
 import type { SeatingMapAsset } from '../../domain/seating-map.types';
-import type { SvgSafetyValidator } from '../services/svg-safety-validator';
+import type { SvgElementIdExtractor } from '../services/svg-element-id-extractor';
+import type { SvgSanitizer } from '../services/svg-sanitizer';
 import { UploadSeatingMapUseCase } from './upload-seating-map.use-case';
 
 const now = new Date('2026-06-15T00:00:00.000Z');
@@ -24,6 +27,7 @@ function makeSeatingMapAsset(overrides: Partial<SeatingMapAsset> = {}): SeatingM
     uploadedById: 'user-1',
     createdAt: now,
     updatedAt: now,
+    svgElementIds: [],
     ...overrides,
   };
 }
@@ -47,8 +51,10 @@ describe('UploadSeatingMapUseCase', () => {
   let authorizeConcertManagement: AuthorizeConcertManagementUseCase;
   let storage: ObjectStoragePort;
   let seatingMapWriteRepo: SeatingMapWriteRepositoryPort;
+  let concertWriteRepo: ConcertWriteRepositoryPort;
   let config: PlatformConfigService;
-  let svgSafetyValidator: SvgSafetyValidator;
+  let svgSanitizer: SvgSanitizer;
+  let svgElementIdExtractor: SvgElementIdExtractor;
 
   beforeEach(() => {
     authorizeConcertManagement = {
@@ -68,13 +74,21 @@ describe('UploadSeatingMapUseCase', () => {
       findAssetById: vi.fn(),
     };
 
+    concertWriteRepo = {
+      findConcertById: vi.fn().mockResolvedValue({ id: 'concert-1', status: 'DRAFT' }),
+    } as unknown as ConcertWriteRepositoryPort;
+
     config = {
       seatingMapSvgMaxBytes: 5 * 1024 * 1024,
     } as unknown as PlatformConfigService;
 
-    svgSafetyValidator = {
-      validate: vi.fn().mockReturnValue({ safe: true, reasons: [] }),
-    } as unknown as SvgSafetyValidator;
+    svgSanitizer = {
+      sanitize: vi.fn().mockReturnValue({ sanitizedBuffer: SVG_BUFFER, removedElements: [] }),
+    } as unknown as SvgSanitizer;
+
+    svgElementIdExtractor = {
+      extract: vi.fn().mockReturnValue(['zone-1', 'zone-2']),
+    } as unknown as SvgElementIdExtractor;
   });
 
   function makeUseCase() {
@@ -82,8 +96,10 @@ describe('UploadSeatingMapUseCase', () => {
       authorizeConcertManagement,
       storage,
       seatingMapWriteRepo,
+      concertWriteRepo,
       config,
-      svgSafetyValidator,
+      svgSanitizer,
+      svgElementIdExtractor,
     );
   }
 
@@ -166,5 +182,59 @@ describe('UploadSeatingMapUseCase', () => {
     // The new object (storageKey) should have been cleaned up
     expect(storage.deleteObject).toHaveBeenCalledTimes(1);
     expect(vi.mocked(storage.deleteObject).mock.calls[0][0]).toMatch(/^seating-maps\/concert-1\//);
+  });
+
+  it('fails if concert is not in DRAFT status', async () => {
+    vi.mocked(concertWriteRepo.findConcertById).mockResolvedValue({ id: 'concert-1', status: 'PUBLISHED' } as any);
+
+    const useCase = makeUseCase();
+    await expect(useCase.execute(makeInput())).rejects.toThrow(ConcertNotDraftError);
+  });
+
+  it('fails if concert is not found', async () => {
+    vi.mocked(concertWriteRepo.findConcertById).mockResolvedValue(null);
+
+    const useCase = makeUseCase();
+    await expect(useCase.execute(makeInput())).rejects.toThrow(ConcertNotDraftError);
+  });
+
+  it('sanitizes SVG, extracts element IDs, and uses sanitized buffer for checksum, size, and storage', async () => {
+    const sanitizedBuffer = Buffer.from('<svg id="sanitized"></svg>');
+    vi.mocked(svgSanitizer.sanitize).mockReturnValue({
+      sanitizedBuffer: sanitizedBuffer,
+      removedElements: ['script'],
+    });
+    vi.mocked(svgElementIdExtractor.extract).mockReturnValue(['zone-A']);
+
+    const repoResult = {
+      asset: makeSeatingMapAsset(),
+      concert: { id: 'concert-1', seatingMapAssetId: 'asset-new' },
+      replacedStorageKey: null,
+    };
+    vi.mocked(seatingMapWriteRepo.createAssetAndAssociateConcertSeatingMap).mockResolvedValue(repoResult);
+
+    const useCase = makeUseCase();
+    const result = await useCase.execute(makeInput());
+
+    expect(svgSanitizer.sanitize).toHaveBeenCalledWith(SVG_BUFFER);
+    expect(svgElementIdExtractor.extract).toHaveBeenCalledWith(sanitizedBuffer.toString('utf-8'));
+    
+    // Checks that the storage object put used the sanitized buffer
+    expect(storage.putObject).toHaveBeenCalledWith(expect.objectContaining({
+      content: sanitizedBuffer,
+    }));
+
+    // Checks that the repository was called with the right size and metadata
+    expect(seatingMapWriteRepo.createAssetAndAssociateConcertSeatingMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sizeBytes: sanitizedBuffer.length,
+        metadata: { svgElementIds: ['zone-A'] },
+      }),
+      'concert-1'
+    );
+
+    // Checks result contains removedElements and extracted IDs
+    expect(result.removedElements).toEqual(['script']);
+    expect(result.extractedSvgElementIds).toEqual(['zone-A']);
   });
 });

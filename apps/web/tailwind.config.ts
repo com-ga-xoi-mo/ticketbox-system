@@ -1,13 +1,56 @@
 import type { Config } from 'tailwindcss';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
 const config: Config = {
-  darkMode: 'class',
+  darkMode: ['class'],
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Midnight Venue palette (from Stitch dashboard design)
-        background: '#0b1326',
+        border: 'oklch(var(--border) / <alpha-value>)',
+        input: 'oklch(var(--input) / <alpha-value>)',
+        ring: 'oklch(var(--ring) / <alpha-value>)',
+        background: 'oklch(var(--background) / <alpha-value>)',
+        foreground: 'oklch(var(--foreground) / <alpha-value>)',
+        primary: {
+          DEFAULT: 'oklch(var(--primary) / <alpha-value>)',
+          foreground: 'oklch(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'oklch(var(--secondary) / <alpha-value>)',
+          foreground: 'oklch(var(--secondary-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'oklch(var(--destructive) / <alpha-value>)',
+          foreground: 'oklch(var(--destructive-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'oklch(var(--muted) / <alpha-value>)',
+          foreground: 'oklch(var(--muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'oklch(var(--accent) / <alpha-value>)',
+          foreground: 'oklch(var(--accent-foreground) / <alpha-value>)',
+        },
+        popover: {
+          DEFAULT: 'oklch(var(--popover) / <alpha-value>)',
+          foreground: 'oklch(var(--popover-foreground) / <alpha-value>)',
+        },
+        card: {
+          DEFAULT: 'oklch(var(--card) / <alpha-value>)',
+          foreground: 'oklch(var(--card-foreground) / <alpha-value>)',
+        },
+        sidebar: {
+          DEFAULT: 'oklch(var(--sidebar) / <alpha-value>)',
+          foreground: 'oklch(var(--sidebar-foreground) / <alpha-value>)',
+          primary: 'oklch(var(--sidebar-primary) / <alpha-value>)',
+          'primary-foreground': 'oklch(var(--sidebar-primary-foreground) / <alpha-value>)',
+          accent: 'oklch(var(--sidebar-accent) / <alpha-value>)',
+          'accent-foreground': 'oklch(var(--sidebar-accent-foreground) / <alpha-value>)',
+          border: 'oklch(var(--sidebar-border) / <alpha-value>)',
+          ring: 'oklch(var(--sidebar-ring) / <alpha-value>)',
+        },
+        // Legacy Midnight Venue palette
         surface: {
           DEFAULT: '#0b1326',
           dim: '#0b1326',
@@ -24,37 +67,6 @@ const config: Config = {
         'on-surface': {
           DEFAULT: '#dae2fd',
           variant: '#cbc3d7',
-        },
-        primary: {
-          DEFAULT: '#ecb2ff',
-          fixed: '#f8d8ff',
-          'fixed-dim': '#ecb2ff',
-          container: '#db4df5',
-          'on-primary': '#520071',
-          'on-primary-container': '#ffffff',
-          'on-primary-fixed': '#320047',
-          'on-primary-fixed-variant': '#74009f',
-          'inverse-primary': '#9900cf',
-        },
-        secondary: {
-          DEFAULT: '#ffb1c3',
-          fixed: '#ffd9e0',
-          'fixed-dim': '#ffb1c3',
-          container: '#ff4b89',
-          'on-secondary': '#66002c',
-          'on-secondary-container': '#590026',
-          'on-secondary-fixed': '#3f0019',
-          'on-secondary-fixed-variant': '#8f0041',
-        },
-        tertiary: {
-          DEFAULT: '#00dbe9',
-          fixed: '#7df4ff',
-          'fixed-dim': '#00dbe9',
-          container: '#00838b',
-          'on-tertiary': '#00363a',
-          'on-tertiary-container': '#ffffff',
-          'on-tertiary-fixed': '#002022',
-          'on-tertiary-fixed-variant': '#004f54',
         },
         error: {
           DEFAULT: '#ffb4ab',
@@ -89,10 +101,9 @@ const config: Config = {
         'mono-data': ['14px', { lineHeight: '20px', fontWeight: '400' }],
       },
       borderRadius: {
-        DEFAULT: '0.25rem',
-        sm: '0.25rem',
-        md: '0.5rem',
-        lg: '0.5rem',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
         xl: '0.75rem',
         '2xl': '1rem',
         full: '9999px',
@@ -110,7 +121,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

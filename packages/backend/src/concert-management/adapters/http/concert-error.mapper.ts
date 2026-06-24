@@ -27,6 +27,7 @@ export async function mapConcertErrors<T>(operation: () => Promise<T>): Promise<
   try {
     return await operation();
   } catch (err: unknown) {
+    console.error('ConcertErrorMapper caught error:', err);
     if (err instanceof ForbiddenConcertOwnershipError) {
       throw new ForbiddenException(err.message);
     }
