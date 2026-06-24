@@ -15,6 +15,7 @@ export class NotificationDeliveryProcessor extends WorkerHost {
     const outcome = await this.deliverNotification.execute(
       job.data.notificationId,
       job.data.toEmail,
+      { orderId: job.data.orderId },
     );
 
     if (outcome.shouldRetry) {

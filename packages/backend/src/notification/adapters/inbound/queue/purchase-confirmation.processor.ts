@@ -32,6 +32,7 @@ export class PurchaseConfirmationProcessor extends WorkerHost {
       {
         notificationId: notifications.email.id,
         toEmail: job.data.userEmail,
+        orderId: job.data.orderId,
       },
       {
         jobId: `deliver-${notifications.email.id}`,

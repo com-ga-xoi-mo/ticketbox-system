@@ -73,6 +73,7 @@ describe('notification BullMQ processors', () => {
       {
         notificationId: 'notification-email',
         toEmail: 'audience@ticketbox.test',
+        orderId: 'order-1',
       },
       expect.objectContaining({
         jobId: 'deliver-notification-email',
@@ -95,10 +96,16 @@ describe('notification BullMQ processors', () => {
       data: {
         notificationId: 'notification-email',
         toEmail: 'audience@ticketbox.test',
+        orderId: 'order-1',
       },
     } as Job<NotificationDeliveryJobData>);
 
     expect(result).toEqual({ status: NotificationStatus.SENT });
+    expect(deliverNotification.execute).toHaveBeenCalledWith(
+      'notification-email',
+      'audience@ticketbox.test',
+      { orderId: 'order-1' },
+    );
   });
 
   it('delivery processor throws when use case reports retryable failure', async () => {
@@ -116,6 +123,7 @@ describe('notification BullMQ processors', () => {
         data: {
           notificationId: 'notification-email',
           toEmail: 'audience@ticketbox.test',
+          orderId: 'order-1',
         },
       } as Job<NotificationDeliveryJobData>),
     ).rejects.toThrow('Email delivery failed and should be retried');

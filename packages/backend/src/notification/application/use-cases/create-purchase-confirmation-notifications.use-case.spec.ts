@@ -87,6 +87,8 @@ describe('CreatePurchaseConfirmationNotificationsUseCase', () => {
     expect(result.email.body).toContain('View your e-tickets');
     expect(result.email.body).toContain('https://ticketbox.test/me/tickets/order-1');
     expect(result.inApp.body).toContain('https://ticketbox.test/me/tickets/order-1');
+    expect(JSON.stringify([...repository.records.values()])).not.toContain('qrPayload');
+    expect(JSON.stringify([...repository.records.values()])).not.toContain('image/png');
     expect(repository.records.size).toBe(2);
   });
 
