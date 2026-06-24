@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Request,
+  UnprocessableEntityException,
+  UseGuards,
+} from '@nestjs/common';
+import { GuestListBatchNotCompletedError } from '../../domain/errors';
 import { AuthorizeAdminActionUseCase } from '../../../identity/application/use-cases/authorize-admin-action.use-case';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
@@ -59,14 +69,25 @@ export class AdminGuestListController {
     @Param('batchId') batchId: string,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return JSON.parse(
-      (
-        await this.batches.report(
-          { userId: req.user.id, roles: req.user.roles },
-          concertId,
-          batchId,
-        )
-      ).toString('utf8'),
-    );
+    try {
+      return JSON.parse(
+        (
+          await this.batches.report(
+            { userId: req.user.id, roles: req.user.roles },
+            concertId,
+            batchId,
+          )
+        ).toString('utf8'),
+      );
+    } catch (error) {
+      if (error instanceof GuestListBatchNotCompletedError) {
+        throw new UnprocessableEntityException({
+          error: 'BATCH_NOT_COMPLETED',
+          status: error.batchStatus,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 }

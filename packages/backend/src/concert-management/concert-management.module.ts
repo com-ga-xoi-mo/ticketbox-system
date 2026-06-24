@@ -86,9 +86,13 @@ import { ListOrganizerConcertsUseCase } from './application/use-cases/list-organ
 import { GetOrganizerConcertUseCase } from './application/use-cases/get-organizer-concert.use-case';
 import { ListAdminConcertsUseCase } from './application/use-cases/list-admin-concerts.use-case';
 import { GetAdminConcertUseCase } from './application/use-cases/get-admin-concert.use-case';
-import { SvgSafetyValidator } from './application/services/svg-safety-validator';
+import { SvgSanitizer } from './application/services/svg-sanitizer';
+import { SvgElementIdExtractor } from './application/services/svg-element-id-extractor';
 import { PosterImageValidator } from './application/services/poster-image-validator';
 import { GetAssetContentUseCase } from './application/use-cases/get-asset-content.use-case';
+import { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
+import { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';
+import { ListTicketTypesWithZoneMappingsUseCase } from './application/use-cases/list-ticket-types-with-zone-mappings.use-case';
 
 // Controllers
 import { PublicConcertCatalogController } from './adapters/http/public-concert-catalog.controller';
@@ -140,8 +144,12 @@ import { AssetController } from './adapters/http/asset.controller';
       useClass: PrismaAssetReadRepository,
     },
     {
-      provide: SvgSafetyValidator,
-      useFactory: () => new SvgSafetyValidator(),
+      provide: SvgSanitizer,
+      useFactory: () => new SvgSanitizer(),
+    },
+    {
+      provide: SvgElementIdExtractor,
+      useFactory: () => new SvgElementIdExtractor(),
     },
     {
       provide: PosterImageValidator,
@@ -262,17 +270,29 @@ import { AssetController } from './adapters/http/asset.controller';
         AuthorizeConcertManagementUseCase,
         OBJECT_STORAGE,
         SEATING_MAP_WRITE_REPOSITORY,
+        CONCERT_WRITE_REPOSITORY,
         PlatformConfigService,
-        SvgSafetyValidator,
+        SvgSanitizer,
+        SvgElementIdExtractor,
       ],
       useFactory: (
         authorize: AuthorizeConcertManagementUseCase,
         storage: ObjectStoragePort,
         seatingMapRepo: SeatingMapWriteRepositoryPort,
+        concertWriteRepo: ConcertWriteRepositoryPort,
         config: PlatformConfigService,
-        svgSafetyValidator: SvgSafetyValidator,
+        svgSanitizer: SvgSanitizer,
+        svgElementIdExtractor: SvgElementIdExtractor,
       ) =>
-        new UploadSeatingMapUseCase(authorize, storage, seatingMapRepo, config, svgSafetyValidator),
+        new UploadSeatingMapUseCase(
+          authorize,
+          storage,
+          seatingMapRepo,
+          concertWriteRepo,
+          config,
+          svgSanitizer,
+          svgElementIdExtractor,
+        ),
     },
     {
       provide: UploadPosterUseCase,
@@ -293,11 +313,24 @@ import { AssetController } from './adapters/http/asset.controller';
     },
     {
       provide: UpsertSeatingZonesUseCase,
-      inject: [AuthorizeConcertManagementUseCase, SEATING_ZONE_REPOSITORY],
+      inject: [
+        AuthorizeConcertManagementUseCase,
+        SEATING_ZONE_REPOSITORY,
+        CONCERT_WRITE_REPOSITORY,
+        SEATING_MAP_WRITE_REPOSITORY,
+      ],
       useFactory: (
         authorize: AuthorizeConcertManagementUseCase,
         seatingZoneRepo: SeatingZoneRepositoryPort,
-      ) => new UpsertSeatingZonesUseCase(authorize, seatingZoneRepo),
+        concertWriteRepo: ConcertWriteRepositoryPort,
+        seatingMapWriteRepo: SeatingMapWriteRepositoryPort,
+      ) =>
+        new UpsertSeatingZonesUseCase(
+          authorize,
+          seatingZoneRepo,
+          concertWriteRepo,
+          seatingMapWriteRepo,
+        ),
     },
     {
       provide: UpdateTicketTypeZoneMappingsUseCase,
@@ -346,6 +379,40 @@ import { AssetController } from './adapters/http/asset.controller';
         authUseCase: AuthorizeConcertManagementUseCase,
       ) => new GetAdminConcertUseCase(repo, authUseCase),
     },
+    {
+      provide: GetSeatingMapUseCase,
+      inject: [
+        AuthorizeConcertManagementUseCase,
+        CONCERT_WRITE_REPOSITORY,
+        SEATING_MAP_WRITE_REPOSITORY,
+      ],
+      useFactory: (
+        authUseCase: AuthorizeConcertManagementUseCase,
+        concertRepo: ConcertWriteRepositoryPort,
+        seatingMapRepo: SeatingMapWriteRepositoryPort,
+      ) => new GetSeatingMapUseCase(authUseCase, concertRepo, seatingMapRepo),
+    },
+    {
+      provide: ListSeatingZonesUseCase,
+      inject: [AuthorizeConcertManagementUseCase, SEATING_ZONE_REPOSITORY],
+      useFactory: (
+        authUseCase: AuthorizeConcertManagementUseCase,
+        zoneRepo: SeatingZoneRepositoryPort,
+      ) => new ListSeatingZonesUseCase(authUseCase, zoneRepo),
+    },
+    {
+      provide: ListTicketTypesWithZoneMappingsUseCase,
+      inject: [
+        AuthorizeConcertManagementUseCase,
+        CONCERT_WRITE_REPOSITORY,
+        TICKET_TYPE_ZONE_REPOSITORY,
+      ],
+      useFactory: (
+        authUseCase: AuthorizeConcertManagementUseCase,
+        concertRepo: ConcertWriteRepositoryPort,
+        ticketTypeZoneRepo: TicketTypeZoneRepositoryPort,
+      ) => new ListTicketTypesWithZoneMappingsUseCase(authUseCase, concertRepo, ticketTypeZoneRepo),
+    },
   ],
 })
 export class ConcertManagementModule {}
@@ -377,3 +444,6 @@ export { GetOrganizerConcertUseCase } from './application/use-cases/get-organize
 export { ListAdminConcertsUseCase } from './application/use-cases/list-admin-concerts.use-case';
 export { GetAdminConcertUseCase } from './application/use-cases/get-admin-concert.use-case';
 export { GetAssetContentUseCase } from './application/use-cases/get-asset-content.use-case';
+export { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
+export { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';
+export { ListTicketTypesWithZoneMappingsUseCase } from './application/use-cases/list-ticket-types-with-zone-mappings.use-case';

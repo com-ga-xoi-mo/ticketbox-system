@@ -5,12 +5,15 @@ import {
   ForbiddenConcertOwnershipError,
 } from '../../../identity/domain/errors';
 import {
+  ConcertNotDraftError,
   CrossConcertZoneMappingError,
   DuplicateSvgElementIdError,
   InvalidSeatingMapContentTypeError,
   InvalidSeatingMapExtensionError,
+  InvalidSvgElementIdError,
   MissingSeatingMapFileError,
   SeatingMapFileTooLargeError,
+  SeatingMapRequiredError,
   UnsafeSeatingMapSvgError,
 } from '../../domain/seating-map.errors';
 
@@ -31,7 +34,10 @@ export async function mapSeatingMapErrors<T>(operation: () => Promise<T>): Promi
       err instanceof SeatingMapFileTooLargeError ||
       err instanceof UnsafeSeatingMapSvgError ||
       err instanceof DuplicateSvgElementIdError ||
-      err instanceof CrossConcertZoneMappingError
+      err instanceof CrossConcertZoneMappingError ||
+      err instanceof SeatingMapRequiredError ||
+      err instanceof InvalidSvgElementIdError ||
+      err instanceof ConcertNotDraftError
     ) {
       throw new BadRequestException(err.message);
     }

@@ -1,4 +1,6 @@
+import { UnprocessableEntityException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
+import { GuestListBatchNotCompletedError } from '../../domain/errors';
 import { Role } from '../../../identity/domain/role.enum';
 import { AdminGuestListController } from './admin-guest-list.controller';
 
@@ -38,5 +40,36 @@ describe('AdminGuestListController', () => {
     await expect(controller.report('concert', 'batch', { user })).resolves.toEqual({
       batchId: 'batch',
     });
+  });
+
+  it('returns 422 with structured body when batch is not completed', async () => {
+    const claim = { execute: vi.fn() };
+    const discovery = { execute: vi.fn() };
+    const batches = {
+      list: vi.fn(),
+      get: vi.fn(),
+      report: vi.fn().mockRejectedValue(
+        new GuestListBatchNotCompletedError('batch-1', 'FAILED'),
+      ),
+    };
+    const authorize = { execute: vi.fn() };
+    const controller = new AdminGuestListController(
+      claim as never,
+      discovery as never,
+      batches as never,
+      authorize as never,
+    );
+    await expect(controller.report('concert', 'batch-1', { user })).rejects.toThrow(
+      UnprocessableEntityException,
+    );
+    try {
+      await controller.report('concert', 'batch-1', { user });
+    } catch (error) {
+      const response = (error as UnprocessableEntityException).getResponse();
+      expect(response).toMatchObject({
+        error: 'BATCH_NOT_COMPLETED',
+        status: 'FAILED',
+      });
+    }
   });
 });

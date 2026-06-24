@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
+  Patch,
   Post,
   Put,
   Request,
@@ -19,6 +21,8 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth
 import { UpdateTicketTypeZoneMappingsUseCase } from '../../application/use-cases/update-ticket-type-zone-mappings.use-case';
 import { UploadSeatingMapUseCase } from '../../application/use-cases/upload-seating-map.use-case';
 import { UpsertSeatingZonesUseCase } from '../../application/use-cases/upsert-seating-zones.use-case';
+import { GetSeatingMapUseCase } from '../../application/use-cases/get-seating-map.use-case';
+import { ListSeatingZonesUseCase } from '../../application/use-cases/list-seating-zones.use-case';
 import { mapSeatingMapErrors } from './seating-map-error.mapper';
 import { UpdateZoneMappingsDto } from './dto/update-zone-mappings.dto';
 import { UpsertSeatingZonesDto } from './dto/upsert-seating-zones.dto';
@@ -32,7 +36,37 @@ export class OrganizerSeatingMapController {
     private readonly uploadSeatingMapUseCase: UploadSeatingMapUseCase,
     private readonly upsertSeatingZonesUseCase: UpsertSeatingZonesUseCase,
     private readonly updateTicketTypeZoneMappingsUseCase: UpdateTicketTypeZoneMappingsUseCase,
+    private readonly getSeatingMapUseCase: GetSeatingMapUseCase,
+    private readonly listSeatingZonesUseCase: ListSeatingZonesUseCase,
   ) {}
+
+  @Get('seating-map')
+  async getSeatingMap(
+    @Param('id') concertId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapSeatingMapErrors(() =>
+      this.getSeatingMapUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: false,
+      }),
+    );
+  }
+
+  @Get('seating-zones')
+  async getSeatingZones(
+    @Param('id') concertId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapSeatingMapErrors(() =>
+      this.listSeatingZonesUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: false,
+      }),
+    );
+  }
 
   @Post('seating-map')
   @UseInterceptors(
@@ -58,7 +92,7 @@ export class OrganizerSeatingMapController {
     );
   }
 
-  @Put('seating-zones')
+  @Patch('seating-zones')
   async upsertZones(
     @Param('id') concertId: string,
     @Body() dto: UpsertSeatingZonesDto,
