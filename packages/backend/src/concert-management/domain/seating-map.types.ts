@@ -13,6 +13,7 @@ export interface SeatingMapAsset {
   uploadedById: string | null;
   createdAt: Date;
   updatedAt: Date;
+  svgElementIds: string[];
 }
 
 export interface SeatingZone {
@@ -52,6 +53,17 @@ export interface UploadSeatingMapResult {
     id: string;
     seatingMapAssetId: string;
   };
+  removedElements: string[];
+  extractedSvgElementIds: string[];
+}
+
+export interface SvgSanitizationResult {
+  sanitizedBuffer: Buffer;
+  removedElements: string[];
+}
+
+export interface SvgElementIdExtractionResult {
+  svgElementIds: string[];
 }
 
 export interface UpsertSeatingZoneInput {
