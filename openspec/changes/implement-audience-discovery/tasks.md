@@ -56,35 +56,35 @@
 
 ## 7. Audience Web — Event Listing with Search/Filter/Sort
 
-- [ ] 7.1 Add a filter toolbar to `EventListPage.tsx` with: text search input, city filter (shadcn `select` populated from `useConcertCities()`), date range picker (shadcn `popover` + two date inputs for `dateFrom`/`dateTo`), price range inputs (two number inputs for `minPrice`/`maxPrice` in VND), and sort dropdown (shadcn `select` with date/price options).
-- [ ] 7.2 Sync filter/sort state to URL search params using `useSearchParams` from react-router-dom. Restore state from URL on mount. Params: `q`, `city`, `dateFrom`, `dateTo`, `minPrice`, `maxPrice`, `sortBy`, `sortDir`.
-- [ ] 7.3 Replace the current `fetchConcertList()` call with `useConcertList(params)` that passes all URL search params as API query parameters.
-- [ ] 7.4 Render `PageNoResults` when the filtered query returns zero results, with contextual message (mentions search term, city, or date range when applicable) and a "Clear filters" action.
-- [ ] 7.5 Ensure the existing `PageLoading` and `PageError` states work correctly with filtered queries.
-- [ ] 7.6 Ensure responsive layout: stacked filter controls on mobile (search + city on row 1, date + price on row 2, sort on row 3), inline horizontal toolbar on desktop.
-- [ ] 7.7 Write tests for EventListPage: filter/sort URL sync, API calls with all params (including dateFrom/dateTo/minPrice/maxPrice), no-results state, clearing filters.
+- [x] 7.1 Add a filter toolbar to `EventListPage.tsx` with: text search input, city filter (shadcn `select` populated from `useConcertCities()`), date range picker (shadcn `popover` + two date inputs for `dateFrom`/`dateTo`), price range inputs (two number inputs for `minPrice`/`maxPrice` in VND), and sort dropdown (shadcn `select` with date/price options).
+- [x] 7.2 Sync filter/sort state to URL search params using `useSearchParams` from react-router-dom. Restore state from URL on mount. Params: `q`, `city`, `dateFrom`, `dateTo`, `minPrice`, `maxPrice`, `sortBy`, `sortDir`.
+- [x] 7.3 Replace the current `fetchConcertList()` call with `useConcertList(params)` that passes all URL search params as API query parameters.
+- [x] 7.4 Render `PageNoResults` when the filtered query returns zero results, with contextual message (mentions search term, city, or date range when applicable) and a "Clear filters" action.
+- [x] 7.5 Ensure the existing `PageLoading` and `PageError` states work correctly with filtered queries.
+- [x] 7.6 Ensure responsive layout: stacked filter controls on mobile (search + city on row 1, date + price on row 2, sort on row 3), inline horizontal toolbar on desktop.
+- [x] 7.7 Write tests for EventListPage: filter/sort URL sync, API calls with all params (including dateFrom/dateTo/minPrice/maxPrice), no-results state, clearing filters.
 
 ## 8. Audience Web — Event Detail Enrichment
 
-- [ ] 8.1 Add artist bio section to `EventDetailPage.tsx` that renders `publishedArtistBio` with multi-paragraph support when present, hidden when null.
-- [ ] 8.2 Add seating zone legend section that renders each zone's label, color indicator, and per-zone available ticket count (computed from `ticketTypeZoneMappings` and ticket type availability). Hidden when `seatingZones` is empty.
-- [ ] 8.3 Add seating map image display that renders `seatingMapAsset` as an `<img>` near the zone legend, resolving via `publicUrl` with fallback to `/assets/:id`. Hidden when null.
-- [ ] 8.4 Create a `getSaleWindowState(ticketType, now)` utility function returning `'upcoming' | 'on-sale' | 'ended'` based on `saleStartsAt`, `saleEndsAt`, and current time.
-- [ ] 8.5 Add sale window state indicators to each ticket type row: "Sale starts on [date]" badge for upcoming, "On sale" badge for active, "Sale ended" badge for ended, "Temporarily unavailable" badge for PAUSED status.
-- [ ] 8.6 Disable the quantity selector (+/- buttons) for ticket types that are not on-sale, paused, sold-out, or sale-ended.
-- [ ] 8.7 Implement functional ticket quantity state using `useState<Map<string, number>>`. Wire +/- buttons to increment/decrement, respecting `maxPerUser` and `availableQuantity` bounds. Disable buttons at bounds.
-- [ ] 8.8 Add per-ticket-type sold-out badge when `status === 'SOLD_OUT'` or `availableQuantity === 0`.
-- [ ] 8.9 Add full-page sold-out banner (using `PageSoldOut`) when all ticket types have `availableQuantity === 0`. Disable the primary CTA button.
-- [ ] 8.10 Handle 404 response from `GET /concerts/:slug` by rendering `PageUnavailable` with a link back to `/events`.
-- [ ] 8.11 Ensure responsive layout: stacked poster-above-content on mobile (< 1024px), sticky poster left + scrolling content right on desktop.
-- [ ] 8.12 Write tests for EventDetailPage: artist bio rendering, zone legend, sale window states, quantity selector bounds, sold-out states, 404 handling.
+- [x] 8.1 Add artist bio section to `EventDetailPage.tsx` that renders `publishedArtistBio` with multi-paragraph support when present, hidden when null.
+- [x] 8.2 Add seating zone legend section that renders each zone's label, color indicator, and per-zone available ticket count (computed from `ticketTypeZoneMappings` and ticket type availability). Hidden when `seatingZones` is empty.
+- [x] 8.3 Add seating map image display that renders `seatingMapAsset` as an `<img>` near the zone legend, resolving via `publicUrl` with fallback to `/assets/:id`. Hidden when null.
+- [x] 8.4 Create a `getSaleWindowState(ticketType, now)` utility function returning `'upcoming' | 'on-sale' | 'ended'` based on `saleStartsAt`, `saleEndsAt`, and current time.
+- [x] 8.5 Add sale window state indicators to each ticket type row: "Sale starts on [date]" badge for upcoming, "On sale" badge for active, "Sale ended" badge for ended, "Temporarily unavailable" badge for PAUSED status.
+- [x] 8.6 Disable the quantity selector (+/- buttons) for ticket types that are not on-sale, paused, sold-out, or sale-ended.
+- [x] 8.7 Implement functional ticket quantity state using `useState<Map<string, number>>`. Wire +/- buttons to increment/decrement, respecting `maxPerUser` and `availableQuantity` bounds. Disable buttons at bounds.
+- [x] 8.8 Add per-ticket-type sold-out badge when `status === 'SOLD_OUT'` or `availableQuantity === 0`.
+- [x] 8.9 Add full-page sold-out banner (using `PageSoldOut`) when all ticket types have `availableQuantity === 0`. Disable the primary CTA button.
+- [x] 8.10 Handle 404 response from `GET /concerts/:slug` by rendering `PageUnavailable` with a link back to `/events`.
+- [x] 8.11 Ensure responsive layout: stacked poster-above-content on mobile (< 1024px), sticky poster left + scrolling content right on desktop.
+- [x] 8.12 Write tests for EventDetailPage: artist bio rendering, zone legend, sale window states, quantity selector bounds, sold-out states, 404 handling.
 
 ## 9. Verification & Polish
 
-- [ ] 9.1 Run `npm run verify:audience-web` (typecheck + tests) and fix any failures.
-- [ ] 9.2 Run `npm run dev:audience-web` and manually verify: homepage search bar navigates to `/events?q=...`, city tabs filter events, featured hero uses real data.
-- [ ] 9.3 Manually verify event listing: search/city/date-range/price-range/sort filters work, URL params sync, no-results state displays correctly.
-- [ ] 9.4 Manually verify event detail: artist bio renders, seating zones/map display, sale window badges show correctly, quantity selector respects bounds, sold-out state works.
-- [ ] 9.5 Test responsive behavior at mobile (375px), tablet (768px), and desktop (1440px) viewport widths for all three pages.
-- [ ] 9.6 Run backend API tests to ensure `GET /concerts` with all query params (q, city, dateFrom, dateTo, minPrice, maxPrice, sortBy, sortDir) and `GET /concerts/cities` pass.
-- [ ] 9.7 Audit font tokens in `apps/audience-web/src/styles/global.css`: `global.css` declares `--font-family-display: "Be Vietnam Pro"` and `--font-family-body: "Inter"` but these fonts are not imported. Decide whether to keep Geist (which is already imported via `@fontsource-variable/geist`) or add `@import` for Be Vietnam Pro and Inter. Update the token declarations to match whichever fonts are actually loaded.
+- [x] 9.1 Run `npm run verify:audience-web` (typecheck + tests) and fix any failures.
+- [x] 9.2 Run `npm run dev:audience-web` and manually verify: homepage search bar navigates to `/events?q=...`, city tabs filter events, featured hero uses real data.
+- [x] 9.3 Manually verify event listing: search/city/date-range/price-range/sort filters work, URL params sync, no-results state displays correctly.
+- [x] 9.4 Manually verify event detail: artist bio renders, seating zones/map display, sale window badges show correctly, quantity selector respects bounds, sold-out state works.
+- [x] 9.5 Test responsive behavior at mobile (375px), tablet (768px), and desktop (1440px) viewport widths for all three pages.
+- [x] 9.6 Run backend API tests to ensure `GET /concerts` with all query params (q, city, dateFrom, dateTo, minPrice, maxPrice, sortBy, sortDir) and `GET /concerts/cities` pass.
+- [x] 9.7 Audit font tokens in `apps/audience-web/src/styles/global.css`: `global.css` declares `--font-family-display: "Be Vietnam Pro"` and `--font-family-body: "Inter"` but these fonts are not imported. Decide whether to keep Geist (which is already imported via `@fontsource-variable/geist`) or add `@import` for Be Vietnam Pro and Inter. Update the token declarations to match whichever fonts are actually loaded.
