@@ -90,7 +90,7 @@ describe('HttpCheckinMobileApiClient', () => {
       ticketId,
     });
     await expect(invalidClient.submitOnlineScan('token', request)).resolves.toEqual({
-      status: 'unavailable',
+      status: 'unknown-commit',
       message: 'Invalid response from /checkin/scan',
     });
   });
@@ -108,7 +108,11 @@ describe('HttpCheckinMobileApiClient', () => {
         scannedAt: timestamp,
         deviceId: staffId,
       }),
-    ).resolves.toEqual({ status: 'unauthorized', message: 'Unauthorized, Try login' });
+    ).resolves.toEqual({
+      status: 'unauthorized',
+      httpStatus: status,
+      message: 'Unauthorized, Try login',
+    });
   });
 
   it('classifies a non-JSON 401 by status before response parsing', async () => {
@@ -131,10 +135,10 @@ describe('HttpCheckinMobileApiClient', () => {
         scannedAt: timestamp,
         deviceId: staffId,
       }),
-    ).resolves.toEqual({ status: 'unauthorized', message: 'Request failed' });
+    ).resolves.toEqual({ status: 'unauthorized', httpStatus: 401, message: 'Request failed' });
   });
 
-  it('maps fetch failures and unavailable statuses without accepting locally', async () => {
+  it('preserves transport, request, and service failure categories', async () => {
     const request = {
       assignmentId,
       concertId,
@@ -152,12 +156,55 @@ describe('HttpCheckinMobileApiClient', () => {
       baseUrl: 'http://localhost:3000',
       fetchImpl: async () => response(503, { message: 'Service unavailable' }),
     });
+    const requestErrorClient = new HttpCheckinMobileApiClient({
+      baseUrl: 'http://localhost:3000',
+      fetchImpl: async () => response(400, { message: 'Invalid request' }),
+    });
 
     await expect(networkClient.submitOnlineScan('token', request)).resolves.toMatchObject({
-      status: 'network-error',
+      status: 'transport-error',
     });
     await expect(unavailableClient.submitOnlineScan('token', request)).resolves.toMatchObject({
-      status: 'unavailable',
+      status: 'service-error',
+      httpStatus: 503,
     });
+    await expect(requestErrorClient.submitOnlineScan('token', request)).resolves.toMatchObject({
+      status: 'request-error',
+      httpStatus: 400,
+    });
+  });
+
+  it('submits and validates batch sync responses through the shared contract', async () => {
+    const requests: Array<{ input: string; body: string | undefined }> = [];
+    const batchEvent = {
+      localId: 'local-1',
+      assignmentId,
+      concertId,
+      qrPayloadHash: 'a'.repeat(64),
+      scannedAt: timestamp,
+      deviceId: 'device-1',
+    };
+    const request = { events: [batchEvent] };
+    const client = new HttpCheckinMobileApiClient({
+      baseUrl: 'http://localhost:3000',
+      fetchImpl: async (input, init) => {
+        requests.push({ input, body: init?.body as string | undefined });
+        return response(201, { results: [{ localId: 'local-1', status: 'duplicate', message: 'Duplicate' }] });
+      },
+    });
+    await expect(client.submitBatchSync('token', request)).resolves.toEqual({
+      results: [{ localId: 'local-1', status: 'duplicate', message: 'Duplicate' }],
+    });
+    expect(requests).toEqual([
+      { input: 'http://localhost:3000/checkin/sync', body: JSON.stringify(request) },
+    ]);
+
+    const invalid = new HttpCheckinMobileApiClient({
+      baseUrl: 'http://localhost:3000',
+      fetchImpl: async () => response(201, [{ localId: 'local-1', status: 'accepted' }]),
+    });
+    await expect(invalid.submitBatchSync('token', request)).rejects.toThrow(
+      'Invalid response from /checkin/sync',
+    );
   });
 });

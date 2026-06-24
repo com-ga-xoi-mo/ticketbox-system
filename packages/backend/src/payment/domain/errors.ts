@@ -55,10 +55,92 @@ export class PaymentGatewayRequestError extends Error {
   }
 }
 
+export class PaymentProviderCircuitOpenError extends Error {
+  constructor(
+    public readonly provider: string,
+    public readonly retryAfterMs?: number,
+  ) {
+    super(
+      retryAfterMs === undefined
+        ? `${provider} payment provider circuit is open`
+        : `${provider} payment provider circuit is open; retry after ${retryAfterMs}ms`,
+    );
+    this.name = 'PaymentProviderCircuitOpenError';
+  }
+}
+
+export class PaymentProviderHalfOpenTrialRejectedError extends Error {
+  constructor(public readonly provider: string) {
+    super(`${provider} payment provider circuit is half-open; trial limit reached`);
+    this.name = 'PaymentProviderHalfOpenTrialRejectedError';
+  }
+}
+
+export class PaymentCircuitBreakerStoreUnavailableError extends Error {
+  constructor(message = 'Payment circuit breaker store is unavailable') {
+    super(message);
+    this.name = 'PaymentCircuitBreakerStoreUnavailableError';
+  }
+}
+
 export class InvalidMomoIpnSignatureError extends Error {
   constructor() {
     super('Invalid MoMo IPN signature');
     this.name = 'InvalidMomoIpnSignatureError';
+  }
+}
+
+export class InvalidVnpaySignatureError extends Error {
+  constructor() {
+    super('Invalid VNPay callback signature');
+    this.name = 'InvalidVnpaySignatureError';
+  }
+}
+
+export class InvalidVnpayTerminalError extends Error {
+  constructor() {
+    super('VNPay callback terminal code does not match configuration');
+    this.name = 'InvalidVnpayTerminalError';
+  }
+}
+
+export class VnpayAmountMismatchError extends Error {
+  constructor(
+    public readonly expectedAmountVnd: number,
+    public readonly actualAmountVnd: number,
+  ) {
+    super(
+      `VNPay callback amount mismatch: expected ${expectedAmountVnd}, received ${actualAmountVnd}`,
+    );
+    this.name = 'VnpayAmountMismatchError';
+  }
+}
+
+export class PaymentIdempotencyKeyMismatchError extends Error {
+  constructor() {
+    super('Payment initiation idempotency key was reused with a different request');
+    this.name = 'PaymentIdempotencyKeyMismatchError';
+  }
+}
+
+export class PaymentInitiationInProgressError extends Error {
+  constructor() {
+    super('Payment initiation is already in progress for this idempotency key');
+    this.name = 'PaymentInitiationInProgressError';
+  }
+}
+
+export class PaymentIdempotencyStoreUnavailableError extends Error {
+  constructor(message = 'Payment idempotency store is unavailable') {
+    super(message);
+    this.name = 'PaymentIdempotencyStoreUnavailableError';
+  }
+}
+
+export class PaymentInitiationPreviouslyFailedError extends Error {
+  constructor() {
+    super('Payment initiation previously failed for this idempotency key; retry with a new key');
+    this.name = 'PaymentInitiationPreviouslyFailedError';
   }
 }
 

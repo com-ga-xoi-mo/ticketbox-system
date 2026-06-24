@@ -4,22 +4,88 @@
 TBD - created by archiving change define-ticketbox-blueprint. Update Purpose after archive.
 ## Requirements
 ### Requirement: Purchase confirmation notifications
-The system SHALL send an in-app notification and email confirmation with e-ticket access after successful payment.
+
+The system SHALL send an in-app notification and email confirmation with e-ticket access after
+successful payment. When an order transitions to the paid state and its e-tickets are issued, the
+system SHALL enqueue exactly one purchase confirmation per order, and a failure to enqueue or deliver
+the confirmation SHALL NOT roll back the paid order or the issued tickets.
 
 #### Scenario: Paid order queues confirmation
+
 - **WHEN** an order becomes paid
 - **THEN** the system SHALL enqueue confirmation notifications for the customer
 
+#### Scenario: Paid-order ticket issuance triggers confirmation enqueue
+
+- **WHEN** the paid-order flow issues e-tickets for a newly paid order
+- **THEN** the system SHALL enqueue a purchase confirmation job carrying the customer's email and
+  display name, the concert title and start time, the ticket count, and an e-ticket access URL
+
+#### Scenario: Confirmation enqueue is idempotent per order
+
+- **WHEN** the paid-order transition for the same order is processed more than once
+- **THEN** the system SHALL NOT create duplicate confirmation notifications for that order
+
 #### Scenario: Email delivery failure is retried
+
 - **WHEN** email sending fails transiently
 - **THEN** the system SHALL retry delivery without rolling back the paid order
 
 ### Requirement: Concert reminder notifications
-The system SHALL send reminders to ticket holders 24 hours before the concert starts.
+The system SHALL send a reminder to every valid ticket holder of a published concert approximately
+24 hours before the concert start time. The reminder SHALL be created as both an in-app notification
+and an email: the in-app notification is delivered by persistence (created in a sent state, readable
+in the app, not routed through a channel adapter), while only the email is routed through the
+notification channel adapter via the delivery queue. A scheduled worker job SHALL periodically scan
+for upcoming concerts and enqueue reminder work; each user SHALL receive at most one reminder per
+concert per channel. Concert start times SHALL be treated as absolute instants; the 24-hour boundary
+is evaluated as pure instant arithmetic, and the operating timezone (`Asia/Ho_Chi_Minh`) is used
+only to format the human-readable start time shown to users. Reminder email delivery SHALL use
+bounded retry attempts in the worker and SHALL NOT run in the request path.
+
+Only concerts with a **published** status SHALL be reminded; draft, cancelled, and ended concerts
+SHALL be excluded. A **valid ticket holder** is a user who holds at least one active (issued or
+checked-in, i.e. not voided or refunded) ticket on a **paid** order for the concert. The
+notification module SHALL obtain concert start time and the valid ticket-holder list through a read
+port, not by importing other modules' persistence models directly. The reminder use case SHALL NOT
+depend on the queue; enqueuing of email delivery jobs SHALL occur in the worker processor (adapter
+layer), keeping the application layer free of queue dependencies.
 
 #### Scenario: Reminder job finds ticket holders
-- **WHEN** a concert is 24 hours from start time
-- **THEN** the system SHALL enqueue reminder notifications for users with valid tickets
+- **WHEN** the scheduled reminder scan runs and a concert's start time falls within the window
+  `[now + 24h, now + 24h + scanInterval)`
+- **THEN** the system SHALL enqueue reminder notifications for every valid ticket holder of that concert
+
+#### Scenario: In-app reminder is created in a sent state
+- **WHEN** a reminder is processed for a valid ticket holder
+- **THEN** the system SHALL persist an in-app reminder in a sent state (readable in the app) without
+  routing it through a channel adapter or the delivery queue
+
+#### Scenario: Email reminder is queued for channel delivery
+- **WHEN** a reminder is processed for a valid ticket holder
+- **THEN** the system SHALL persist an email reminder in a pending state and enqueue exactly one
+  delivery job for it on the delivery queue, sent through the registered email channel adapter
+
+#### Scenario: Each user is reminded at most once per concert
+- **WHEN** the scheduler scans the same concert in overlapping runs, or a previously reminded user
+  is encountered again
+- **THEN** the system SHALL NOT create or send a duplicate reminder for a user/concert/channel that
+  already has a reminder, identified by a deterministic dedupe key
+
+#### Scenario: Only published concerts are reminded
+- **WHEN** the reminder scan encounters a concert whose status is not published (draft, cancelled,
+  or ended)
+- **THEN** the system SHALL NOT create, enqueue, or send reminders for that concert
+
+#### Scenario: Rescheduled concert is re-evaluated against the new start time
+- **WHEN** a concert's start time changes
+- **THEN** the reminder scan SHALL evaluate the 24-hour window against the new start time, and the
+  dedupe key SHALL prevent resending to users who were already reminded for that concert
+
+#### Scenario: Reminder email delivery failure is retried with bounded attempts
+- **WHEN** sending a reminder email fails transiently
+- **THEN** the worker SHALL retry delivery up to the configured bounded attempt limit without
+  blocking other reminders, and SHALL mark the notification failed after attempts are exhausted
 
 ### Requirement: Extensible notification channels
 The system SHALL model notification delivery through channel adapters so future SMS or Zalo OA channels can be added without changing purchase logic.
@@ -61,4 +127,28 @@ The system SHALL organize notification delivery folders so contributors can iden
 #### Scenario: Runtime notification contracts remain unchanged
 - **WHEN** the notification module structure is refactored
 - **THEN** queue names, job names, queue payloads, email behavior, database schema, public API surface, and notification business logic SHALL remain unchanged
+
+### Requirement: Authenticated SMTP email delivery
+
+The system SHALL support delivering notification email through an authenticated, TLS-capable SMTP
+provider (such as Gmail) selected by configuration, without changing notification use-cases or the
+existing local/Maildev delivery path.
+
+#### Scenario: Authenticated TLS transport is used when credentials are configured
+
+- **WHEN** the email provider is `smtp` and SMTP username and password are configured
+- **THEN** the system SHALL deliver email through an authenticated, TLS-capable SMTP transport using
+  the configured host, port, secure flag, and credentials
+
+#### Scenario: Maildev path is preserved when no credentials are configured
+
+- **WHEN** the email provider is `smtp` and no SMTP username/password are configured
+- **THEN** the system SHALL continue to use the existing plaintext SMTP transport for the local
+  Maildev demo, unchanged
+
+#### Scenario: Delivery failures remain retryable
+
+- **WHEN** sending through the authenticated SMTP transport fails transiently
+- **THEN** the failure SHALL surface to the worker's bounded-retry delivery flow without changing the
+  paid order or notification persistence
 

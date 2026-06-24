@@ -4,6 +4,7 @@ import { AuthModule } from '../identity/auth.module';
 import { AiArtistBioModule } from '../ai-artist-bio/ai-artist-bio.module';
 import { CheckinModule } from '../checkin/checkin.module';
 import { NotificationModule } from '../notification/notification.module';
+import { GuestListImportModule } from '../guest-list-import/guest-list-import.module';
 import { PlatformConfigModule } from './config/platform-config.module';
 import { DatabaseModule } from './database/database.module';
 import { CacheModule } from './cache/cache.module';
@@ -23,6 +24,7 @@ import { StorageModule } from './storage/storage.module';
     AiArtistBioModule,
     CheckinModule,
     NotificationModule,
+    GuestListImportModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -35,6 +37,7 @@ import { StorageModule } from './storage/storage.module';
     AiArtistBioModule,
     CheckinModule,
     NotificationModule,
+    GuestListImportModule,
   ],
 })
 export class BackendCoreModule {}

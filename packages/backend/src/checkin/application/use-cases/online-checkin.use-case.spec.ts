@@ -46,6 +46,8 @@ describe('OnlineCheckinUseCase', () => {
       hasAcceptedCheckin: vi.fn(),
       recordAcceptedScan: vi.fn(),
       recordRejectedScan: vi.fn(),
+      findOfflineEvent: vi.fn(),
+      recordOfflineOutcome: vi.fn(),
     };
     assignmentRepository = {
       findAssignmentById: vi.fn(),

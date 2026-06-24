@@ -3,15 +3,23 @@ import {
   OnlineScanResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  TicketCacheDeltaResponseSchema,
+  TicketCacheFullResponseSchema,
   type LoginRequest,
   type OnlineScanRequest,
+  BatchSyncResponseSchema,
+  type BatchSyncRequest,
+  type BatchSyncResponse,
+  type TicketCacheDeltaResponse,
+  type TicketCacheFullResponse,
 } from '@ticketbox/api-types';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import type {
   CheckinMobileApiClient,
   MobileSession,
   OnlineScanResult,
+  TicketCacheRequest,
 } from './checkin-mobile-api.types';
 
 export interface FetchResponseLike {
@@ -34,6 +42,20 @@ export class ApiRequestError extends Error {
   ) {
     super(message);
     this.name = 'ApiRequestError';
+  }
+}
+
+export class ApiTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiTransportError';
+  }
+}
+
+export class ApiResponseValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiResponseValidationError';
   }
 }
 
@@ -88,18 +110,56 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     } catch (error) {
       if (error instanceof ApiRequestError) {
         if (error.status === 401 || error.status === 403) {
-          return { status: 'unauthorized', message: error.message };
+          return {
+            status: 'unauthorized',
+            httpStatus: error.status,
+            message: error.message,
+          };
         }
-        return { status: 'unavailable', message: error.message };
+        if (error.status >= 500) {
+          return { status: 'service-error', httpStatus: error.status, message: error.message };
+        }
+        return { status: 'request-error', httpStatus: error.status, message: error.message };
       }
       if (error instanceof ApiResponseValidationError) {
-        return { status: 'unavailable', message: error.message };
+        return { status: 'unknown-commit', message: error.message };
       }
       return {
-        status: 'network-error',
+        status: 'transport-error',
         message: error instanceof Error ? error.message : 'Network error',
       };
     }
+  }
+
+  async submitBatchSync(
+    accessToken: string,
+    request: BatchSyncRequest,
+  ): Promise<BatchSyncResponse> {
+    return this.request(
+      '/checkin/sync',
+      { method: 'POST', body: JSON.stringify(request) },
+      BatchSyncResponseSchema,
+      accessToken,
+    );
+  }
+
+  async fetchTicketCache(
+    accessToken: string,
+    request: TicketCacheRequest,
+  ): Promise<TicketCacheFullResponse | TicketCacheDeltaResponse> {
+    const params = new URLSearchParams({
+      assignmentId: request.assignmentId,
+      concertId: request.concertId,
+    });
+    if (request.since) params.set('since', request.since);
+
+    const schema = z.union([TicketCacheFullResponseSchema, TicketCacheDeltaResponseSchema]);
+    return this.request(
+      `/checkin/ticket-cache?${params.toString()}`,
+      { method: 'GET' },
+      schema,
+      accessToken,
+    );
   }
 
   private async request<TSchema extends z.ZodTypeAny>(
@@ -115,10 +175,33 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       headers.set('authorization', `Bearer ${accessToken}`);
     }
 
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      ...init,
-      headers,
+    const controller = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new ApiTransportError('Request timed out')),
+        5_000,
+      );
     });
+
+    let response: FetchResponseLike;
+    try {
+      response = await Promise.race([
+        this.fetchImpl(`${this.baseUrl}${path}`, {
+          ...init,
+          headers,
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      controller.abort();
+      throw error instanceof ApiTransportError
+        ? error
+        : new ApiTransportError(error instanceof Error ? error.message : 'Network request failed');
+    } finally {
+      clearTimeout(timeoutId!);
+    }
 
     let payload: unknown;
     try {
@@ -139,13 +222,6 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
       throw new ApiResponseValidationError(`Invalid response from ${path}`);
     }
     return parsed.data;
-  }
-}
-
-export class ApiResponseValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ApiResponseValidationError';
   }
 }
 

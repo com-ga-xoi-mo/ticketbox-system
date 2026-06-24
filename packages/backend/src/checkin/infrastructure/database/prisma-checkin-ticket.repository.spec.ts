@@ -23,6 +23,7 @@ describe('PrismaCheckinTicketRepository', () => {
     };
     checkinEvent: {
       findFirst: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
     };
     $transaction: ReturnType<typeof vi.fn>;
@@ -30,10 +31,11 @@ describe('PrismaCheckinTicketRepository', () => {
   let tx: {
     ticket: {
       findUnique: ReturnType<typeof vi.fn>;
-      update: ReturnType<typeof vi.fn>;
+      updateMany: ReturnType<typeof vi.fn>;
     };
     checkinEvent: {
       create: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
     };
   };
   let repository: PrismaCheckinTicketRepository;
@@ -42,10 +44,11 @@ describe('PrismaCheckinTicketRepository', () => {
     tx = {
       ticket: {
         findUnique: vi.fn(),
-        update: vi.fn(),
+        updateMany: vi.fn(),
       },
       checkinEvent: {
         create: vi.fn(),
+        findFirst: vi.fn(),
       },
     };
     prisma = {
@@ -54,6 +57,7 @@ describe('PrismaCheckinTicketRepository', () => {
       },
       checkinEvent: {
         findFirst: vi.fn(),
+        findUnique: vi.fn(),
         create: vi.fn(),
       },
       $transaction: vi.fn((callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)),
@@ -75,7 +79,7 @@ describe('PrismaCheckinTicketRepository', () => {
   });
 
   it('persists accepted scans in a transaction and updates the ticket', async () => {
-    tx.ticket.findUnique.mockResolvedValue(makeTicket());
+    tx.ticket.updateMany.mockResolvedValue({ count: 1 });
     tx.checkinEvent.create.mockResolvedValue({ id: 'event-1' });
 
     await expect(
@@ -99,8 +103,12 @@ describe('PrismaCheckinTicketRepository', () => {
         result: CheckinEventResult.ACCEPTED,
       }),
     });
-    expect(tx.ticket.update).toHaveBeenCalledWith({
-      where: { id: 'ticket-1' },
+    expect(tx.ticket.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: 'ticket-1',
+        status: TicketStatus.ISSUED,
+        checkedInAt: null,
+      }),
       data: expect.objectContaining({ status: TicketStatus.CHECKED_IN }),
     });
   });
@@ -121,6 +129,84 @@ describe('PrismaCheckinTicketRepository', () => {
       status: 'duplicate',
       ticketId: 'ticket-1',
     });
+  });
+
+  it('returns claim loss metadata without creating another accepted event', async () => {
+    tx.ticket.updateMany.mockResolvedValue({ count: 0 });
+    tx.ticket.findUnique.mockResolvedValue({ checkedInAt: occurredAt });
+    tx.checkinEvent.findFirst.mockResolvedValue({ id: 'accepted-event', deviceId: 'device-2' });
+
+    await expect(
+      repository.recordAcceptedScan({
+        ticketId: 'ticket-1',
+        concertId: 'concert-1',
+        staffId: 'staff-1',
+        scannedQrHash: 'hash-1',
+        deviceId: 'device-1',
+        occurredAt,
+      }),
+    ).resolves.toMatchObject({
+      status: 'duplicate',
+      acceptedByDeviceId: 'device-2',
+      checkinEventId: 'accepted-event',
+    });
+    expect(tx.checkinEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('propagates accepted-event persistence failure so the transaction can roll back the claim', async () => {
+    tx.ticket.updateMany.mockResolvedValue({ count: 1 });
+    tx.checkinEvent.create.mockRejectedValue(new Error('event write failed'));
+    await expect(
+      repository.recordAcceptedScan({
+        ticketId: 'ticket-1',
+        concertId: 'concert-1',
+        staffId: 'staff-1',
+        scannedQrHash: 'hash-1',
+        deviceId: 'device-1',
+        occurredAt,
+      }),
+    ).rejects.toThrow('event write failed');
+  });
+
+  it('persists and replays account-owned offline outcomes by exact device/local identity', async () => {
+    prisma.checkinEvent.create.mockResolvedValue({ id: 'offline-event' });
+    await repository.recordOfflineOutcome({
+      localId: 'local-1',
+      ticketId: 'ticket-1',
+      concertId: 'concert-1',
+      staffId: 'staff-1',
+      scannedQrHash: 'hash-1',
+      deviceId: 'device-1',
+      occurredAt,
+      syncedAt: occurredAt,
+      result: 'CONFLICT',
+      rejectionReason: 'Other device',
+    });
+    expect(prisma.checkinEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        source: CheckinEventSource.OFFLINE_SYNC,
+        offlineEventId: 'local-1',
+        occurredAt,
+        syncedAt: occurredAt,
+      }),
+    });
+
+    prisma.checkinEvent.findUnique.mockResolvedValue({
+      staffId: 'staff-1',
+      ticketId: 'ticket-1',
+      result: CheckinEventResult.CONFLICT,
+      rejectionReason: 'Other device',
+      ticket: { checkedInAt: occurredAt },
+    });
+    await expect(repository.findOfflineEvent('device-1', 'local-1')).resolves.toMatchObject({
+      staffId: 'staff-1',
+      result: 'CONFLICT',
+    });
+    expect(prisma.checkinEvent.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { deviceId_offlineEventId: { deviceId: 'device-1', offlineEventId: 'local-1' } },
+      }),
+    );
   });
 
   it('records rejected scan attempts for authenticated staff', async () => {

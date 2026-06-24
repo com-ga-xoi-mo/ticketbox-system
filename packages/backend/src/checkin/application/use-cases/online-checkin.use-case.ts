@@ -1,79 +1,65 @@
-import {
-  CheckinGateMismatchError,
-  MissingActiveCheckinAssignmentError,
-} from '../../../identity/domain/errors';
-import type { CheckinStaffAssignmentRepositoryPort } from '../../../identity/domain/ports/checkin-staff-assignment.port';
 import type { AuthorizeCheckinAssignmentUseCase } from '../../../identity/application/use-cases/authorize-checkin-assignment.use-case';
+import type { CheckinStaffAssignmentRepositoryPort } from '../../../identity/domain/ports/checkin-staff-assignment.port';
 import type {
   CheckinTicketRecord,
+  InvalidScanReasonCode,
   OnlineScanCommand,
   OnlineScanReasonCode,
   OnlineScanResult,
-  InvalidScanReasonCode,
   PersistedCheckinResult,
   UnassignedScanReasonCode,
 } from '../../domain/checkin-scan.types';
 import type { CheckinTicketRepositoryPort } from '../../domain/ports/checkin-ticket-repository.port';
 import type { QrTokenHasherPort } from '../../domain/ports/qr-token-hasher.port';
+import { ScanValidationService } from '../services/scan-validation.service';
 
 export class OnlineCheckinUseCase {
+  private readonly validation: ScanValidationService;
+
   constructor(
     private readonly ticketRepository: CheckinTicketRepositoryPort,
-    private readonly assignmentRepository: CheckinStaffAssignmentRepositoryPort,
-    private readonly authorizeCheckinAssignment: AuthorizeCheckinAssignmentUseCase,
+    assignmentRepository: CheckinStaffAssignmentRepositoryPort,
+    authorizeCheckinAssignment: AuthorizeCheckinAssignmentUseCase,
     private readonly qrTokenHasher: QrTokenHasherPort,
-  ) {}
+  ) {
+    this.validation = new ScanValidationService(
+      ticketRepository,
+      assignmentRepository,
+      authorizeCheckinAssignment,
+    );
+  }
 
-  async execute(cmd: OnlineScanCommand): Promise<OnlineScanResult> {
-    const qrTokenHash = this.qrTokenHasher.hashPayload(cmd.qrPayload);
-    const assignmentResult = await this.verifyAssignment(cmd, qrTokenHash);
-    if (assignmentResult) {
-      return assignmentResult;
-    }
+  async execute(command: OnlineScanCommand): Promise<OnlineScanResult> {
+    const qrTokenHash = this.qrTokenHasher.hashPayload(command.qrPayload);
+    const validation = await this.validation.validate({
+      actor: command.actor,
+      assignmentId: command.assignmentId,
+      concertId: command.concertId,
+      gateName: command.gateName,
+      qrTokenHash,
+    });
 
-    const ticket = await this.ticketRepository.findByQrTokenHash(qrTokenHash);
-    if (!ticket) {
-      return this.recordRejected(cmd, {
+    if (validation.status === 'unassigned') {
+      return this.recordRejected(command, {
         qrTokenHash,
-        result: 'INVALID',
-        reasonCode: 'INVALID_TICKET',
-        message: 'Ticket QR is invalid.',
+        result: 'UNASSIGNED_STAFF',
+        reasonCode: validation.reasonCode,
+        message: validation.message,
+      });
+    }
+    if (validation.status === 'invalid') {
+      return this.recordRejected(command, {
+        ticket: validation.ticket,
+        qrTokenHash,
+        result: validation.reasonCode === 'WRONG_CONCERT' ? 'WRONG_CONCERT' : 'INVALID',
+        reasonCode: validation.reasonCode,
+        message: validation.message,
       });
     }
 
-    if (ticket.concertId !== cmd.concertId) {
-      return this.recordRejected(cmd, {
-        ticket,
-        qrTokenHash,
-        result: 'WRONG_CONCERT',
-        reasonCode: 'WRONG_CONCERT',
-        message: 'Ticket belongs to a different concert.',
-      });
-    }
-
-    if (ticket.status === 'VOIDED' || ticket.status === 'REFUNDED') {
-      return this.recordRejected(cmd, {
-        ticket,
-        qrTokenHash,
-        result: 'INVALID',
-        reasonCode: 'TICKET_NOT_ISSUED',
-        message: 'Ticket is not valid for check-in.',
-      });
-    }
-
-    if (ticket.checkedInAt || ticket.status === 'CHECKED_IN') {
-      return this.recordRejected(cmd, {
-        ticket,
-        qrTokenHash,
-        result: 'DUPLICATE',
-        message: 'Ticket has already been checked in.',
-      });
-    }
-
-    const hasAcceptedCheckin = await this.ticketRepository.hasAcceptedCheckin(ticket.id);
-    if (hasAcceptedCheckin) {
-      return this.recordRejected(cmd, {
-        ticket,
+    if (validation.ticket.checkedInAt || validation.ticket.status === 'CHECKED_IN') {
+      return this.recordRejected(command, {
+        ticket: validation.ticket,
         qrTokenHash,
         result: 'DUPLICATE',
         message: 'Ticket has already been checked in.',
@@ -81,15 +67,27 @@ export class OnlineCheckinUseCase {
     }
 
     const accepted = await this.ticketRepository.recordAcceptedScan({
-      ticketId: ticket.id,
-      concertId: cmd.concertId,
-      staffId: cmd.actor.userId,
+      ticketId: validation.ticket.id,
+      concertId: command.concertId,
+      staffId: command.actor.userId,
       scannedQrHash: qrTokenHash,
-      deviceId: cmd.deviceId,
-      occurredAt: cmd.scannedAt,
+      deviceId: command.deviceId,
+      occurredAt: command.scannedAt,
     });
-
     if (accepted.status === 'duplicate') {
+      // Losing the atomic claim is a race-loss duplicate. Persist a DUPLICATE
+      // audit event via the rejected-scan path so it has the same audit trail
+      // as the early read-check duplicate path, without changing the wire
+      // contract of POST /checkin/scan.
+      await this.ticketRepository.recordRejectedScan({
+        ticketId: accepted.ticketId,
+        concertId: command.concertId,
+        staffId: command.actor.userId,
+        scannedQrHash: qrTokenHash,
+        deviceId: command.deviceId,
+        occurredAt: command.scannedAt,
+        result: 'DUPLICATE',
+      });
       return {
         status: 'duplicate',
         message: 'Ticket has already been checked in.',
@@ -98,7 +96,6 @@ export class OnlineCheckinUseCase {
         checkedInAt: accepted.checkedInAt,
       };
     }
-
     return {
       status: 'accepted',
       message: 'Ticket check-in accepted.',
@@ -108,72 +105,8 @@ export class OnlineCheckinUseCase {
     };
   }
 
-  private async verifyAssignment(
-    cmd: OnlineScanCommand,
-    qrTokenHash: string,
-  ): Promise<OnlineScanResult | null> {
-    try {
-      await this.authorizeCheckinAssignment.execute({
-        actor: cmd.actor,
-        concertId: cmd.concertId,
-        gateName: cmd.gateName,
-      });
-    } catch (err: unknown) {
-      if (
-        err instanceof MissingActiveCheckinAssignmentError ||
-        err instanceof CheckinGateMismatchError
-      ) {
-        const reasonCode = await this.getAssignmentFailureReason(cmd);
-        return this.recordRejected(cmd, {
-          qrTokenHash,
-          result: 'UNASSIGNED_STAFF',
-          reasonCode,
-          message: 'Check-in staff is not assigned to this concert or gate.',
-        });
-      }
-      throw err;
-    }
-
-    const reasonCode = await this.getAssignmentFailureReason(cmd);
-    if (reasonCode) {
-      return this.recordRejected(cmd, {
-        qrTokenHash,
-        result: 'UNASSIGNED_STAFF',
-        reasonCode,
-        message: 'Selected check-in assignment does not match this scan.',
-      });
-    }
-
-    return null;
-  }
-
-  private async getAssignmentFailureReason(
-    cmd: OnlineScanCommand,
-  ): Promise<UnassignedScanReasonCode | undefined> {
-    const assignment = await this.assignmentRepository.findAssignmentById(cmd.assignmentId);
-    if (!assignment) {
-      return 'ASSIGNMENT_MISMATCH';
-    }
-
-    const gateMatches = !cmd.gateName || assignment.gateName === cmd.gateName;
-    const assignmentMatches =
-      assignment.staffUserId === cmd.actor.userId &&
-      assignment.concertId === cmd.concertId &&
-      gateMatches;
-
-    if (!assignmentMatches) {
-      return 'ASSIGNMENT_MISMATCH';
-    }
-
-    if (assignment.status !== 'ACTIVE') {
-      return 'REVOKED_ASSIGNMENT';
-    }
-
-    return undefined;
-  }
-
   private async recordRejected(
-    cmd: OnlineScanCommand,
+    command: OnlineScanCommand,
     params: {
       ticket?: CheckinTicketRecord;
       qrTokenHash: string;
@@ -184,15 +117,14 @@ export class OnlineCheckinUseCase {
   ): Promise<OnlineScanResult> {
     const event = await this.ticketRepository.recordRejectedScan({
       ticketId: params.ticket?.id,
-      concertId: cmd.concertId,
-      staffId: cmd.actor.userId,
+      concertId: command.concertId,
+      staffId: command.actor.userId,
       scannedQrHash: params.qrTokenHash,
-      deviceId: cmd.deviceId,
-      occurredAt: cmd.scannedAt,
+      deviceId: command.deviceId,
+      occurredAt: command.scannedAt,
       result: params.result,
       rejectionReason: params.reasonCode,
     });
-
     if (params.result === 'DUPLICATE') {
       return {
         status: 'duplicate',
@@ -202,7 +134,6 @@ export class OnlineCheckinUseCase {
         checkedInAt: params.ticket?.checkedInAt,
       };
     }
-
     if (params.result === 'UNASSIGNED_STAFF') {
       return {
         status: 'unassigned',
@@ -211,7 +142,6 @@ export class OnlineCheckinUseCase {
         checkinEventId: event?.id,
       };
     }
-
     return {
       status: 'invalid',
       message: params.message,

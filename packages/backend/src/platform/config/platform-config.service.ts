@@ -91,6 +91,46 @@ export class PlatformConfigService {
     return this.configService.get('MOMO_IPN_URL');
   }
 
+  get vnpayTmnCode(): string {
+    return this.configService.get('VNPAY_TMN_CODE');
+  }
+
+  get vnpayHashSecret(): string {
+    return this.configService.get('VNPAY_HASH_SECRET');
+  }
+
+  get vnpayPaymentUrl(): string {
+    return this.configService.get('VNPAY_PAYMENT_URL');
+  }
+
+  get vnpayReturnUrl(): string {
+    return this.configService.get('VNPAY_RETURN_URL');
+  }
+
+  get vnpayIpnUrl(): string {
+    return this.configService.get('VNPAY_IPN_URL');
+  }
+
+  get vnpayVersion(): string {
+    return this.configService.get('VNPAY_VERSION');
+  }
+
+  get vnpayCommand(): string {
+    return this.configService.get('VNPAY_COMMAND');
+  }
+
+  get vnpayLocale(): PlatformEnv['VNPAY_LOCALE'] {
+    return this.configService.get('VNPAY_LOCALE');
+  }
+
+  get vnpayOrderType(): string {
+    return this.configService.get('VNPAY_ORDER_TYPE');
+  }
+
+  get vnpayExpireMinutes(): number {
+    return this.configService.get('VNPAY_EXPIRE_MINUTES');
+  }
+
   get emailProvider(): PlatformEnv['EMAIL_PROVIDER'] {
     return this.configService.get('EMAIL_PROVIDER');
   }
@@ -113,6 +153,18 @@ export class PlatformConfigService {
 
   get emailSmtpPort(): number {
     return this.configService.get('EMAIL_SMTP_PORT');
+  }
+
+  get emailSmtpUser(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_USER', { infer: true });
+  }
+
+  get emailSmtpPass(): string | undefined {
+    return this.configService.get('EMAIL_SMTP_PASS', { infer: true });
+  }
+
+  get emailSmtpSecure(): boolean {
+    return this.configService.get('EMAIL_SMTP_SECURE');
   }
 
   get maildevWebUrl(): string | undefined {
@@ -160,6 +212,34 @@ export class PlatformConfigService {
     return this.configService.get('GEMINI_TIMEOUT_MS');
   }
 
+  get guestListDiscoveryCron(): string {
+    return this.configService.get('GUEST_LIST_DISCOVERY_CRON');
+  }
+  get guestListInboxPath(): string {
+    return this.configService.get('GUEST_LIST_INBOX_PATH');
+  }
+  get guestListArchivePath(): string {
+    return this.configService.get('GUEST_LIST_ARCHIVE_PATH');
+  }
+  get guestListStoragePath(): string {
+    return this.configService.get('GUEST_LIST_STORAGE_PATH');
+  }
+  get guestListMaxBytes(): number {
+    return this.configService.get('GUEST_LIST_MAX_BYTES');
+  }
+  get guestListMaxRows(): number {
+    return this.configService.get('GUEST_LIST_MAX_ROWS');
+  }
+  get guestListMaxAttempts(): number {
+    return this.configService.get('GUEST_LIST_MAX_ATTEMPTS');
+  }
+  get guestListRetryBackoffMs(): number {
+    return this.configService.get('GUEST_LIST_RETRY_BACKOFF_MS');
+  }
+  get guestListProcessingLeaseMs(): number {
+    return this.configService.get('GUEST_LIST_PROCESSING_LEASE_MS');
+  }
+
   get storageDriver(): PlatformEnv['STORAGE_DRIVER'] {
     return this.configService.get('STORAGE_DRIVER');
   }
@@ -170,6 +250,10 @@ export class PlatformConfigService {
 
   get localStoragePublicBaseUrl(): string {
     return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
+  }
+
+  get ticketAccessBaseUrl(): string {
+    return this.configService.get('TICKET_ACCESS_BASE_URL');
   }
 
   get s3Endpoint(): string | undefined {

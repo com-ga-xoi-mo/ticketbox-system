@@ -22,6 +22,12 @@ describe('StorageModule', () => {
       S3_ACCESS_KEY_ID: '',
       S3_SECRET_ACCESS_KEY: '',
       S3_PUBLIC_BASE_URL: '',
+      MOMO_PARTNER_CODE: 'test',
+      MOMO_ACCESS_KEY: 'test',
+      MOMO_SECRET_KEY: 'test',
+      MOMO_PUBLIC_KEY: 'test',
+      VNPAY_TMN_CODE: 'test',
+      VNPAY_HASH_SECRET: 'test',
     };
   });
 

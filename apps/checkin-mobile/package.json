@@ -14,15 +14,20 @@
     "verify": "npm run typecheck && npm run test"
   },
   "dependencies": {
+    "@expo/env": "^2.0.11",
+    "@expo/image-utils": "^0.10.1",
+    "@react-native-community/netinfo": "11.4.1",
     "@ticketbox/api-types": "0.1.0",
-    "expo": "^52.0.0",
-    "expo-camera": "^16.0.0",
-    "expo-crypto": "~14.0.2",
-    "expo-secure-store": "^14.0.0",
-    "react": "^18.3.1",
-    "react-native": "^0.76.0"
+    "expo": "~54.0.0",
+    "expo-asset": "~12.0.13",
+    "expo-camera": "~17.0.10",
+    "expo-crypto": "~15.0.9",
+    "expo-secure-store": "~15.0.8",
+    "expo-sqlite": "~16.0.10",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   },
   "devDependencies": {
-    "@types/react": "~18.3.12"
+    "@types/react": "~19.1.10"
   }
 }

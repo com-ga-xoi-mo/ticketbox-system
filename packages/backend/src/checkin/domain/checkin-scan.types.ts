@@ -13,6 +13,8 @@ export type PersistedCheckinResult =
   | 'WRONG_CONCERT'
   | 'UNASSIGNED_STAFF';
 
+export type PersistedBatchCheckinResult = PersistedCheckinResult | 'CONFLICT';
+
 export type TicketCheckinStatus = 'ISSUED' | 'CHECKED_IN' | 'VOIDED' | 'REFUNDED';
 
 export interface OnlineScanActor {
@@ -87,6 +89,7 @@ export type AcceptedScanPersistenceResult =
       ticketId: string;
       checkinEventId?: string;
       checkedInAt?: Date;
+      acceptedByDeviceId?: string;
     };
 
 export interface RecordRejectedScanInput {
@@ -107,4 +110,68 @@ export interface RecordAcceptedScanInput {
   scannedQrHash: string;
   deviceId: string;
   occurredAt: Date;
+  source?: 'ONLINE' | 'OFFLINE_SYNC';
+  offlineEventId?: string;
+  syncedAt?: Date;
+}
+
+export interface BatchSyncEventCommand {
+  localId: string;
+  assignmentId: string;
+  concertId: string;
+  gateName?: string;
+  qrPayloadHash: string;
+  scannedAt: Date;
+  deviceId: string;
+}
+
+export interface BatchSyncCommand {
+  actor: OnlineScanActor;
+  concertId?: string;
+  events: BatchSyncEventCommand[];
+  since?: Date;
+}
+
+export type BatchSyncEventResult =
+  | { localId: string; status: 'accepted'; message: string; ticketId: string; checkedInAt: Date }
+  | { localId: string; status: 'duplicate'; message: string }
+  | { localId: string; status: 'invalid'; message: string; reasonCode: InvalidScanReasonCode }
+  | { localId: string; status: 'conflict'; message: string; conflictReason: string }
+  | {
+      localId: string;
+      status: 'unassigned';
+      message: string;
+      reasonCode: UnassignedScanReasonCode;
+    };
+
+export interface BatchSyncCacheUpdates {
+  upserted: Array<{ hash: string; status: 'valid' | 'checked_in' }>;
+  voided: string[];
+  syncedAt: Date;
+}
+
+export interface BatchSyncResult {
+  events: BatchSyncEventResult[];
+  cacheUpdates?: BatchSyncCacheUpdates;
+}
+
+export interface PersistedOfflineEvent {
+  staffId: string;
+  ticketId?: string;
+  result: PersistedBatchCheckinResult;
+  rejectionReason?: string;
+  checkedInAt?: Date;
+}
+
+export interface RecordOfflineOutcomeInput {
+  localId: string;
+  ticketId?: string;
+  concertId: string;
+  staffId: string;
+  scannedQrHash: string;
+  deviceId: string;
+  occurredAt: Date;
+  syncedAt: Date;
+  result: Exclude<PersistedBatchCheckinResult, 'ACCEPTED'>;
+  rejectionReason?: string;
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +12,16 @@ import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { OrderNotFoundError } from '../../../ordering/domain/errors';
 import { Payment } from '../../domain/payment.entity';
-import { PaymentOrderNotPendingError } from '../../domain/errors';
+import {
+  InvalidVnpaySignatureError,
+  PaymentIdempotencyKeyMismatchError,
+  PaymentInitiationInProgressError,
+  PaymentNotFoundError,
+  PaymentOrderNotPendingError,
+  PaymentProviderCircuitOpenError,
+  PaymentProviderHalfOpenTrialRejectedError,
+  VnpayAmountMismatchError,
+} from '../../domain/errors';
 import { PaymentProvider } from '../../domain/payment-provider.enum';
 import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.enum';
 import { PaymentStatus } from '../../domain/payment-status.enum';
@@ -35,16 +49,22 @@ describe('PaymentController', () => {
   let initiatePaymentUseCase: { execute: ReturnType<typeof vi.fn> };
   let callbackUseCase: { execute: ReturnType<typeof vi.fn> };
   let momoIpnUseCase: { execute: ReturnType<typeof vi.fn> };
+  let vnpayIpnUseCase: { execute: ReturnType<typeof vi.fn> };
+  let vnpayReturnUseCase: { execute: ReturnType<typeof vi.fn> };
   let controller: PaymentController;
 
   beforeEach(() => {
     initiatePaymentUseCase = { execute: vi.fn() };
     callbackUseCase = { execute: vi.fn() };
     momoIpnUseCase = { execute: vi.fn() };
+    vnpayIpnUseCase = { execute: vi.fn() };
+    vnpayReturnUseCase = { execute: vi.fn() };
     controller = new PaymentController(
       initiatePaymentUseCase as never,
       callbackUseCase as never,
       momoIpnUseCase as never,
+      vnpayIpnUseCase as never,
+      vnpayReturnUseCase as never,
     );
   });
 
@@ -66,14 +86,16 @@ describe('PaymentController', () => {
 
     const result = await controller.initiatePayment(
       'order-1',
-      { provider: PaymentProvider.MOMO },
+      { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
       { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
     );
 
     expect(initiatePaymentUseCase.execute).toHaveBeenCalledWith({
       orderId: 'order-1',
       userId: 'user-1',
+      idempotencyKey: 'pay-key-1',
       provider: PaymentProvider.MOMO,
+      clientIp: undefined,
     });
     expect(result).toMatchObject({
       payment: { id: 'payment-1', status: PaymentStatus.PENDING },
@@ -81,11 +103,78 @@ describe('PaymentController', () => {
     });
   });
 
+  it('verifies VNPay return without invoking authoritative IPN processing', () => {
+    vnpayReturnUseCase.execute.mockReturnValue({
+      payload: {},
+      providerTransactionId: 'payment-1',
+      providerEventId: 'vnpay:payment-1:123:00:00:20260624100000',
+      providerPaymentId: '123',
+      amountVnd: 2400000,
+      responseCode: '00',
+      transactionStatus: '00',
+      success: true,
+      failureCode: null,
+      failureMessage: null,
+    });
+
+    const result = controller.vnpayReturn({
+      vnp_TxnRef: 'payment-1',
+      vnp_SecureHash: 'signature',
+    });
+
+    expect(vnpayReturnUseCase.execute).toHaveBeenCalled();
+    expect(vnpayIpnUseCase.execute).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      verified: true,
+      authoritative: false,
+      transactionReference: 'payment-1',
+    });
+  });
+
+  it('returns VNPay-compatible acknowledgement for processed and duplicate IPNs', async () => {
+    vnpayIpnUseCase.execute
+      .mockResolvedValueOnce({ duplicate: false })
+      .mockResolvedValueOnce({ duplicate: true });
+
+    await expect(controller.vnpayIpn({ vnp_TxnRef: 'payment-1' })).resolves.toEqual({
+      RspCode: '00',
+      Message: 'Confirm Success',
+    });
+    await expect(controller.vnpayIpn({ vnp_TxnRef: 'payment-1' })).resolves.toEqual({
+      RspCode: '02',
+      Message: 'Order already confirmed',
+    });
+  });
+
+  it('maps VNPay IPN validation failures to provider acknowledgement codes', async () => {
+    vnpayIpnUseCase.execute.mockRejectedValueOnce(new InvalidVnpaySignatureError());
+    await expect(controller.vnpayIpn({})).resolves.toEqual({
+      RspCode: '97',
+      Message: 'Invalid Checksum',
+    });
+
+    vnpayIpnUseCase.execute.mockRejectedValueOnce(new PaymentNotFoundError('payment-1'));
+    await expect(controller.vnpayIpn({})).resolves.toEqual({
+      RspCode: '01',
+      Message: 'Order not found',
+    });
+
+    vnpayIpnUseCase.execute.mockRejectedValueOnce(new VnpayAmountMismatchError(1000, 2000));
+    await expect(controller.vnpayIpn({})).resolves.toEqual({
+      RspCode: '04',
+      Message: 'Invalid Amount',
+    });
+  });
+
   it('maps missing order to 404', async () => {
     initiatePaymentUseCase.execute.mockRejectedValue(new OrderNotFoundError('order-1'));
 
     await expect(
-      controller.initiatePayment('order-1', {}, { user: { id: 'user-1', roles: [Role.AUDIENCE] } }),
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -95,8 +184,60 @@ describe('PaymentController', () => {
     );
 
     await expect(
-      controller.initiatePayment('order-1', {}, { user: { id: 'user-1', roles: [Role.AUDIENCE] } }),
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('maps payment idempotency conflicts to 409', async () => {
+    initiatePaymentUseCase.execute.mockRejectedValue(new PaymentIdempotencyKeyMismatchError());
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    initiatePaymentUseCase.execute.mockRejectedValue(new PaymentInitiationInProgressError());
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('maps payment circuit degradation to 503', async () => {
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderCircuitOpenError(PaymentProvider.MOMO, 30000),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    initiatePaymentUseCase.execute.mockRejectedValue(
+      new PaymentProviderHalfOpenTrialRejectedError(PaymentProvider.MOMO),
+    );
+
+    await expect(
+      controller.initiatePayment(
+        'order-1',
+        { provider: PaymentProvider.MOMO, idempotencyKey: 'pay-key-1' },
+        { user: { id: 'user-1', roles: [Role.AUDIENCE] } },
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
   });
 
   it('processes simulator callback', async () => {

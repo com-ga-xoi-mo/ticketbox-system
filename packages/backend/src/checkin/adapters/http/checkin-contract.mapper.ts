@@ -1,6 +1,31 @@
-import type { OnlineScanResponse } from '@ticketbox/api-types';
+import type { BatchSyncResponse, OnlineScanResponse } from '@ticketbox/api-types';
 
-import type { OnlineScanResult } from '../../domain/checkin-scan.types';
+import type { BatchSyncResult, OnlineScanResult } from '../../domain/checkin-scan.types';
+
+export function toBatchSyncResponse(result: BatchSyncResult): BatchSyncResponse {
+  const results = result.events.map((event) => {
+    switch (event.status) {
+      case 'accepted':
+        return { ...event, checkedInAt: event.checkedInAt.toISOString() };
+      case 'duplicate':
+      case 'invalid':
+      case 'conflict':
+      case 'unassigned':
+        return { ...event };
+    }
+  });
+
+  if (!result.cacheUpdates) return { results };
+
+  return {
+    results,
+    cacheUpdates: {
+      upserted: result.cacheUpdates.upserted,
+      voided: result.cacheUpdates.voided,
+      syncedAt: result.cacheUpdates.syncedAt.toISOString(),
+    },
+  };
+}
 
 export function toOnlineScanResponse(result: OnlineScanResult): OnlineScanResponse {
   switch (result.status) {

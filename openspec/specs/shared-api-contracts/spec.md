@@ -126,3 +126,87 @@ The system SHALL verify shared contract compatibility using package schema tests
 
 - **WHEN** migration to the shared package is complete
 - **THEN** old duplicate wire types SHALL be removed only after usage inventory, build, typecheck, unit, HTTP contract, and integration tests pass
+
+### Requirement: Batch sync wire contract
+
+The shared contract package SHALL provide Zod schemas and inferred TypeScript types for the batch sync request and response as the canonical runtime definitions for the `POST /checkin/sync` endpoint.
+
+#### Scenario: BatchSyncRequest schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `BatchSyncRequestSchema`, `BatchSyncEventSchema`, and the inferred `BatchSyncRequest` and `BatchSyncEvent` types
+
+#### Scenario: BatchSyncResponse schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `BatchSyncResponseSchema`, `BatchSyncEventResultSchema`, and the inferred `BatchSyncResponse` and `BatchSyncEventResult` types
+
+#### Scenario: Batch sync schemas follow the strict discriminated-union pattern
+
+- **WHEN** the batch sync response result is validated
+- **THEN** the result schema SHALL use a discriminated union on `status` with strict mode, consistent with the existing `OnlineScanResponseSchema`
+
+#### Scenario: Batch sync request is bounded and correlatable
+
+- **WHEN** `BatchSyncRequestSchema` validates a request
+- **THEN** it SHALL allow at most 100 events, reject duplicate `localId` values, bound all variable-length strings, and require `qrPayloadHash` as lowercase 64-character SHA-256 hexadecimal
+
+#### Scenario: Batch sync types remain framework-independent
+
+- **WHEN** the batch sync contract files are compiled
+- **THEN** they SHALL depend only on Zod and SHALL NOT import backend, mobile, NestJS, React Native, Prisma, or application workspace code
+
+#### Scenario: Mobile validates batch sync responses
+
+- **WHEN** the mobile sync service receives a batch sync response
+- **THEN** it SHALL validate the response payload with `BatchSyncResponseSchema` before processing results
+
+#### Scenario: Backend response mapper for batch sync is contract-tested
+
+- **WHEN** the backend maps batch sync use-case results to wire format
+- **THEN** contract tests SHALL validate every response variant with the corresponding shared Zod schema
+
+#### Scenario: Backend request validation uses the canonical schema
+
+- **WHEN** the NestJS HTTP adapter receives `POST /checkin/sync`
+- **THEN** it SHALL validate the body directly with `BatchSyncRequestSchema` through a Zod adapter pipe and SHALL NOT maintain an equivalent class-validator DTO
+
+#### Scenario: Response mapping remains side-effect free
+
+- **WHEN** the backend maps committed per-event outcomes into `BatchSyncResponse`
+- **THEN** it SHALL use a deterministic side-effect-free mapper covered by contract tests and SHALL NOT add runtime response parsing after accepted transactions have committed
+
+### Requirement: Audience public catalog wire contracts
+
+The shared contract package SHALL provide framework-independent Zod schemas and inferred TypeScript types for the public audience concert catalog responses consumed by the audience web app.
+
+#### Scenario: Public concert list contract is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports schemas and inferred types for the `GET /concerts` public concert list response
+
+#### Scenario: Public concert detail contract is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports schemas and inferred types for the `GET /concerts/:slug` public concert detail response
+
+#### Scenario: Public concert availability contract is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports schemas and inferred types for the `GET /concerts/:slug/availability` public concert availability response
+
+#### Scenario: Audience app validates public catalog responses
+
+- **WHEN** the audience web app receives a successful public catalog response
+- **THEN** it validates the payload with the matching shared schema before returning data to route or feature code
+
+#### Scenario: Public catalog contracts stay framework-independent
+
+- **WHEN** public catalog contract files are compiled
+- **THEN** they depend only on framework-independent contract dependencies such as Zod
+- **AND** they do not import backend, React, Vite, Prisma, NestJS, or app-specific UI code
+
+#### Scenario: Backend public catalog mapper is contract-tested
+
+- **WHEN** the backend maps public concert catalog use-case results to HTTP responses consumed by the audience app
+- **THEN** contract tests validate representative list, detail, and availability payloads with the corresponding shared schemas
