@@ -34,6 +34,35 @@ export async function assignStaff(concertId: string, payload: AssignStaffPayload
   });
 }
 
+export interface BulkCreateStaffPayload {
+  baseEmail: string;
+  quantity: number;
+  displayNamePrefix: string;
+}
+
+export interface BulkCreatedStaffCredential {
+  userId: string;
+  displayName: string;
+  email: string;
+  password: string;
+  assignmentId: string;
+  concertId: string;
+  concertTitle: string;
+}
+
+export interface BulkCreateStaffResponse {
+  concertId: string;
+  concertTitle: string;
+  credentials: BulkCreatedStaffCredential[];
+}
+
+export async function bulkCreateStaff(
+  concertId: string,
+  payload: BulkCreateStaffPayload,
+): Promise<BulkCreateStaffResponse> {
+  return post<BulkCreateStaffResponse>(`/admin/concerts/${concertId}/staff/bulk-create`, payload);
+}
+
 export async function revokeAssignment(concertId: string, assignmentId: string): Promise<void> {
   const token = getToken();
   const res = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000'}/admin/concerts/${concertId}/staff/${assignmentId}`, {

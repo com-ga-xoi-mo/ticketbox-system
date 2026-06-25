@@ -18,6 +18,7 @@ interface VenueMapSvgViewerProps {
   hoveredElementId: string | null;
   onElementClick: (id: string) => void;
   onElementHover: (id: string | null) => void;
+  svgContentOverride?: string | null;
 }
 
 export function VenueMapSvgViewer({
@@ -27,6 +28,7 @@ export function VenueMapSvgViewer({
   hoveredElementId,
   onElementClick,
   onElementHover,
+  svgContentOverride,
 }: VenueMapSvgViewerProps) {
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +37,18 @@ export function VenueMapSvgViewer({
 
   useEffect(() => {
     async function fetchSvg() {
-      if (!seatingMap.assetId) return;
+      if (svgContentOverride) {
+        setSvgContent(svgContentOverride);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+      if (!seatingMap.assetId) {
+        setSvgContent(null);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
       setIsLoading(true);
       setError(null);
 
@@ -63,7 +76,7 @@ export function VenueMapSvgViewer({
       setIsLoading(false);
     }
     fetchSvg();
-  }, [seatingMap.assetId, seatingMap.svgUrl]);
+  }, [seatingMap.assetId, seatingMap.svgUrl, svgContentOverride]);
 
   useEffect(() => {
     if (!containerRef.current || !svgContent) return;
@@ -72,20 +85,20 @@ export function VenueMapSvgViewer({
     if (!svgElement) return;
 
     // Apply styles to elements based on their status
-    seatingMap.svgElementIds.forEach(id => {
+    seatingMap.svgElementIds.forEach((id) => {
       const element = svgElement.querySelector(`[id="${id}"]`) as SVGElement | null;
       if (!element) return;
 
-      const zone = seatingZones.find(z => z.svgElementId === id);
+      const zone = seatingZones.find((z) => z.svgElementId === id);
       const isSelected = id === selectedElementId;
       const isHovered = id === hoveredElementId;
 
       // Base style
       element.style.cursor = 'pointer';
       element.style.transition = 'all 0.2s ease-in-out';
-      
+
       const zoneColor = zone?.color;
-      
+
       if (isSelected) {
         element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.8) : 'rgba(99, 102, 241, 0.8)';
         element.style.stroke = '#ffffff';
@@ -99,7 +112,7 @@ export function VenueMapSvgViewer({
         element.style.stroke = zoneColor || '#475569';
         element.style.strokeWidth = '1px';
       }
-      
+
       // Update text if there is a sibling or child text element
       let textElement = element.nextElementSibling;
       if (textElement && textElement.tagName.toLowerCase() === 'text') {
@@ -111,7 +124,6 @@ export function VenueMapSvgViewer({
         }
       }
     });
-
   }, [svgContent, seatingMap.svgElementIds, seatingZones, selectedElementId, hoveredElementId]);
 
   const handleContainerClick = (e: React.MouseEvent) => {
@@ -139,23 +151,23 @@ export function VenueMapSvgViewer({
   };
 
   const handleContainerMouseOut = (e: React.MouseEvent) => {
-     let target = e.target as Element;
-     // Check if relatedTarget is outside the element
-     const relatedTarget = e.relatedTarget as Element;
-     
-     let isStillInValidElement = false;
-     let current = relatedTarget;
-     while (current && current !== containerRef.current) {
-        if (current.id && seatingMap.svgElementIds.includes(current.id)) {
-          isStillInValidElement = true;
-          break;
-        }
-        current = current.parentElement as Element;
-     }
+    let target = e.target as Element;
+    // Check if relatedTarget is outside the element
+    const relatedTarget = e.relatedTarget as Element;
 
-     if (!isStillInValidElement) {
-        onElementHover(null);
-     }
+    let isStillInValidElement = false;
+    let current = relatedTarget;
+    while (current && current !== containerRef.current) {
+      if (current.id && seatingMap.svgElementIds.includes(current.id)) {
+        isStillInValidElement = true;
+        break;
+      }
+      current = current.parentElement as Element;
+    }
+
+    if (!isStillInValidElement) {
+      onElementHover(null);
+    }
   };
 
   if (isLoading) {
@@ -163,20 +175,22 @@ export function VenueMapSvgViewer({
   }
 
   if (error) {
-    return <div className="flex items-center justify-center h-full w-full text-red-500">{error}</div>;
+    return (
+      <div className="flex items-center justify-center h-full w-full text-red-500">{error}</div>
+    );
   }
 
   return (
-    <div 
+    <div
       className="w-full h-full relative overflow-auto flex items-center justify-center"
       onClick={handleContainerClick}
       onMouseOver={handleContainerMouseOver}
       onMouseOut={handleContainerMouseOut}
     >
-      <div 
+      <div
         ref={containerRef}
         className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full"
-        dangerouslySetInnerHTML={{ __html: svgContent || '' }} 
+        dangerouslySetInnerHTML={{ __html: svgContent || '' }}
       />
     </div>
   );

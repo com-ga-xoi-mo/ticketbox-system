@@ -219,7 +219,7 @@ export function ConcertsPage() {
               </div>
 
               {/* Table — horizontally scrollable when narrow (detail panel open) */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-auto">
               {filteredConcerts.length === 0 ? (
                 <div className="p-12 text-center text-sm font-semibold text-on-surface-variant">
                   No concerts matching current filters.

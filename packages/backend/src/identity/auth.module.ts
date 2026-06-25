@@ -12,6 +12,7 @@ import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-admin-action.use-case';
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
+import { BulkCreateCheckinStaffUseCase } from './application/use-cases/bulk-create-checkin-staff.use-case';
 import { ManageCheckinStaffAssignmentsUseCase } from './application/use-cases/manage-checkin-staff-assignments.use-case';
 import {
   CreateUserAccountUseCase,
@@ -35,6 +36,10 @@ import { PASSWORD_HASHER, type PasswordHasherPort } from './domain/ports/passwor
 import { TOKEN_ISSUER, type TokenIssuerPort } from './domain/ports/token-issuer.port';
 import { USER_REPOSITORY, type IUserRepository } from './domain/ports/user-repository.port';
 import {
+  BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
+  type BulkCheckinStaffProvisioningRepositoryPort,
+} from './domain/ports/bulk-checkin-staff-provisioning.port';
+import {
   CHECKIN_STAFF_ASSIGNMENT_REPOSITORY,
   type CheckinStaffAssignmentRepositoryPort,
 } from './domain/ports/checkin-staff-assignment.port';
@@ -45,6 +50,7 @@ import {
 
 // Infrastructure — concrete implementations
 import { BcryptPasswordHasher } from './infrastructure/crypto/bcrypt-password-hasher';
+import { PrismaBulkCheckinStaffProvisioningRepository } from './infrastructure/database/prisma-bulk-checkin-staff-provisioning.repository';
 import { PrismaCheckinStaffAssignmentRepository } from './infrastructure/database/prisma-checkin-staff-assignment.repository';
 import { PrismaConcertOwnershipRepository } from './infrastructure/database/prisma-concert-ownership.repository';
 import { PrismaUserRepository } from './infrastructure/database/prisma-user.repository';
@@ -150,11 +156,36 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       ) =>
         new ManageCheckinStaffAssignmentsUseCase(assignmentRepository, authorizeConcertManagement),
     },
+    {
+      provide: BulkCreateCheckinStaffUseCase,
+      inject: [
+        USER_REPOSITORY,
+        PASSWORD_HASHER,
+        BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
+        AuthorizeAdminActionUseCase,
+      ],
+      useFactory: (
+        userRepository: IUserRepository,
+        passwordHasher: PasswordHasherPort,
+        provisioningRepository: BulkCheckinStaffProvisioningRepositoryPort,
+        authorizeAdmin: AuthorizeAdminActionUseCase,
+      ) =>
+        new BulkCreateCheckinStaffUseCase(
+          userRepository,
+          passwordHasher,
+          provisioningRepository,
+          authorizeAdmin,
+        ),
+    },
 
     // Infrastructure layer — Bind port to concrete implementation
     {
       provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
+      useClass: PrismaBulkCheckinStaffProvisioningRepository,
     },
     {
       provide: PROFILE_QUERY,
