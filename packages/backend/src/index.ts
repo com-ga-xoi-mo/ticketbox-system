@@ -20,6 +20,7 @@ export * from './platform/redis/redis.module';
 export * from './platform/redis/redis.tokens';
 export * from './platform/storage';
 export * from './identity/auth.module';
+export * from './artist-discovery/artist-discovery.module';
 export * from './concert-management/concert-management.module';
 export * from './ai-artist-bio/ai-artist-bio.module';
 export * from './checkin/checkin.module';
