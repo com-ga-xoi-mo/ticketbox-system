@@ -1,5 +1,6 @@
 import type { OrderPaidForNotification } from '../../domain/events/order-paid-for-notification.event';
 import type { NotificationRepositoryPort } from '../../domain/ports/notification-repository.port';
+import type { RealtimeNotificationPublisherPort } from '../../domain/ports/realtime-notification-publisher.port';
 import {
   NotificationChannel,
   NotificationStatus,
@@ -13,7 +14,10 @@ export interface PurchaseConfirmationNotifications {
 }
 
 export class CreatePurchaseConfirmationNotificationsUseCase {
-  constructor(private readonly notificationRepository: NotificationRepositoryPort) {}
+  constructor(
+    private readonly notificationRepository: NotificationRepositoryPort,
+    private readonly realtimePublisher?: RealtimeNotificationPublisherPort,
+  ) {}
 
   async execute(event: OrderPaidForNotification): Promise<PurchaseConfirmationNotifications> {
     const subject = `TicketBox confirmation: ${event.concertTitle}`;
@@ -31,6 +35,9 @@ export class CreatePurchaseConfirmationNotificationsUseCase {
       body,
       sentAt,
     });
+
+    // Best-effort realtime signal so a connected browser updates without a reload.
+    await this.realtimePublisher?.publishNewNotification(event.userId);
 
     const email = await this.notificationRepository.upsertByDedupeKey({
       userId: event.userId,

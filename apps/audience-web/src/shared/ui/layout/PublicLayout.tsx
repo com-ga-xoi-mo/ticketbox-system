@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { Bell, LifeBuoy, LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
+import { NotificationStreamListener } from '../../api/NotificationStreamListener';
 import { cn } from '../cn';
 import { Button } from '../../../components/ui/button';
 import {
@@ -158,6 +159,7 @@ export function PublicLayout() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
+      <NotificationStreamListener />
       <header className="sticky top-0 z-50 border-b border-white/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />
