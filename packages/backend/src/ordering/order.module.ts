@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../identity/auth.module';
 import { NotificationModule } from '../notification/notification.module';
+import { PromotionModule } from '../promotion/promotion.module';
 import { EnqueuePurchaseConfirmationUseCase } from '../notification/application/use-cases/enqueue-purchase-confirmation.use-case';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
@@ -52,7 +53,7 @@ import { PrismaTicketTypePricingRepository } from './infrastructure/database/pri
 import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket-issuing-order-event-publisher';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, AuthModule, NotificationModule],
+  imports: [PlatformConfigModule, DatabaseModule, AuthModule, NotificationModule, PromotionModule],
   controllers: [OrderController, InternalOrderController],
   providers: [
     {
@@ -61,19 +62,23 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
         ORDER_REPOSITORY,
         INVENTORY_RESERVATION_REPOSITORY,
         TICKET_TYPE_PRICING_REPOSITORY,
+        'PromotionValidationPort',
         PlatformConfigService,
       ],
       useFactory: (
         orderRepository: IOrderRepository,
         inventoryReservationRepository: IInventoryReservationRepository,
         ticketTypePricingRepository: TicketTypePricingRepositoryPort,
+        promotionValidationPort: any,
         config: PlatformConfigService,
       ) =>
         new CreateOrderUseCase(
           orderRepository,
           inventoryReservationRepository,
           ticketTypePricingRepository,
+          promotionValidationPort,
           {
+            serviceFeeVnd: config.serviceFeeVnd,
             reservationTtlMinutes: config.orderReservationTtlMinutes,
           },
         ),

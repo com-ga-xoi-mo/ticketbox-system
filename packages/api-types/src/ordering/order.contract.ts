@@ -29,7 +29,11 @@ export const OrderSummaryResponseSchema = z.object({
   concertId: z.string(),
   idempotencyKey: z.string().nullable().optional(),
   status: OrderStatusSchema,
+  subtotalVnd: z.number().int().min(0).default(0),
+  discountAmountVnd: z.number().int().min(0).default(0),
+  serviceFeeVnd: z.number().int().min(0).default(0),
   totalAmountVnd: z.number().int().min(0),
+  promoCode: z.string().nullable().optional(),
   reservationExpiresAt: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -62,6 +66,7 @@ export type CreateOrderItemRequest = z.infer<typeof CreateOrderItemRequestSchema
 export const CreateOrderRequestSchema = z.object({
   concertId: z.string().uuid(),
   idempotencyKey: z.string().min(1).max(80),
+  promoCode: z.string().trim().min(1).optional(),
   items: z.array(CreateOrderItemRequestSchema).min(1),
 });
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;

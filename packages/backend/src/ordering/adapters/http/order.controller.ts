@@ -1,5 +1,5 @@
 import {
-  Body,
+  Body, Req,
   BadRequestException,
   ConflictException,
   Controller,
@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth
 import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
 import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
+import { ValidatePromotionUseCase } from '../../../promotion/application/use-cases/validate-promotion.use-case';
 import { GetUserTicketUseCase } from '../../application/use-cases/get-user-ticket.use-case';
 import { GetOrderUseCase } from '../../application/use-cases/get-order.use-case';
 import { ListUserTicketsUseCase } from '../../application/use-cases/list-user-tickets.use-case';
@@ -48,10 +49,39 @@ import {
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrderController {
+  @Post('checkout/promo/validate')
+  async validatePromo(
+    @Request() req: any,
+    @Body() body: any,
+  ) {
+    const userId = (req as any).user.sub;
+    try {
+      const promotion = await this.validatePromotion.execute({
+        code: body.code,
+        userId,
+        concertId: body.concertId,
+        ticketTypeIds: body.ticketTypeIds,
+      });
+      return {
+        valid: true,
+        discountType: promotion.discountType,
+        discountValue: promotion.discountValue,
+        maxDiscountVnd: promotion.maxDiscountVnd,
+      };
+    } catch (e: any) {
+      return {
+        valid: false,
+        errorCode: e.code || 'UNKNOWN_ERROR',
+        message: e.message,
+      };
+    }
+  }
+
   constructor(
     private readonly createOrderUseCase: CreateOrderUseCase,
     private readonly getOrderUseCase: GetOrderUseCase,
     private readonly listUserOrdersUseCase: ListUserOrdersUseCase,
+    private readonly validatePromotion: ValidatePromotionUseCase,
     private readonly listUserTicketsUseCase: ListUserTicketsUseCase,
     private readonly getUserTicketUseCase: GetUserTicketUseCase,
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
@@ -69,6 +99,7 @@ export class OrderController {
         userId: req.user.id,
         concertId: dto.concertId,
         idempotencyKey: dto.idempotencyKey,
+        promoCode: dto.promoCode,
         items: dto.items.map((item) => ({
           ticketTypeId: item.ticketTypeId,
           quantity: item.quantity,

@@ -61,7 +61,9 @@ describe('CreateOrderUseCase', () => {
       orderRepository,
       inventoryReservationRepository,
       ticketTypePricingRepository,
+      {} as any,
       {
+        serviceFeeVnd: 0,
         reservationTtlMinutes: 15,
         now: () => now,
       },

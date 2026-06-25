@@ -234,3 +234,16 @@ export type {
   TicketResendResponse,
   TicketResendStatus,
 } from './audience/download.contract';
+
+export {
+  DiscountTypeSchema,
+  PromoErrorCodeSchema,
+  ValidatePromoRequestSchema,
+  ValidatePromoResponseSchema,
+} from './promotion/promotion.contract';
+export type {
+  DiscountType,
+  PromoErrorCode,
+  ValidatePromoRequest,
+  ValidatePromoResponse,
+} from './promotion/promotion.contract';

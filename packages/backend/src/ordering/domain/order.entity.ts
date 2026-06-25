@@ -10,7 +10,12 @@ export interface OrderProps {
   concertId: string;
   idempotencyKey?: string | null;
   status: OrderStatus;
+  subtotalVnd?: number;
+  discountAmountVnd?: number;
+  serviceFeeVnd?: number;
   totalAmountVnd: number;
+  promoCode?: string | null;
+  promotionId?: string | null;
   reservationExpiresAt?: Date | null;
   paidAt?: Date | null;
   expiredAt?: Date | null;
@@ -40,7 +45,12 @@ export class Order {
   readonly userId: string;
   readonly concertId: string;
   readonly idempotencyKey: string | null;
+  readonly subtotalVnd: number;
+  readonly discountAmountVnd: number;
+  readonly serviceFeeVnd: number;
   readonly totalAmountVnd: number;
+  readonly promoCode: string | null;
+  readonly promotionId: string | null;
   readonly reservationExpiresAt: Date | null;
   readonly createdAt: Date;
   readonly items: OrderItem[];
@@ -59,7 +69,12 @@ export class Order {
     this.concertId = props.concertId;
     this.idempotencyKey = props.idempotencyKey ?? null;
     this.status = props.status;
+    this.subtotalVnd = props.subtotalVnd ?? 0;
+    this.discountAmountVnd = props.discountAmountVnd ?? 0;
+    this.serviceFeeVnd = props.serviceFeeVnd ?? 0;
     this.totalAmountVnd = props.totalAmountVnd;
+    this.promoCode = props.promoCode ?? null;
+    this.promotionId = props.promotionId ?? null;
     this.reservationExpiresAt = props.reservationExpiresAt ?? null;
     this.paidAt = props.paidAt ?? null;
     this.expiredAt = props.expiredAt ?? null;

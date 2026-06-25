@@ -71,6 +71,7 @@ describe('OrderController', () => {
       listUserTicketsUseCase as never,
       getUserTicketUseCase as never,
       transitionOrderStatusUseCase as never,
+      {} as never,
     );
   });
 

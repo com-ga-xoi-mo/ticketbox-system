@@ -6,6 +6,9 @@ import type { PlatformEnv } from './env.schema';
 
 @Injectable()
 export class PlatformConfigService {
+  get serviceFeeVnd(): number {
+    return parseInt((this.configService.get as any)('SERVICE_FEE_VND') ?? '0', 10);
+  }
   constructor(
     @Inject(ConfigService)
     private readonly configService: ConfigService<PlatformEnv, true>,
