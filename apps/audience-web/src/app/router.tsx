@@ -10,7 +10,6 @@ import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
 import { PaymentResultPage } from '../features/account/PaymentResultPage';
 
-// Lazy loaded account pages
 const AccountPage = lazy(() => import('../features/account/AccountPage').then(m => ({ default: m.AccountPage })));
 const MyOrdersPage = lazy(() => import('../features/account/MyOrdersPage').then(m => ({ default: m.MyOrdersPage })));
 const OrderDetailPage = lazy(() => import('../features/account/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));
