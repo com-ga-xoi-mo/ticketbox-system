@@ -98,14 +98,31 @@ export class PrismaPaymentRepository implements PaymentRepositoryPort {
   }
 
   async updateStatus(data: UpdatePaymentStatusData): Promise<Payment> {
-    const payment = await this.prisma.payment.update({
-      where: { id: data.paymentId },
-      data: {
-        status: data.status,
-        completedAt: data.completedAt,
-        failureCode: data.failureCode,
-        failureMessage: data.failureMessage,
-      },
+    const payment = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.payment.findUnique({
+        where: { id: data.paymentId },
+        select: { orderId: true },
+      });
+      if (!current) {
+        throw new Error(`Payment not found: ${data.paymentId}`);
+      }
+
+      await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM orders
+        WHERE id = ${current.orderId}::uuid
+        FOR UPDATE
+      `;
+
+      return tx.payment.update({
+        where: { id: data.paymentId },
+        data: {
+          status: data.status,
+          completedAt: data.completedAt,
+          failureCode: data.failureCode,
+          failureMessage: data.failureMessage,
+        },
+      });
     });
 
     return this.toDomain(payment);

@@ -63,6 +63,26 @@ export class PlatformConfigService {
     return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
   }
 
+  get paymentRepairEnabled(): boolean {
+    return this.configService.get('PAYMENT_REPAIR_ENABLED');
+  }
+
+  get paymentRepairIntervalMs(): number {
+    return this.configService.get('PAYMENT_REPAIR_INTERVAL_MS');
+  }
+
+  get paymentRepairBatchSize(): number {
+    return this.configService.get('PAYMENT_REPAIR_BATCH_SIZE');
+  }
+
+  get paymentRepairMaxAttempts(): number {
+    return this.configService.get('PAYMENT_REPAIR_MAX_ATTEMPTS');
+  }
+
+  get paymentRepairBackoffMs(): number {
+    return this.configService.get('PAYMENT_REPAIR_BACKOFF_MS');
+  }
+
   get momoPartnerCode(): string {
     return this.configService.get('MOMO_PARTNER_CODE');
   }

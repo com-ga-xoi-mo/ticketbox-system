@@ -36,6 +36,17 @@ export const envSchema = z
     QR_TOKEN_SECRET: z.string().min(1).default('ticketbox-qr-token-dev-secret'),
     BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
     ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+    PAYMENT_REPAIR_ENABLED: z.preprocess(
+      (value) =>
+        typeof value === 'string'
+          ? ['1', 'true', 'yes'].includes(value.trim().toLowerCase())
+          : Boolean(value),
+      z.boolean(),
+    ).default(true),
+    PAYMENT_REPAIR_INTERVAL_MS: z.coerce.number().int().min(1000).default(60000),
+    PAYMENT_REPAIR_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
+    PAYMENT_REPAIR_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+    PAYMENT_REPAIR_BACKOFF_MS: z.coerce.number().int().min(100).default(5000),
     MOMO_PARTNER_CODE: z.string().min(1),
     MOMO_ACCESS_KEY: z.string().min(1),
     MOMO_SECRET_KEY: z.string().min(1),

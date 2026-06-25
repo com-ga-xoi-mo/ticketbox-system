@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   TicketIssuanceOrderNotPaidError,
-  TicketPartialIssuanceConflictError,
 } from '../../domain/errors';
 import { OrderStatus } from '../../domain/order-status.enum';
 import { Ticket } from '../../domain/ticket.entity';
@@ -167,21 +166,50 @@ describe('PrismaTicketRepository', () => {
     expect(tx.ticket.create).not.toHaveBeenCalled();
   });
 
-  it('fails fast when an order has a partial ticket set', async () => {
+  it('creates only the missing deterministic ticket for a partial ticket set', async () => {
     tx.order.findUnique.mockResolvedValue(
       buildPaidOrder({
         tickets: [buildPrismaTicket()],
       }),
     );
-
-    await expect(
-      repository.issueTicketsForPaidOrder({
-        orderId: 'order-1',
-        createTickets: vi.fn(),
+    tx.ticket.create.mockResolvedValue(
+      buildPrismaTicket({
+        id: 'ticket-2',
+        ticketNumber: 'TCK-ORD-20260616-ABC123-002',
+        qrTokenHash: 'hash-2',
       }),
-    ).rejects.toThrow(TicketPartialIssuanceConflictError);
+    );
 
-    expect(tx.ticket.create).not.toHaveBeenCalled();
+    const result = await repository.issueTicketsForPaidOrder({
+      orderId: 'order-1',
+      createTickets: () => [
+        {
+          id: 'unused-existing-plan',
+          ticketNumber: 'TCK-ORD-20260616-ABC123-001',
+          orderItemId: 'order-item-1',
+          ticketTypeId: 'ticket-type-1',
+          qrTokenHash: 'unused-existing-hash',
+          issuedAt,
+        },
+        {
+          id: 'ticket-2',
+          ticketNumber: 'TCK-ORD-20260616-ABC123-002',
+          orderItemId: 'order-item-1',
+          ticketTypeId: 'ticket-type-1',
+          qrTokenHash: 'hash-2',
+          issuedAt,
+        },
+      ],
+    });
+
+    expect(tx.ticket.create).toHaveBeenCalledTimes(1);
+    expect(tx.ticket.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: 'ticket-2',
+        ticketNumber: 'TCK-ORD-20260616-ABC123-002',
+      }),
+    });
+    expect(result.map((ticket) => ticket.id)).toEqual(['ticket-1', 'ticket-2']);
   });
 
   it('rejects non-paid orders', async () => {

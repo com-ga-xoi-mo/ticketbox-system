@@ -28,7 +28,13 @@ describe('ExpiredReservationProcessor', () => {
   });
 
   it('runs the expiration use case when processing a job', async () => {
-    const result = { scanned: 2, expired: 1, failed: 1 };
+    const result = {
+      scanned: 2,
+      expired: 1,
+      skippedPaid: 0,
+      conflicted: 0,
+      failed: 1,
+    };
     const queue = { add: vi.fn() };
     const useCase = { execute: vi.fn().mockResolvedValue(result) };
     const processor = new ExpiredReservationProcessor(

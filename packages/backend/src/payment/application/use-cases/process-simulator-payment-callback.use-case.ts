@@ -1,6 +1,9 @@
-import { OrderStatus } from '../../../ordering/order.module';
-import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import {
+  OrderStatus,
+  type TransitionOrderStatusUseCase,
+} from '../../../ordering/order.module';
 import { OrderConflictError } from '../../../ordering/domain/errors';
+
 import {
   PaymentCallbackMismatchError,
   PaymentNotFoundError,
@@ -12,6 +15,8 @@ import { PaymentSimulatorOutcome } from '../../domain/payment-simulator-outcome.
 import { PaymentStatus } from '../../domain/payment-status.enum';
 import type { PaymentGatewayPort } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
+import { SuccessfulPaymentRecoverySource } from '../../domain/payment-recovery';
+import type { FinalizeSuccessfulPaymentUseCase } from './finalize-successful-payment.use-case';
 
 export interface ProcessSimulatorPaymentCallbackCommand {
   token: string;
@@ -31,6 +36,7 @@ export class ProcessSimulatorPaymentCallbackUseCase {
   constructor(
     private readonly paymentRepository: PaymentRepositoryPort,
     private readonly paymentGateway: PaymentGatewayPort,
+    private readonly finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
   ) {}
 
@@ -87,11 +93,19 @@ export class ProcessSimulatorPaymentCallbackUseCase {
         throw new PaymentNotFoundError(payment.id);
       }
 
+      const recovery =
+        currentPayment.status === PaymentStatus.SUCCEEDED
+          ? await this.finalizeSuccessfulPaymentUseCase.execute({
+              paymentId: currentPayment.id,
+              source: SuccessfulPaymentRecoverySource.CALLBACK,
+              occurredAt: command.occurredAt,
+            })
+          : null;
       return {
         payment: currentPayment,
         outcome,
         duplicate: true,
-        orderTransitioned: false,
+        orderTransitioned: recovery?.orderTransitioned ?? false,
       };
     }
 
@@ -103,9 +117,9 @@ export class ProcessSimulatorPaymentCallbackUseCase {
         completedAt: paidAt,
       });
 
-      const orderTransitioned = await this.transitionOrderStatus({
-        orderId: payment.orderId,
-        status: OrderStatus.PAID,
+      const recovery = await this.finalizeSuccessfulPaymentUseCase.execute({
+        paymentId: updatedPayment.id,
+        source: SuccessfulPaymentRecoverySource.CALLBACK,
         occurredAt: paidAt,
       });
 
@@ -113,7 +127,7 @@ export class ProcessSimulatorPaymentCallbackUseCase {
         payment: updatedPayment,
         outcome,
         duplicate: false,
-        orderTransitioned,
+        orderTransitioned: recovery.orderTransitioned,
       };
     }
 
@@ -126,12 +140,10 @@ export class ProcessSimulatorPaymentCallbackUseCase {
       failureMessage: 'Payment simulator returned failure',
     });
 
-    const orderTransitioned = await this.transitionOrderStatus({
-      orderId: payment.orderId,
-      status: OrderStatus.FAILED,
-      occurredAt: failedAt,
-    });
-
+    const orderTransitioned = await this.transitionFailedOrder(
+      payment.orderId,
+      failedAt,
+    );
     return {
       payment: updatedPayment,
       outcome,
@@ -151,24 +163,22 @@ export class ProcessSimulatorPaymentCallbackUseCase {
     return `${providerTransactionId}:${outcome}`;
   }
 
-  private async transitionOrderStatus(params: {
-    orderId: string;
-    status: OrderStatus;
-    occurredAt: Date;
-  }): Promise<boolean> {
+  private async transitionFailedOrder(
+    orderId: string,
+    occurredAt: Date,
+  ): Promise<boolean> {
     try {
       await this.transitionOrderStatusUseCase.execute({
-        orderId: params.orderId,
-        status: params.status,
+        orderId,
+        status: OrderStatus.FAILED,
         skipOwnershipCheck: true,
-        occurredAt: params.occurredAt,
+        occurredAt,
       });
       return true;
-    } catch (err: unknown) {
-      if (err instanceof OrderConflictError) {
-        return false;
-      }
-      throw err;
+    } catch (error: unknown) {
+      if (error instanceof OrderConflictError) return false;
+      throw error;
     }
   }
+
 }

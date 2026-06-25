@@ -63,6 +63,23 @@ export class InventoryReservationConflictError extends Error {
   }
 }
 
+export class PaidOrderExpirationSkippedError extends Error {
+  constructor(
+    public readonly orderId: string,
+    public readonly paymentId?: string,
+  ) {
+    super(`Cannot expire order ${orderId} because a successful payment exists`);
+    this.name = 'PaidOrderExpirationSkippedError';
+  }
+}
+
+export class SuccessfulPaymentRequiredError extends Error {
+  constructor(public readonly orderId: string) {
+    super(`Cannot mark order ${orderId} as paid without a successful payment`);
+    this.name = 'SuccessfulPaymentRequiredError';
+  }
+}
+
 export class PerUserTicketLimitExceededError extends Error {
   constructor(
     public readonly ticketTypeId: string,

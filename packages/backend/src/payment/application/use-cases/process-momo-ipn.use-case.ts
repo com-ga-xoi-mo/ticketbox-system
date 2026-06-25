@@ -1,7 +1,9 @@
 import type { Prisma } from '@prisma/client';
 
-import { OrderStatus } from '../../../ordering/order.module';
-import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import {
+  OrderStatus,
+  type TransitionOrderStatusUseCase,
+} from '../../../ordering/order.module';
 import { OrderConflictError } from '../../../ordering/domain/errors';
 import { PaymentCallbackMismatchError, PaymentNotFoundError } from '../../domain/errors';
 import type { Payment } from '../../domain/payment.entity';
@@ -14,6 +16,8 @@ import type {
   VerifiedMomoIpnPayload,
 } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
+import { SuccessfulPaymentRecoverySource } from '../../domain/payment-recovery';
+import type { FinalizeSuccessfulPaymentUseCase } from './finalize-successful-payment.use-case';
 
 export interface ProcessMomoIpnCommand {
   payload: MomoIpnPayload;
@@ -31,6 +35,7 @@ export class ProcessMomoIpnUseCase {
   constructor(
     private readonly paymentRepository: PaymentRepositoryPort,
     private readonly paymentGateway: PaymentGatewayPort,
+    private readonly finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
   ) {}
 
@@ -61,11 +66,19 @@ export class ProcessMomoIpnUseCase {
         throw new PaymentNotFoundError(payment.id);
       }
 
+      const recovery =
+        currentPayment.status === PaymentStatus.SUCCEEDED
+          ? await this.finalizeSuccessfulPaymentUseCase.execute({
+              paymentId: currentPayment.id,
+              source: SuccessfulPaymentRecoverySource.CALLBACK,
+              occurredAt: command.occurredAt,
+            })
+          : null;
       return {
         payment: currentPayment,
         momo,
         duplicate: true,
-        orderTransitioned: false,
+        orderTransitioned: recovery?.orderTransitioned ?? false,
       };
     }
 
@@ -77,15 +90,16 @@ export class ProcessMomoIpnUseCase {
         completedAt: occurredAt,
       });
 
+      const recovery = await this.finalizeSuccessfulPaymentUseCase.execute({
+        paymentId: updatedPayment.id,
+        source: SuccessfulPaymentRecoverySource.CALLBACK,
+        occurredAt,
+      });
       return {
         payment: updatedPayment,
         momo,
         duplicate: false,
-        orderTransitioned: await this.transitionOrderStatus({
-          orderId: payment.orderId,
-          status: OrderStatus.PAID,
-          occurredAt,
-        }),
+        orderTransitioned: recovery.orderTransitioned,
       };
     }
 
@@ -101,32 +115,28 @@ export class ProcessMomoIpnUseCase {
       payment: updatedPayment,
       momo,
       duplicate: false,
-      orderTransitioned: await this.transitionOrderStatus({
-        orderId: payment.orderId,
-        status: OrderStatus.FAILED,
+      orderTransitioned: await this.transitionFailedOrder(
+        payment.orderId,
         occurredAt,
-      }),
+      ),
     };
   }
 
-  private async transitionOrderStatus(params: {
-    orderId: string;
-    status: OrderStatus;
-    occurredAt: Date;
-  }): Promise<boolean> {
+  private async transitionFailedOrder(
+    orderId: string,
+    occurredAt: Date,
+  ): Promise<boolean> {
     try {
       await this.transitionOrderStatusUseCase.execute({
-        orderId: params.orderId,
-        status: params.status,
+        orderId,
+        status: OrderStatus.FAILED,
         skipOwnershipCheck: true,
-        occurredAt: params.occurredAt,
+        occurredAt,
       });
       return true;
-    } catch (err: unknown) {
-      if (err instanceof OrderConflictError) {
-        return false;
-      }
-      throw err;
+    } catch (error: unknown) {
+      if (error instanceof OrderConflictError) return false;
+      throw error;
     }
   }
 

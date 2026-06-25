@@ -1,7 +1,9 @@
 import type { Prisma } from '@prisma/client';
 
-import { OrderStatus } from '../../../ordering/order.module';
-import type { TransitionOrderStatusUseCase } from '../../../ordering/order.module';
+import {
+  OrderStatus,
+  type TransitionOrderStatusUseCase,
+} from '../../../ordering/order.module';
 import { OrderConflictError } from '../../../ordering/domain/errors';
 import {
   PaymentCallbackMismatchError,
@@ -18,6 +20,8 @@ import type {
   VnpayCallbackPayload,
 } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
+import { SuccessfulPaymentRecoverySource } from '../../domain/payment-recovery';
+import type { FinalizeSuccessfulPaymentUseCase } from './finalize-successful-payment.use-case';
 
 export interface ProcessVnpayIpnResult {
   payment: Payment;
@@ -30,6 +34,7 @@ export class ProcessVnpayIpnUseCase {
   constructor(
     private readonly paymentRepository: PaymentRepositoryPort,
     private readonly paymentGateway: PaymentGatewayPort,
+    private readonly finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
     private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
   ) {}
 
@@ -66,16 +71,24 @@ export class ProcessVnpayIpnUseCase {
         throw new PaymentNotFoundError(payment.id);
       }
 
+      const recovery =
+        currentPayment.status === PaymentStatus.SUCCEEDED
+          ? await this.finalizeSuccessfulPaymentUseCase.execute({
+              paymentId: currentPayment.id,
+              source: SuccessfulPaymentRecoverySource.CALLBACK,
+              occurredAt,
+            })
+          : null;
+
       return {
         payment: currentPayment,
         vnpay,
         duplicate: true,
-        orderTransitioned: false,
+        orderTransitioned: recovery?.orderTransitioned ?? false,
       };
     }
 
     const status = vnpay.success ? PaymentStatus.SUCCEEDED : PaymentStatus.FAILED;
-    const orderStatus = vnpay.success ? OrderStatus.PAID : OrderStatus.FAILED;
     const updatedPayment = await this.paymentRepository.updateStatus({
       paymentId: payment.id,
       status,
@@ -84,32 +97,46 @@ export class ProcessVnpayIpnUseCase {
       failureMessage: vnpay.failureMessage,
     });
 
+    if (vnpay.success) {
+      const recovery = await this.finalizeSuccessfulPaymentUseCase.execute({
+        paymentId: updatedPayment.id,
+        source: SuccessfulPaymentRecoverySource.CALLBACK,
+        occurredAt,
+      });
+      return {
+        payment: updatedPayment,
+        vnpay,
+        duplicate: false,
+        orderTransitioned: recovery.orderTransitioned,
+      };
+    }
+
     return {
       payment: updatedPayment,
       vnpay,
       duplicate: false,
-      orderTransitioned: await this.transitionOrderStatus(payment.orderId, orderStatus, occurredAt),
+      orderTransitioned: await this.transitionFailedOrder(
+        payment.orderId,
+        occurredAt,
+      ),
     };
   }
 
-  private async transitionOrderStatus(
+  private async transitionFailedOrder(
     orderId: string,
-    status: OrderStatus,
     occurredAt: Date,
   ): Promise<boolean> {
     try {
       await this.transitionOrderStatusUseCase.execute({
         orderId,
-        status,
+        status: OrderStatus.FAILED,
         skipOwnershipCheck: true,
         occurredAt,
       });
       return true;
-    } catch (err: unknown) {
-      if (err instanceof OrderConflictError) {
-        return false;
-      }
-      throw err;
+    } catch (error: unknown) {
+      if (error instanceof OrderConflictError) return false;
+      throw error;
     }
   }
 

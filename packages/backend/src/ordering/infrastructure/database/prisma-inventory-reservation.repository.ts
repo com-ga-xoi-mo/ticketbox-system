@@ -6,6 +6,8 @@ import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
   OrderConflictError,
+  PaidOrderExpirationSkippedError,
+  SuccessfulPaymentRequiredError,
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
@@ -173,6 +175,7 @@ export class PrismaInventoryReservationRepository
 
   async applyStatusTransition(data: InventoryAdjustmentData): Promise<Order> {
     return this.prisma.$transaction(async (tx) => {
+      await this.lockOrder(tx, data.orderId);
       const order = await tx.order.findUnique({
         where: { id: data.orderId },
         include: { items: { include: { ticketType: true } } },
@@ -188,6 +191,40 @@ export class PrismaInventoryReservationRepository
           item.ticketTypeId,
           (quantities.get(item.ticketTypeId) ?? 0) + item.quantity,
         );
+      }
+      await this.lockTicketTypesForAdjustment(
+        tx,
+        data.orderId,
+        [...quantities.keys()],
+      );
+
+      if (data.nextStatus === OrderStatus.EXPIRED) {
+        const successfulPayment = await tx.payment.findFirst({
+          where: {
+            orderId: data.orderId,
+            status: 'SUCCEEDED',
+          },
+          select: { id: true },
+        });
+        if (successfulPayment) {
+          throw new PaidOrderExpirationSkippedError(
+            data.orderId,
+            successfulPayment.id,
+          );
+        }
+      }
+
+      if (data.nextStatus === OrderStatus.PAID) {
+        const successfulPayment = await tx.payment.findFirst({
+          where: {
+            orderId: data.orderId,
+            status: 'SUCCEEDED',
+          },
+          select: { id: true },
+        });
+        if (!successfulPayment) {
+          throw new SuccessfulPaymentRequiredError(data.orderId);
+        }
       }
 
       const orderUpdateResult = await tx.order.updateMany({
@@ -241,6 +278,41 @@ export class PrismaInventoryReservationRepository
 
       return this.toDomain(updatedOrder);
     });
+  }
+
+  private async lockOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ): Promise<void> {
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM orders
+      WHERE id = ${orderId}::uuid
+      FOR UPDATE
+    `;
+    if (rows.length === 0) {
+      throw new OrderConflictError(orderId);
+    }
+  }
+
+  private async lockTicketTypesForAdjustment(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    ticketTypeIds: string[],
+  ): Promise<void> {
+    const sortedIds = [...new Set(ticketTypeIds)].sort();
+    if (sortedIds.length === 0) return;
+
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM ticket_types
+      WHERE id IN (${Prisma.join(sortedIds.map((id) => Prisma.sql`${id}::uuid`))})
+      ORDER BY id
+      FOR UPDATE
+    `;
+    if (rows.length !== sortedIds.length) {
+      throw new InventoryReservationConflictError(orderId);
+    }
   }
 
   private async lockTicketTypes(

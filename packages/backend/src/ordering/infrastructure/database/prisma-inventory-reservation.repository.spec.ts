@@ -6,6 +6,7 @@ import {
   InventoryReservationConflictError,
   OrderConflictError,
   PerUserTicketLimitExceededError,
+  PaidOrderExpirationSkippedError,
   TicketTypeInactiveError,
   TicketTypeSaleWindowError,
 } from '../../domain/errors';
@@ -98,6 +99,9 @@ describe('PrismaInventoryReservationRepository', () => {
     orderItem: {
       groupBy: ReturnType<typeof vi.fn>;
     };
+    payment: {
+      findFirst: ReturnType<typeof vi.fn>;
+    };
     ticketType: {
       update: ReturnType<typeof vi.fn>;
       updateMany: ReturnType<typeof vi.fn>;
@@ -122,6 +126,9 @@ describe('PrismaInventoryReservationRepository', () => {
       orderItem: {
         groupBy: vi.fn(),
       },
+      payment: {
+        findFirst: vi.fn(),
+      },
       ticketType: {
         update: vi.fn(),
         updateMany: vi.fn(),
@@ -135,6 +142,7 @@ describe('PrismaInventoryReservationRepository', () => {
     };
     repository = new PrismaInventoryReservationRepository(prisma as never);
     tx.orderItem.groupBy.mockResolvedValue([]);
+    tx.payment.findFirst.mockResolvedValue(null);
   });
 
   it('locks ticket types, creates order, and increments reserved quantity in one transaction', async () => {
@@ -532,6 +540,10 @@ describe('PrismaInventoryReservationRepository', () => {
   });
 
   it('confirms paid inventory by moving reserved quantity to sold quantity', async () => {
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: 'order-1' }])
+      .mockResolvedValueOnce([{ id: 'ticket-type-1' }]);
+    tx.payment.findFirst.mockResolvedValueOnce({ id: 'payment-1' });
     tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder()).mockResolvedValueOnce(
       buildPrismaOrder({
         status: OrderStatus.PAID,
@@ -569,6 +581,9 @@ describe('PrismaInventoryReservationRepository', () => {
 
   it('releases expired inventory by decrementing reserved quantity once', async () => {
     const expiredAt = new Date('2026-06-16T10:30:00.000Z');
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: 'order-1' }])
+      .mockResolvedValueOnce([{ id: 'ticket-type-1' }]);
     tx.order.findUnique
       .mockResolvedValueOnce(buildPrismaOrder())
       .mockResolvedValueOnce(buildPrismaOrder({ status: OrderStatus.EXPIRED, expiredAt }));
@@ -594,7 +609,30 @@ describe('PrismaInventoryReservationRepository', () => {
     });
   });
 
+  it('does not expire or release inventory after payment success is persisted', async () => {
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: 'order-1' }])
+      .mockResolvedValueOnce([{ id: 'ticket-type-1' }]);
+    tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder());
+    tx.payment.findFirst.mockResolvedValueOnce({ id: 'payment-1' });
+
+    await expect(
+      repository.applyStatusTransition({
+        orderId: 'order-1',
+        expectedStatus: OrderStatus.PENDING_PAYMENT,
+        nextStatus: OrderStatus.EXPIRED,
+        updatedAt: new Date('2026-06-16T10:30:00.000Z'),
+      }),
+    ).rejects.toThrow(PaidOrderExpirationSkippedError);
+
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.ticketType.updateMany).not.toHaveBeenCalled();
+  });
+
   it('rejects repeated or concurrent transitions before inventory counters are changed', async () => {
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: 'order-1' }])
+      .mockResolvedValueOnce([{ id: 'ticket-type-1' }]);
     tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder());
     tx.order.updateMany.mockResolvedValueOnce({ count: 0 });
 
@@ -611,6 +649,9 @@ describe('PrismaInventoryReservationRepository', () => {
   });
 
   it('rejects inventory counter conflicts after the status guard succeeds', async () => {
+    tx.$queryRaw
+      .mockResolvedValueOnce([{ id: 'order-1' }])
+      .mockResolvedValueOnce([{ id: 'ticket-type-1' }]);
     tx.order.findUnique.mockResolvedValueOnce(buildPrismaOrder());
     tx.order.updateMany.mockResolvedValueOnce({ count: 1 });
     tx.ticketType.updateMany.mockResolvedValueOnce({ count: 0 });

@@ -138,6 +138,7 @@ Changes:
 - `implement-payment-circuit-breaker`
 - `implement-rate-limiting`
 - `harden-concurrency-tests`
+- `harden-paid-order-recovery`
 
 ### Member 4: Operations, Mobile, Integrations
 

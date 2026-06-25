@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../identity/auth.module';
 import {
   GetOrderUseCase,
+  IssueTicketsForPaidOrderUseCase,
   OrderModule,
   TransitionOrderStatusUseCase,
 } from '../ordering/order.module';
@@ -11,6 +12,8 @@ import { DatabaseModule } from '../platform/database/database.module';
 import { RedisModule } from '../platform/redis/redis.module';
 import { PaymentController } from './adapters/http/payment.controller';
 import { InitiatePaymentUseCase } from './application/use-cases/initiate-payment.use-case';
+import { FinalizeSuccessfulPaymentUseCase } from './application/use-cases/finalize-successful-payment.use-case';
+import { RepairSuccessfulPaymentsUseCase } from './application/use-cases/repair-successful-payments.use-case';
 import { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';
 import { ProcessVnpayIpnUseCase } from './application/use-cases/process-vnpay-ipn.use-case';
@@ -28,7 +31,12 @@ import {
   PAYMENT_REPOSITORY,
   type PaymentRepositoryPort,
 } from './domain/ports/payment-repository.port';
+import {
+  PAYMENT_RECOVERY_REPOSITORY,
+  type PaymentRecoveryRepositoryPort,
+} from './domain/ports/payment-recovery-repository.port';
 import { PrismaPaymentRepository } from './infrastructure/database/prisma-payment.repository';
+import { PrismaPaymentRecoveryRepository } from './infrastructure/database/prisma-payment-recovery.repository';
 import { MomoPaymentGateway } from './infrastructure/momo/momo-payment-gateway';
 import { PaymentGatewayRegistry } from './infrastructure/payment-gateway-registry';
 import { RedisPaymentCircuitBreaker } from './infrastructure/redis/redis-payment-circuit-breaker';
@@ -40,6 +48,39 @@ import { VnpayPaymentGateway } from './infrastructure/vnpay/vnpay-payment-gatewa
   imports: [PlatformConfigModule, DatabaseModule, RedisModule, AuthModule, OrderModule],
   controllers: [PaymentController],
   providers: [
+    {
+      provide: FinalizeSuccessfulPaymentUseCase,
+      inject: [
+        PAYMENT_REPOSITORY,
+        PAYMENT_RECOVERY_REPOSITORY,
+        TransitionOrderStatusUseCase,
+        IssueTicketsForPaidOrderUseCase,
+      ],
+      useFactory: (
+        paymentRepository: PaymentRepositoryPort,
+        recoveryRepository: PaymentRecoveryRepositoryPort,
+        transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
+        issueTicketsForPaidOrderUseCase: IssueTicketsForPaidOrderUseCase,
+      ) =>
+        new FinalizeSuccessfulPaymentUseCase(
+          paymentRepository,
+          recoveryRepository,
+          transitionOrderStatusUseCase,
+          issueTicketsForPaidOrderUseCase,
+        ),
+    },
+    {
+      provide: RepairSuccessfulPaymentsUseCase,
+      inject: [PAYMENT_RECOVERY_REPOSITORY, FinalizeSuccessfulPaymentUseCase],
+      useFactory: (
+        recoveryRepository: PaymentRecoveryRepositoryPort,
+        finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
+      ) =>
+        new RepairSuccessfulPaymentsUseCase(
+          recoveryRepository,
+          finalizeSuccessfulPaymentUseCase,
+        ),
+    },
     {
       provide: InitiatePaymentUseCase,
       inject: [
@@ -66,37 +107,66 @@ import { VnpayPaymentGateway } from './infrastructure/vnpay/vnpay-payment-gatewa
     },
     {
       provide: ProcessSimulatorPaymentCallbackUseCase,
-      inject: [PAYMENT_REPOSITORY, PAYMENT_GATEWAY, TransitionOrderStatusUseCase],
+      inject: [
+        PAYMENT_REPOSITORY,
+        PAYMENT_GATEWAY,
+        FinalizeSuccessfulPaymentUseCase,
+        TransitionOrderStatusUseCase,
+      ],
       useFactory: (
         paymentRepository: PaymentRepositoryPort,
         paymentGateway: PaymentGatewayPort,
+        finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
         transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
       ) =>
         new ProcessSimulatorPaymentCallbackUseCase(
           paymentRepository,
           paymentGateway,
+          finalizeSuccessfulPaymentUseCase,
           transitionOrderStatusUseCase,
         ),
     },
     {
       provide: ProcessMomoIpnUseCase,
-      inject: [PAYMENT_REPOSITORY, PAYMENT_GATEWAY, TransitionOrderStatusUseCase],
+      inject: [
+        PAYMENT_REPOSITORY,
+        PAYMENT_GATEWAY,
+        FinalizeSuccessfulPaymentUseCase,
+        TransitionOrderStatusUseCase,
+      ],
       useFactory: (
         paymentRepository: PaymentRepositoryPort,
         paymentGateway: PaymentGatewayPort,
+        finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
         transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
       ) =>
-        new ProcessMomoIpnUseCase(paymentRepository, paymentGateway, transitionOrderStatusUseCase),
+        new ProcessMomoIpnUseCase(
+          paymentRepository,
+          paymentGateway,
+          finalizeSuccessfulPaymentUseCase,
+          transitionOrderStatusUseCase,
+        ),
     },
     {
       provide: ProcessVnpayIpnUseCase,
-      inject: [PAYMENT_REPOSITORY, PAYMENT_GATEWAY, TransitionOrderStatusUseCase],
+      inject: [
+        PAYMENT_REPOSITORY,
+        PAYMENT_GATEWAY,
+        FinalizeSuccessfulPaymentUseCase,
+        TransitionOrderStatusUseCase,
+      ],
       useFactory: (
         paymentRepository: PaymentRepositoryPort,
         paymentGateway: PaymentGatewayPort,
+        finalizeSuccessfulPaymentUseCase: FinalizeSuccessfulPaymentUseCase,
         transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
       ) =>
-        new ProcessVnpayIpnUseCase(paymentRepository, paymentGateway, transitionOrderStatusUseCase),
+        new ProcessVnpayIpnUseCase(
+          paymentRepository,
+          paymentGateway,
+          finalizeSuccessfulPaymentUseCase,
+          transitionOrderStatusUseCase,
+        ),
     },
     {
       provide: VerifyVnpayReturnUseCase,
@@ -107,6 +177,10 @@ import { VnpayPaymentGateway } from './infrastructure/vnpay/vnpay-payment-gatewa
     {
       provide: PAYMENT_REPOSITORY,
       useClass: PrismaPaymentRepository,
+    },
+    {
+      provide: PAYMENT_RECOVERY_REPOSITORY,
+      useClass: PrismaPaymentRecoveryRepository,
     },
     {
       provide: PAYMENT_IDEMPOTENCY,
@@ -130,6 +204,8 @@ import { VnpayPaymentGateway } from './infrastructure/vnpay/vnpay-payment-gatewa
     ProcessMomoIpnUseCase,
     ProcessVnpayIpnUseCase,
     VerifyVnpayReturnUseCase,
+    FinalizeSuccessfulPaymentUseCase,
+    RepairSuccessfulPaymentsUseCase,
   ],
 })
 export class PaymentModule {}
@@ -139,3 +215,5 @@ export { ProcessMomoIpnUseCase } from './application/use-cases/process-momo-ipn.
 export { ProcessSimulatorPaymentCallbackUseCase } from './application/use-cases/process-simulator-payment-callback.use-case';
 export { ProcessVnpayIpnUseCase } from './application/use-cases/process-vnpay-ipn.use-case';
 export { VerifyVnpayReturnUseCase } from './application/use-cases/verify-vnpay-return.use-case';
+export { FinalizeSuccessfulPaymentUseCase } from './application/use-cases/finalize-successful-payment.use-case';
+export { RepairSuccessfulPaymentsUseCase } from './application/use-cases/repair-successful-payments.use-case';

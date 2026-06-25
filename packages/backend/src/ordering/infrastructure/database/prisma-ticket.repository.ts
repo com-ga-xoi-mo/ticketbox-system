@@ -81,7 +81,7 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
         return order.tickets.map((ticket) => this.toDomain(ticket));
       }
 
-      if (order.tickets.length > 0) {
+      if (order.tickets.length > expectedTicketCount) {
         throw new TicketPartialIssuanceConflictError(
           order.id,
           expectedTicketCount,
@@ -98,8 +98,27 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
         );
       }
 
+      const planByTicketNumber = new Map(
+        ticketPlans.map((ticket) => [ticket.ticketNumber, ticket]),
+      );
+      for (const existingTicket of order.tickets) {
+        if (!planByTicketNumber.has(existingTicket.ticketNumber)) {
+          throw new TicketPartialIssuanceConflictError(
+            order.id,
+            expectedTicketCount,
+            order.tickets.length,
+          );
+        }
+      }
+
+      const existingTicketNumbers = new Set(
+        order.tickets.map((ticket) => ticket.ticketNumber),
+      );
       const createdTickets: PrismaTicketRecord[] = [];
       for (const ticket of ticketPlans) {
+        if (existingTicketNumbers.has(ticket.ticketNumber)) {
+          continue;
+        }
         createdTickets.push(
           await tx.ticket.create({
             data: {
@@ -118,7 +137,9 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
         );
       }
 
-      return createdTickets.map((ticket) => this.toDomain(ticket));
+      return [...order.tickets, ...createdTickets]
+        .sort((left, right) => left.ticketNumber.localeCompare(right.ticketNumber))
+        .map((ticket) => this.toDomain(ticket));
     });
   }
 

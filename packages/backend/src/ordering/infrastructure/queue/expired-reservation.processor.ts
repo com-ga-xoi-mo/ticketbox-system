@@ -34,10 +34,16 @@ export class ExpiredReservationProcessor extends WorkerHost implements OnModuleI
     );
   }
 
-  async process(job: Job): Promise<{ scanned: number; expired: number; failed: number }> {
+  async process(job: Job): Promise<{
+    scanned: number;
+    expired: number;
+    skippedPaid: number;
+    conflicted: number;
+    failed: number;
+  }> {
     const result = await this.expireReservationsUseCase.execute();
     this.logger.debug(
-      `Expired reservation scan completed by job ${job.id}: scanned=${result.scanned}, expired=${result.expired}, failed=${result.failed}`,
+      `Expired reservation scan completed by job ${job.id}: scanned=${result.scanned}, expired=${result.expired}, skippedPaid=${result.skippedPaid}, conflicted=${result.conflicted}, failed=${result.failed}`,
     );
     return result;
   }

@@ -15,6 +15,11 @@ export class PrismaExpiredOrderRepository implements IExpiredOrderRepository {
         reservationExpiresAt: {
           lte: now,
         },
+        payments: {
+          none: {
+            status: 'SUCCEEDED',
+          },
+        },
       },
       select: { id: true },
       orderBy: { reservationExpiresAt: 'asc' },

@@ -16,6 +16,8 @@ import type {
   VerifiedVnpayCallbackPayload,
 } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
+import { SuccessfulPaymentFinalizationOutcome } from '../../domain/payment-recovery';
+import type { FinalizeSuccessfulPaymentUseCase } from './finalize-successful-payment.use-case';
 import { ProcessVnpayIpnUseCase } from './process-vnpay-ipn.use-case';
 
 function buildPayment(status = PaymentStatus.PENDING): Payment {
@@ -58,6 +60,7 @@ describe('ProcessVnpayIpnUseCase', () => {
   let paymentRepository: PaymentRepositoryPort;
   let paymentGateway: PaymentGatewayPort;
   let transitionOrderStatusUseCase: { execute: ReturnType<typeof vi.fn> };
+  let finalizeSuccessfulPaymentUseCase: { execute: ReturnType<typeof vi.fn> };
   let useCase: ProcessVnpayIpnUseCase;
 
   beforeEach(() => {
@@ -83,9 +86,19 @@ describe('ProcessVnpayIpnUseCase', () => {
       verifyVnpayCallbackPayload: vi.fn(() => verified()),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
+    finalizeSuccessfulPaymentUseCase = {
+      execute: vi.fn(async () => ({
+        paymentId: 'payment-1',
+        orderId: 'order-1',
+        outcome: SuccessfulPaymentFinalizationOutcome.COMPLETED,
+        orderTransitioned: true,
+        ticketsComplete: true,
+      })),
+    };
     useCase = new ProcessVnpayIpnUseCase(
       paymentRepository,
       paymentGateway,
+      finalizeSuccessfulPaymentUseCase as unknown as FinalizeSuccessfulPaymentUseCase,
       transitionOrderStatusUseCase as unknown as TransitionOrderStatusUseCase,
     );
   });
@@ -103,8 +116,8 @@ describe('ProcessVnpayIpnUseCase', () => {
     expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ status: PaymentStatus.SUCCEEDED }),
     );
-    expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ orderId: 'order-1', status: OrderStatus.PAID }),
+    expect(finalizeSuccessfulPaymentUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentId: 'payment-1' }),
     );
     expect(result.orderTransitioned).toBe(true);
   });
@@ -171,7 +184,9 @@ describe('ProcessVnpayIpnUseCase', () => {
     const result = await useCase.execute({});
 
     expect(paymentRepository.updateStatus).not.toHaveBeenCalled();
-    expect(transitionOrderStatusUseCase.execute).not.toHaveBeenCalled();
+    expect(finalizeSuccessfulPaymentUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentId: 'payment-1' }),
+    );
     expect(result.duplicate).toBe(true);
   });
 });

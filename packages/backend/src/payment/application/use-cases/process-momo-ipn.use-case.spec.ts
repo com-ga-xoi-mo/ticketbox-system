@@ -12,6 +12,8 @@ import type {
   VerifiedMomoIpnPayload,
 } from '../../domain/ports/payment-gateway.port';
 import type { PaymentRepositoryPort } from '../../domain/ports/payment-repository.port';
+import { SuccessfulPaymentFinalizationOutcome } from '../../domain/payment-recovery';
+import type { FinalizeSuccessfulPaymentUseCase } from './finalize-successful-payment.use-case';
 import { ProcessMomoIpnUseCase } from './process-momo-ipn.use-case';
 
 function buildPayment(status = PaymentStatus.PENDING): Payment {
@@ -55,6 +57,7 @@ describe('ProcessMomoIpnUseCase', () => {
   let paymentRepository: PaymentRepositoryPort;
   let paymentGateway: PaymentGatewayPort;
   let transitionOrderStatusUseCase: { execute: ReturnType<typeof vi.fn> };
+  let finalizeSuccessfulPaymentUseCase: { execute: ReturnType<typeof vi.fn> };
   let useCase: ProcessMomoIpnUseCase;
 
   beforeEach(() => {
@@ -89,9 +92,19 @@ describe('ProcessMomoIpnUseCase', () => {
       verifyVnpayCallbackPayload: vi.fn(),
     };
     transitionOrderStatusUseCase = { execute: vi.fn(async () => undefined) };
+    finalizeSuccessfulPaymentUseCase = {
+      execute: vi.fn(async () => ({
+        paymentId: 'payment-1',
+        orderId: 'order-1',
+        outcome: SuccessfulPaymentFinalizationOutcome.COMPLETED,
+        orderTransitioned: true,
+        ticketsComplete: true,
+      })),
+    };
     useCase = new ProcessMomoIpnUseCase(
       paymentRepository,
       paymentGateway,
+      finalizeSuccessfulPaymentUseCase as unknown as FinalizeSuccessfulPaymentUseCase,
       transitionOrderStatusUseCase as unknown as TransitionOrderStatusUseCase,
     );
   });
@@ -114,11 +127,9 @@ describe('ProcessMomoIpnUseCase', () => {
     expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ status: PaymentStatus.SUCCEEDED }),
     );
-    expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledWith(
+    expect(finalizeSuccessfulPaymentUseCase.execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        orderId: 'order-1',
-        status: OrderStatus.PAID,
-        skipOwnershipCheck: true,
+        paymentId: 'payment-1',
       }),
     );
     expect(result.duplicate).toBe(false);
@@ -161,7 +172,9 @@ describe('ProcessMomoIpnUseCase', () => {
     const result = await useCase.execute({ payload: buildMomoPayload() as MomoIpnPayload });
 
     expect(paymentRepository.updateStatus).not.toHaveBeenCalled();
-    expect(transitionOrderStatusUseCase.execute).not.toHaveBeenCalled();
+    expect(finalizeSuccessfulPaymentUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentId: 'payment-1' }),
+    );
     expect(result.duplicate).toBe(true);
     expect(result.payment.status).toBe(PaymentStatus.SUCCEEDED);
   });

@@ -80,7 +80,7 @@ The event detail page SHALL handle sold-out states at both the ticket type level
 - **AND** the primary CTA button is disabled with "Sold out" text
 
 ### Requirement: Functional ticket quantity selector
-The event detail page SHALL manage ticket quantity selection as local state with validation against availability and per-user limits.
+The event detail page SHALL manage ticket quantity selection as local state with validation against availability and per-user limits. When the user confirms their selection, the page SHALL navigate to the checkout flow passing the selected ticket types and quantities, gated behind authentication.
 
 #### Scenario: Incrementing ticket quantity
 - **WHEN** a user clicks the "+" button on an active ticket type
@@ -102,6 +102,15 @@ The event detail page SHALL manage ticket quantity selection as local state with
 #### Scenario: Quantity cannot go below zero
 - **WHEN** a ticket type has quantity of 0
 - **THEN** the "-" button is disabled for that ticket type
+
+#### Scenario: Checkout button navigates to checkout flow
+- **WHEN** the user clicks "Tiếp tục mua vé" with at least one ticket type having quantity > 0
+- **THEN** the page SHALL navigate to the checkout page passing the concert ID and selected ticket type quantities as state
+- **AND** if the user is not authenticated, the page SHALL redirect to `/login?returnTo=/events/:slug` instead
+
+#### Scenario: Checkout button is disabled without selection
+- **WHEN** no ticket types have quantity > 0
+- **THEN** the "Tiếp tục mua vé" button SHALL be disabled
 
 ### Requirement: Concert not found handling
 The event detail page SHALL handle the case where a concert slug does not resolve to a published upcoming concert.

@@ -1,4 +1,8 @@
 import { OrderStatus } from '../../domain/order-status.enum';
+import {
+  OrderConflictError,
+  PaidOrderExpirationSkippedError,
+} from '../../domain/errors';
 import type { IExpiredOrderRepository } from '../../domain/ports/expired-order-repository.port';
 import type { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
 
@@ -10,6 +14,8 @@ export interface ExpireReservationsCommand {
 export interface ExpireReservationsResult {
   scanned: number;
   expired: number;
+  skippedPaid: number;
+  conflicted: number;
   failed: number;
 }
 
@@ -28,6 +34,8 @@ export class ExpireReservationsUseCase {
     );
 
     let expired = 0;
+    let skippedPaid = 0;
+    let conflicted = 0;
     let failed = 0;
 
     for (const orderId of orderIds) {
@@ -39,14 +47,22 @@ export class ExpireReservationsUseCase {
           occurredAt: now,
         });
         expired += 1;
-      } catch {
-        failed += 1;
+      } catch (error: unknown) {
+        if (error instanceof PaidOrderExpirationSkippedError) {
+          skippedPaid += 1;
+        } else if (error instanceof OrderConflictError) {
+          conflicted += 1;
+        } else {
+          failed += 1;
+        }
       }
     }
 
     return {
       scanned: orderIds.length,
       expired,
+      skippedPaid,
+      conflicted,
       failed,
     };
   }

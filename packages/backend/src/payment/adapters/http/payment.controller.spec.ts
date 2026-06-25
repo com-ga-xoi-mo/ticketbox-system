@@ -162,7 +162,7 @@ describe('PaymentController', () => {
     vnpayIpnUseCase.execute.mockRejectedValueOnce(new VnpayAmountMismatchError(1000, 2000));
     await expect(controller.vnpayIpn({})).resolves.toEqual({
       RspCode: '04',
-      Message: 'Invalid Amount',
+      Message: 'Invalid amount',
     });
   });
 
