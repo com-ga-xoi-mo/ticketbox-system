@@ -169,6 +169,10 @@ export class PrismaInventoryReservationRepository
                 orderId: order.id,
               },
             });
+            await tx.promotion.update({
+              where: { id: order.promotionId },
+              data: { usedCount: { increment: 1 } },
+            });
           }
           return this.toDomain(createdOrder);
       });
