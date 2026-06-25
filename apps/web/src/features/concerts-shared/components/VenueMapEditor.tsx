@@ -187,6 +187,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
   if (props.isLoading) return <div className="p-8 text-white">Loading editor...</div>;
 
   const hasPendingPreview = !!pendingFile;
+  const pendingFileName = pendingFile ? pendingFile.name : null;
   const pendingSeatingMap: SeatingMapMetadata | null =
     pendingPreview && !pendingPreview.error
       ? {
@@ -277,7 +278,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0B0F19] text-white overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#0B0F19] text-white">
       {/* Top Bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0F172A]/80 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-4">
@@ -347,11 +348,11 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 >
                   <span>Select SVG File</span>
                 </Button>
-                {pendingFile && (
+                {pendingFileName && (
                   <div className="mt-4 text-indigo-300 text-sm flex items-center gap-2 bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
                     <Upload className="w-4 h-4 shrink-0" />
                     <span className="truncate">
-                      {pendingFile.name} — click <strong>Save</strong> to upload
+                      {pendingFileName} — click <strong>Save</strong> to upload
                     </span>
                   </div>
                 )}
@@ -367,7 +368,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 <div className="w-full h-full max-w-3xl flex items-center justify-center relative overflow-hidden">
                   <span className="text-slate-500 absolute top-4 left-4 z-10 font-mono text-sm">
                     {hasPendingPreview
-                      ? `Pending SVG Preview (${pendingFile?.name})`
+                      ? `Pending SVG Preview (${pendingFileName})`
                       : `SVG Preview (${props.seatingMap?.assetId})`}
                   </span>
                   {pendingPreview?.error ? (
@@ -414,10 +415,10 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                   >
                     <Upload className="w-4 h-4 mr-2" /> Re-upload Map
                   </Button>
-                  {pendingFile && (
+                  {pendingFileName && (
                     <div className="text-indigo-300 text-xs flex items-center gap-1.5 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-500/20 max-w-[200px]">
                       <Upload className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{pendingFile.name}</span>
+                      <span className="truncate">{pendingFileName}</span>
                     </div>
                   )}
                   {shouldWarnReset && (
@@ -611,8 +612,8 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
             )}
           </div>
 
-          <div className="p-4 overflow-x-auto">
-            <Table>
+          <div className="p-4">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow className="border-slate-800 hover:bg-transparent">
                   <TableHead className="text-slate-400 text-xs">CODE</TableHead>

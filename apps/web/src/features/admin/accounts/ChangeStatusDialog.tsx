@@ -1,9 +1,19 @@
 import { useState } from 'react';
 import { useUpdateAccountStatus } from './hooks';
 import { AdminAccount } from './api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../../shared/ui/dialog';
-import { Button } from '../../../shared/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '../../../shared/ui/alert-dialog';
 import { FieldError } from '../../../shared/ui/FieldError';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
 
 interface ChangeStatusDialogProps {
   account: AdminAccount | null;
@@ -36,40 +46,46 @@ export function ChangeStatusDialog({ account, open, onOpenChange }: ChangeStatus
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{isActive ? 'Deactivate Account' : 'Reactivate Account'}</DialogTitle>
-          <DialogDescription>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia className={isActive ? 'text-destructive' : 'text-primary'}>
+            {isActive ? <AlertTriangle /> : <RotateCcw />}
+          </AlertDialogMedia>
+          <AlertDialogTitle>{isActive ? 'Deactivate Account' : 'Reactivate Account'}</AlertDialogTitle>
+          <AlertDialogDescription>
             {isActive ? (
               <>
-                Are you sure you want to deactivate <strong>{account.displayName}</strong>? 
-                This is a soft delete. The user will be blocked from logging in, 
+                Are you sure you want to deactivate <strong>{account.displayName}</strong>?
+                This is a soft delete. The user will be blocked from logging in,
                 and any active check-in assignments will be revoked.
               </>
             ) : (
               <>
-                Are you sure you want to reactivate <strong>{account.displayName}</strong>? 
+                Are you sure you want to reactivate <strong>{account.displayName}</strong>?
                 The user will be able to log in again.
               </>
             )}
-          </DialogDescription>
-        </DialogHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
         {error && <FieldError message={error} />}
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={updateStatus.isPending}>
             Cancel
-          </Button>
-          <Button 
-            type="button" 
-            variant={isActive ? 'destructive' : 'default'} 
-            onClick={handleConfirm}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant={isActive ? 'destructive' : 'default'}
             disabled={updateStatus.isPending}
+            loading={updateStatus.isPending}
+            onClick={(event) => {
+              event.preventDefault();
+              handleConfirm();
+            }}
           >
             {updateStatus.isPending ? 'Processing...' : isActive ? 'Deactivate' : 'Reactivate'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

@@ -49,8 +49,7 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
   };
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="min-w-[680px]">
+    <Table className="min-w-[680px]" containerClassName="overflow-visible">
         <TableHeader>
           <TableRow className="border-b border-white/5 bg-surface-container-high/20">
             {[
@@ -219,6 +218,5 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
           })}
         </TableBody>
       </Table>
-    </div>
   );
 }

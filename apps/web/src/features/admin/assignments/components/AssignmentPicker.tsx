@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAssignStaff, useAssignments } from '../hooks';
 import { useAccounts } from '../../accounts/hooks';
 import { Button } from '../../../../shared/ui/button';
 import { Input } from '../../../../shared/ui/input';
 import { toast } from 'sonner';
-import { UserPlus } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
+import { filterStaffAccountsBySearch } from '../staff-search';
 
 interface AssignmentPickerProps {
   concertId: string;
@@ -12,6 +13,7 @@ interface AssignmentPickerProps {
 
 export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
   const [userId, setUserId] = useState('');
+  const [staffSearch, setStaffSearch] = useState('');
   const [gateName, setGateName] = useState('');
 
   const { data: allStaff, isLoading: isStaffLoading } = useAccounts('CHECKIN_STAFF', 'ACTIVE');
@@ -26,6 +28,16 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
     () => (allStaff ?? []).filter((s: any) => !assignedUserIds.has(s.id)),
     [allStaff, assignedUserIds],
   );
+  const filteredStaffList = useMemo(
+    () => filterStaffAccountsBySearch(staffList, staffSearch),
+    [staffList, staffSearch],
+  );
+
+  useEffect(() => {
+    if (userId && !filteredStaffList.some((staff: any) => staff.id === userId)) {
+      setUserId('');
+    }
+  }, [filteredStaffList, userId]);
 
   const handleAssign = () => {
     if (!userId || !gateName) {
@@ -40,6 +52,7 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
       onSuccess: () => {
         toast.success('Phân công nhân viên thành công');
         setUserId('');
+        setStaffSearch('');
         setGateName('');
       },
       onError: (err: any) => {
@@ -55,9 +68,18 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
         New Assignment
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-        <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] gap-6 items-end">
+        <div className="space-y-3">
           <label className="text-sm font-medium text-slate-400 ml-1">Check-in Staff</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Input
+              value={staffSearch}
+              onChange={(e) => setStaffSearch(e.target.value)}
+              placeholder="Search by staff name, email, or ID..."
+              className="w-full h-11 bg-slate-900/50 border-white/10 pl-10 text-white placeholder:placeholder:text-slate-500"
+            />
+          </div>
           <div className="relative">
             <select
               value={userId}
@@ -67,14 +89,14 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
               <option value="" disabled>
                 {isStaffLoading ? "Loading..." : "Select staff..."}
               </option>
-              {staffList?.map((staff: any) => (
+              {filteredStaffList?.map((staff: any) => (
                 <option key={staff.id} value={staff.id}>
-                  {staff.displayName || staff.email.split('@')[0]} ({staff.email})
+                  {staff.displayName || staff.email.split('@')[0]} ({staff.email}) - {staff.id.slice(0, 8)}
                 </option>
               ))}
-              {staffList?.length === 0 && !isStaffLoading && (
+              {filteredStaffList?.length === 0 && !isStaffLoading && (
                 <option value="empty" disabled>
-                  No staff available
+                  {staffSearch.trim() ? 'No matching staff' : 'No staff available'}
                 </option>
               )}
             </select>
@@ -82,6 +104,9 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
               ▼
             </span>
           </div>
+          <p className="text-xs text-slate-500">
+            {isStaffLoading ? 'Loading staff...' : `${filteredStaffList.length} staff available`}
+          </p>
         </div>
 
         <div className="space-y-2">
