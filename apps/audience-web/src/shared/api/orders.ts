@@ -5,6 +5,8 @@ import {
   OrderDetailResponseSchema,
   OrderListResponseSchema,
   PaymentInitiationResponseSchema,
+  ValidatePromoRequestSchema,
+  ValidatePromoResponseSchema,
   type CreateOrderRequest,
   type InitiatePaymentRequest,
   type IssuedTicketDetail,
@@ -12,6 +14,8 @@ import {
   type OrderDetailResponse,
   type OrderSummaryResponse,
   type PaymentInitiationResponse,
+  type ValidatePromoRequest,
+  type ValidatePromoResponse,
 } from '@ticketbox/api-types';
 import { apiGet, apiPost } from './client';
 
@@ -40,6 +44,11 @@ export async function fetchMyOrders(): Promise<OrderSummaryResponse[]> {
 export async function fetchOrderDetail(id: string): Promise<OrderDetailResponse> {
   const data = await apiGet<unknown>(`/me/orders/${id}`);
   return OrderDetailResponseSchema.parse(data);
+}
+
+export async function validatePromoCode(data: ValidatePromoRequest): Promise<ValidatePromoResponse> {
+  const response = await apiPost<unknown>('/checkout/promo/validate', data);
+  return ValidatePromoResponseSchema.parse(response);
 }
 
 export async function cancelOrder(id: string): Promise<OrderDetailResponse> {
