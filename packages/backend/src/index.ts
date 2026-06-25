@@ -24,6 +24,7 @@ export * from './concert-management/concert-management.module';
 export * from './ai-artist-bio/ai-artist-bio.module';
 export * from './checkin/checkin.module';
 export * from './notification/notification.module';
+export * from './audience-support/audience-support.module';
 export * from './ordering/order.module';
 export * from './ordering/ordering-worker.module';
 export * from './ordering/application/use-cases/expire-reservations.use-case';

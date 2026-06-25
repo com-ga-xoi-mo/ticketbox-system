@@ -9,7 +9,14 @@ import { CreatePurchaseConfirmationNotificationsUseCase } from './application/us
 import { DeliverNotificationUseCase } from './application/use-cases/deliver-notification.use-case';
 import { EnqueuePurchaseConfirmationUseCase } from './application/use-cases/enqueue-purchase-confirmation.use-case';
 import { SendConcertRemindersUseCase } from './application/use-cases/send-concert-reminders.use-case';
+import {
+  GetAudienceUnreadNotificationCountUseCase,
+  ListAudienceNotificationsUseCase,
+  MarkAllAudienceNotificationsReadUseCase,
+  MarkAudienceNotificationReadUseCase,
+} from './application/use-cases/audience-notification-inbox.use-cases';
 import { PurchaseConfirmationEmailComposer } from './application/services/purchase-confirmation-email-composer';
+import { AudienceNotificationController } from './adapters/http/audience-notification.controller';
 import {
   CONCERT_REMINDER_READ_PORT,
   type ConcertReminderReadPort,
@@ -45,6 +52,7 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
 
 @Module({
   imports: [PlatformConfigModule, DatabaseModule, QueueModule],
+  controllers: [AudienceNotificationController],
   providers: [
     {
       provide: NOTIFICATION_REPOSITORY,
@@ -141,6 +149,30 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
         readPort: ConcertReminderReadPort,
         notificationRepository: NotificationRepositoryPort,
       ) => new SendConcertRemindersUseCase(readPort, notificationRepository),
+    },
+    {
+      provide: ListAudienceNotificationsUseCase,
+      inject: [NOTIFICATION_REPOSITORY],
+      useFactory: (notificationRepository: NotificationRepositoryPort) =>
+        new ListAudienceNotificationsUseCase(notificationRepository),
+    },
+    {
+      provide: GetAudienceUnreadNotificationCountUseCase,
+      inject: [NOTIFICATION_REPOSITORY],
+      useFactory: (notificationRepository: NotificationRepositoryPort) =>
+        new GetAudienceUnreadNotificationCountUseCase(notificationRepository),
+    },
+    {
+      provide: MarkAudienceNotificationReadUseCase,
+      inject: [NOTIFICATION_REPOSITORY],
+      useFactory: (notificationRepository: NotificationRepositoryPort) =>
+        new MarkAudienceNotificationReadUseCase(notificationRepository),
+    },
+    {
+      provide: MarkAllAudienceNotificationsReadUseCase,
+      inject: [NOTIFICATION_REPOSITORY],
+      useFactory: (notificationRepository: NotificationRepositoryPort) =>
+        new MarkAllAudienceNotificationsReadUseCase(notificationRepository),
     },
     PurchaseConfirmationNotificationProducer,
   ],

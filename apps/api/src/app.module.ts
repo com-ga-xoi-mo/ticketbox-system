@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import {
+  AudienceSupportModule,
   BackendCoreModule,
   ConcertManagementModule,
   HealthModule,
@@ -14,6 +15,7 @@ import {
     ConcertManagementModule,
     OrderModule,
     PaymentModule,
+    AudienceSupportModule,
   ],
 })
 export class AppModule {}
