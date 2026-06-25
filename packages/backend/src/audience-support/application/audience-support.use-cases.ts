@@ -1,6 +1,6 @@
 import { OrderStatus } from '../../ordering/domain/order-status.enum';
 import { TicketStatus } from '../../ordering/domain/ticket-status.enum';
-import { QrTicketTokenService } from '../../ordering/domain/qr-ticket-token.service';
+import type { QrTicketTokenService } from '../../ordering/domain/qr-ticket-token.service';
 import type { NotificationRepositoryPort } from '../../notification/domain/ports/notification-repository.port';
 import {
   NotificationChannel,
@@ -17,11 +17,12 @@ import {
   RefundRequestIneligibleError,
   TicketResendUnavailableError,
 } from '../domain/errors';
-import {
+import type {
   RefundRequestReason,
   RefundRequestRecord,
+  SupportRequestRecord} from '../domain/support.types';
+import {
   RefundRequestStatus,
-  SupportRequestRecord,
   SupportRequestStatus,
   type RefundEligibility,
 } from '../domain/support.types';

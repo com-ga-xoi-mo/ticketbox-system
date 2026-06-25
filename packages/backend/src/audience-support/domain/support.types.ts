@@ -1,5 +1,5 @@
-import { OrderStatus } from '../../ordering/domain/order-status.enum';
-import { TicketStatus } from '../../ordering/domain/ticket-status.enum';
+import type { OrderStatus } from '../../ordering/domain/order-status.enum';
+import type { TicketStatus } from '../../ordering/domain/ticket-status.enum';
 
 export enum SupportRequestStatus {
   OPEN = 'OPEN',

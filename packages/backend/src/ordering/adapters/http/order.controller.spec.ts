@@ -55,6 +55,7 @@ describe('OrderController', () => {
   let listUserTicketsUseCase: { execute: ReturnType<typeof vi.fn> };
   let getUserTicketUseCase: { execute: ReturnType<typeof vi.fn> };
   let transitionOrderStatusUseCase: { execute: ReturnType<typeof vi.fn> };
+  let validatePromotion: { execute: ReturnType<typeof vi.fn> };
   const request = { user: { id: 'user-1', roles: [Role.AUDIENCE] } };
 
   beforeEach(() => {
@@ -64,14 +65,15 @@ describe('OrderController', () => {
     listUserTicketsUseCase = { execute: vi.fn() };
     getUserTicketUseCase = { execute: vi.fn() };
     transitionOrderStatusUseCase = { execute: vi.fn() };
+    validatePromotion = { execute: vi.fn() };
     controller = new OrderController(
       createOrderUseCase as never,
       getOrderUseCase as never,
       listUserOrdersUseCase as never,
+      validatePromotion as never,
       listUserTicketsUseCase as never,
       getUserTicketUseCase as never,
       transitionOrderStatusUseCase as never,
-      {} as never,
     );
   });
 
