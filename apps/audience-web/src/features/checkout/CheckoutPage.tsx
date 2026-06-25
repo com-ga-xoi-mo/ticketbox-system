@@ -4,7 +4,7 @@ import { Steps, Result } from 'antd';
 import { Loader2, Ticket, CreditCard, CheckCircle2, ChevronLeft } from 'lucide-react';
 import type { Order, PaymentProvider } from '@ticketbox/api-types';
 
-import { createOrder, initiatePayment, parseOrderError } from '../../shared/api/orders';
+import { createOrder, initiatePayment, parseOrderError, validatePromoCode } from '../../shared/api/orders';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { useCountdown } from '../../shared/hooks/useCountdown';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
@@ -14,6 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../comp
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Separator } from '../../components/ui/separator';
 import { Badge } from '../../components/ui/badge';
+
+import { PromoCodeInput } from './components/PromoCodeInput';
+import { OrderPricingBreakdown } from './components/OrderPricingBreakdown';
+import { usePromoValidation } from './hooks/usePromoValidation';
 
 interface CheckoutState {
   concertId: string;
@@ -37,6 +41,12 @@ export function CheckoutPage() {
 
   const { formatted, isExpired } = useCountdown(createdOrder?.reservationExpiresAt ?? null);
 
+  const { applyPromo, removePromo, promoCode, promoPreview, loading: validatingPromo } = usePromoValidation({
+    validatePromoCode,
+    concertId: state?.concertId ?? '',
+    ticketTypeIds: state?.quantities.map(([id]) => id) ?? [],
+  });
+
   if (!isAuthenticated) {
     return <Navigate to={`/login?returnTo=/checkout`} replace />;
   }
@@ -51,12 +61,13 @@ export function CheckoutPage() {
     try {
       const idempotencyKey = state?.idempotencyKey || generateIdempotencyKey();
       const order = await createOrder({
-        concertId: state.concertId,
+        concertId: state!.concertId,
         idempotencyKey,
-        items: state.quantities.map(([ticketTypeId, quantity]) => ({
+        items: state!.quantities.map(([ticketTypeId, quantity]) => ({
           ticketTypeId,
           quantity,
         })),
+        promoCode: promoCode ?? undefined,
       });
       setCreatedOrder(order);
       setStep(2);
@@ -139,14 +150,26 @@ export function CheckoutPage() {
                 <CardHeader>
                   <CardTitle>Xác nhận đơn hàng</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
+                <CardContent className="space-y-6">
+                  <p className="text-sm text-muted-foreground">
                     Vui lòng kiểm tra lại thông tin vé trước khi tiếp tục.
                   </p>
+
+                  <div className="rounded-lg border p-4 bg-muted/20">
+                    <h3 className="mb-3 font-semibold text-sm">Mã khuyến mãi</h3>
+                    <PromoCodeInput
+                      onApply={applyPromo}
+                      onRemove={removePromo}
+                      appliedPromoCode={promoCode}
+                      appliedPromoPreview={promoPreview}
+                      loading={validatingPromo}
+                    />
+                  </div>
+
                   <Button 
                     className="w-full h-11 rounded-full shadow-lg shadow-primary/20" 
                     onClick={handleCreateOrder} 
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || validatingPromo}
                   >
                     {isSubmitting ? <Loader2 className="mr-2 animate-spin size-4" /> : null}
                     Xác nhận đặt vé
@@ -215,17 +238,22 @@ export function CheckoutPage() {
                         </span>
                       </div>
                     ))}
-                    <Separator />
-                    <div className="flex justify-between font-bold text-lg">
-                      <span>Tổng cộng</span>
-                      <span className="text-primary">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(createdOrder.totalAmountVnd)}
-                      </span>
-                    </div>
+                    <OrderPricingBreakdown
+                      subtotalVnd={createdOrder.subtotalVnd ?? createdOrder.totalAmountVnd}
+                      discountAmountVnd={createdOrder.discountAmountVnd ?? 0}
+                      serviceFeeVnd={createdOrder.serviceFeeVnd ?? 0}
+                      totalAmountVnd={createdOrder.totalAmountVnd}
+                      promoCode={createdOrder.promoCode}
+                    />
                   </>
                 ) : (
                   <div className="text-sm text-muted-foreground">
                     <p>Số lượng vé: {state.quantities.reduce((acc, [_, q]) => acc + q, 0)}</p>
+                    {promoPreview && (
+                      <p className="mt-2 text-green-600">
+                        * Đã áp dụng mã giảm giá {promoCode}
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
