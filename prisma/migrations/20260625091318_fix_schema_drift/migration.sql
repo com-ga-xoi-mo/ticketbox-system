@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE "promotions" ADD COLUMN     "used_count" INTEGER NOT NULL DEFAULT 0;
+-- Removed crashing duplicate line
 
 -- AlterTable
 ALTER TABLE "refund_request_status_history" ALTER COLUMN "id" DROP DEFAULT;

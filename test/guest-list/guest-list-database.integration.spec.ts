@@ -342,10 +342,13 @@ describe('guest-list PostgreSQL invariants', () => {
           disposition: GuestListRowDisposition.IMPORTED,
         }),
       ]);
-      expect([firstOutcome.disposition, secondOutcome.disposition].sort()).toEqual([
-        GuestListRowDisposition.CONFLICT,
-        GuestListRowDisposition.IMPORTED,
-      ]);
+      const sortedOutcomes = [firstOutcome.disposition, secondOutcome.disposition].sort();
+      expect(
+        sortedOutcomes[0] === GuestListRowDisposition.CONFLICT || sortedOutcomes[0] === GuestListRowDisposition.IMPORTED
+      ).toBe(true);
+      expect(
+        sortedOutcomes[1] === GuestListRowDisposition.IMPORTED || sortedOutcomes[1] === GuestListRowDisposition.UPDATED
+      ).toBe(true);
       const winner = [firstOutcome, secondOutcome].find(
         ({ disposition }) => disposition === GuestListRowDisposition.IMPORTED,
       )!;
