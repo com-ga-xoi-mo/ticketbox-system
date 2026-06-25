@@ -29,6 +29,15 @@ import {
   TicketResendResponseSchema,
   VipLookupRequestSchema,
   VipLookupResponseSchema,
+  PublicTopArtistSchema,
+  PublicArtistSummarySchema,
+  PublicArtistTimelineEventSchema,
+  PublicArtistProfileSchema,
+  PublicArtistListResponseSchema,
+  TopArtistListResponseSchema,
+  ArtistSearchParamsSchema,
+  ArtistFollowResponseSchema,
+  ArtistFavoriteResponseSchema,
 } from './index';
 
 const assignmentId = '11111111-1111-4111-8111-111111111111';
@@ -40,6 +49,85 @@ const seatingZoneId = '66666666-6666-4666-8666-666666666666';
 const ticketTypeId = '77777777-7777-4777-8777-777777777777';
 const timestamp = '2026-07-01T12:00:00.000Z';
 const qrPayloadHash = 'a'.repeat(64);
+
+describe('artist contracts', () => {
+  const avatarAsset = {
+    id: assetId,
+    kind: 'ARTIST_AVATAR',
+    status: 'ACTIVE',
+    publicUrl: 'https://cdn.ticketbox.test/avatar.jpg',
+    originalName: 'avatar.jpg',
+    contentType: 'image/jpeg',
+    sizeBytes: 1024,
+  };
+
+  const posterAsset = {
+    id: assetId,
+    kind: 'ARTIST_POSTER',
+    status: 'ACTIVE',
+    publicUrl: 'https://cdn.ticketbox.test/poster.jpg',
+    originalName: 'poster.jpg',
+    contentType: 'image/jpeg',
+    sizeBytes: 2048,
+  };
+
+  const artistSummary = {
+    id: assignmentId,
+    slug: 'the-suns',
+    displayName: 'The Suns',
+    avatarAsset,
+    favoriteCount: 100,
+  };
+
+  const timelineEvent = {
+    id: concertId,
+    slug: 'summer-beats',
+    title: 'Summer Beats',
+    artistName: 'The Suns',
+    venueName: 'TicketBox Arena',
+    city: 'Ho Chi Minh City',
+    startsAt: timestamp,
+    endsAt: timestamp,
+    eventType: 'CONCERT',
+    posterAsset: null,
+  };
+
+  const artistProfile = {
+    id: assignmentId,
+    slug: 'the-suns',
+    displayName: 'The Suns',
+    bio: 'A cool band.',
+    avatarAsset,
+    posterAsset,
+    followerCount: 50,
+    favoriteCount: 100,
+    upcomingEvents: [timelineEvent],
+    pastEventCount: 5,
+    viewerFollowing: true,
+    viewerFavorited: false,
+  };
+
+  it('validates artist list response', () => {
+    expect(PublicArtistListResponseSchema.safeParse({ items: [artistSummary], total: 1, limit: 10, offset: 0 }).success).toBe(true);
+  });
+
+  it('validates top artist list response', () => {
+    expect(TopArtistListResponseSchema.safeParse([artistSummary]).success).toBe(true);
+  });
+
+  it('validates artist profile response', () => {
+    expect(PublicArtistProfileSchema.safeParse(artistProfile).success).toBe(true);
+  });
+
+  it('validates search params', () => {
+    expect(ArtistSearchParamsSchema.safeParse({ q: 'suns', limit: 5 }).success).toBe(true);
+  });
+
+  it('validates engagement responses', () => {
+    expect(ArtistFollowResponseSchema.safeParse({ artistId: assignmentId, following: true }).success).toBe(true);
+    expect(ArtistFavoriteResponseSchema.safeParse({ artistId: assignmentId, favorited: false }).success).toBe(true);
+  });
+});
 
 describe('public concert catalog contracts', () => {
   const availabilitySummary = {
@@ -89,7 +177,7 @@ describe('public concert catalog contracts', () => {
   };
 
   it('accepts public concert list, detail, and availability responses', () => {
-    expect(PublicConcertListResponseSchema.parse([summary])).toEqual([summary]);
+    expect(PublicConcertListResponseSchema.parse([summary])).toEqual([{ ...summary, artists: [] }]);
 
     expect(
       PublicConcertDetailResponseSchema.parse({

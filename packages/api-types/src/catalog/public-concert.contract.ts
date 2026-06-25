@@ -16,6 +16,8 @@ export const AssetKindCodeSchema = z.enum([
   'PRESS_KIT',
   'GUEST_LIST_CSV',
   'QR_IMAGE',
+  'ARTIST_AVATAR',
+  'ARTIST_POSTER',
   'OTHER',
 ]);
 export type AssetKindCode = z.infer<typeof AssetKindCodeSchema>;
@@ -42,6 +44,16 @@ export const PublicAssetSchema = z
   .strict();
 export type PublicAsset = z.infer<typeof PublicAssetSchema>;
 
+export const PublicConcertArtistSchema = z
+  .object({
+    id: z.string().uuid(),
+    slug: z.string().min(1),
+    displayName: z.string().min(1),
+    avatarAsset: PublicAssetSchema.nullable(),
+  })
+  .strict();
+export type PublicConcertArtist = z.infer<typeof PublicConcertArtistSchema>;
+
 export const PublicConcertAvailabilitySummarySchema = z
   .object({
     totalAvailableQuantity: z.number().int().nonnegative(),
@@ -67,6 +79,7 @@ export const PublicConcertSummarySchema = z
     eventType: EventTypeCodeSchema,
     posterAsset: PublicAssetSchema.nullable(),
     availabilitySummary: PublicConcertAvailabilitySummarySchema,
+    artists: z.array(PublicConcertArtistSchema).default([]),
   })
   .strict();
 export type PublicConcertSummary = z.infer<typeof PublicConcertSummarySchema>;
@@ -132,6 +145,7 @@ export const PublicConcertDetailResponseSchema = PublicConcertSummarySchema.exte
   seatingZones: z.array(PublicSeatingZoneSchema),
   ticketTypes: z.array(PublicTicketTypeSchema),
   ticketTypeZoneMappings: z.array(PublicTicketTypeZoneMappingSchema),
+  artists: z.array(PublicConcertArtistSchema).default([]),
 }).strict();
 export type PublicConcertDetailResponse = z.infer<typeof PublicConcertDetailResponseSchema>;
 

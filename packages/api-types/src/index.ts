@@ -1,4 +1,27 @@
 export {
+  PublicArtistSummarySchema,
+  PublicArtistTimelineEventSchema,
+  PublicArtistProfileSchema,
+  PublicTopArtistSchema,
+  PublicArtistListResponseSchema,
+  TopArtistListResponseSchema,
+  ArtistSearchParamsSchema,
+  ArtistFollowResponseSchema,
+  ArtistFavoriteResponseSchema,
+} from './artist/artist.contract';
+export type {
+  PublicArtistSummary,
+  PublicArtistTimelineEvent,
+  PublicArtistProfile,
+  PublicTopArtist,
+  PublicArtistListResponse,
+  TopArtistListResponse,
+  ArtistSearchParams,
+  ArtistFollowResponse,
+  ArtistFavoriteResponse,
+} from './artist/artist.contract';
+
+export {
   LoginRequestSchema,
   LoginResponseSchema,
   ROLE_CODES,
@@ -29,6 +52,8 @@ export {
   PublicConcertCitiesResponseSchema,
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
+  PublicConcertArtistSchema,
+  PublicConcertArtist,
   PublicConcertSummarySchema,
   PublicFeaturedConcertListResponseSchema,
   PublicFeaturedConcertSchema,
