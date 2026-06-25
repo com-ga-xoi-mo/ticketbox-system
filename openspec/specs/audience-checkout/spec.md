@@ -7,11 +7,15 @@ TBD - created by syncing change implement-audience-checkout-and-payment. Update 
 ## Requirements
 
 ### Requirement: Checkout order creation
-The audience-web app SHALL create a pending order by calling `POST /checkout/orders` with the selected ticket type IDs, quantities, concert ID, and a client-generated idempotency key when the authenticated user confirms their ticket selection.
+The audience-web app SHALL create a pending order by calling `POST /checkout/orders` with the selected ticket type IDs, quantities, concert ID, a client-generated idempotency key, and an optional `promoCode` when the authenticated user confirms their ticket selection.
 
 #### Scenario: Successful order creation
 - **WHEN** an authenticated AUDIENCE user submits a checkout with valid ticket selections and an idempotency key
 - **THEN** the app SHALL call `POST /checkout/orders` and display the order summary with a `PENDING_PAYMENT` status and the reservation countdown timer
+
+#### Scenario: Successful order creation with promo code
+- **WHEN** an authenticated AUDIENCE user submits a checkout with valid ticket selections, an idempotency key, and a valid promo code
+- **THEN** the app SHALL call `POST /checkout/orders` with the `promoCode` field and display the order summary including the pricing breakdown (subtotal, discount, service fee, total) with a `PENDING_PAYMENT` status and the reservation countdown timer
 
 #### Scenario: Duplicate submission with same idempotency key
 - **WHEN** the user submits the same checkout request with the same idempotency key (e.g., network retry)
@@ -32,6 +36,10 @@ The audience-web app SHALL create a pending order by calling `POST /checkout/ord
 #### Scenario: Rate limited at checkout
 - **WHEN** the backend returns a rate-limit response (HTTP 429)
 - **THEN** the app SHALL display a "Hệ thống đang bận, vui lòng thử lại sau" message and disable the submit button temporarily
+
+#### Scenario: Promo code rejected at checkout time
+- **WHEN** the backend rejects the checkout because the submitted promo code is invalid, expired, or has exceeded usage limits
+- **THEN** the app SHALL display the promo-specific error message, allow the user to remove the promo code, and retry checkout without it
 
 ### Requirement: Reservation countdown display
 The audience-web app SHALL display a countdown timer showing the remaining reservation time based on the order's `reservationExpiresAt` field, updating every second.
@@ -88,15 +96,15 @@ The audience-web app SHALL display a payment result page at `/orders/:id/result`
 - **THEN** the app SHALL display a "Đang xử lý thanh toán..." (processing payment) state with a loading indicator
 
 ### Requirement: Order detail page
-The audience-web app SHALL display order details at `/orders/:id` showing the order summary, status, ticket items, and QR codes for paid orders.
+The audience-web app SHALL display order details at `/orders/:id` showing the order summary, status, ticket items, pricing breakdown, and QR codes for paid orders.
 
 #### Scenario: Viewing a paid order
 - **WHEN** an authenticated user navigates to `/orders/:id` for a `PAID` order they own
-- **THEN** the app SHALL display the order number, total amount, payment timestamp, and each ticket with its QR code
+- **THEN** the app SHALL display the order number, pricing breakdown (subtotal, discount if applicable, service fee, total amount), payment timestamp, and each ticket with its QR code
 
 #### Scenario: Viewing a pending order
 - **WHEN** an authenticated user navigates to `/orders/:id` for a `PENDING_PAYMENT` order they own
-- **THEN** the app SHALL display the order summary with the reservation countdown and payment options
+- **THEN** the app SHALL display the order summary with pricing breakdown, the reservation countdown, and payment options
 
 #### Scenario: Viewing an expired order
 - **WHEN** an authenticated user navigates to `/orders/:id` for an `EXPIRED` order they own
@@ -137,7 +145,7 @@ The audience-web app SHALL require authentication before entering the checkout f
 - **THEN** the app SHALL redirect to the `returnTo` URL so the user can resume their checkout intent
 
 ### Requirement: Checkout error state handling
-The audience-web app SHALL map backend error codes to Vietnamese user-facing messages and display them using appropriate UI patterns (full-page result for terminal errors, inline alert/toast for recoverable errors).
+The audience-web app SHALL map backend error codes to Vietnamese user-facing messages and display them using appropriate UI patterns (full-page result for terminal errors, inline alert/toast for recoverable errors), including promotion-specific error codes.
 
 #### Scenario: Network error during checkout
 - **WHEN** the network request to create an order or initiate payment fails due to connectivity
@@ -146,3 +154,7 @@ The audience-web app SHALL map backend error codes to Vietnamese user-facing mes
 #### Scenario: Unknown backend error
 - **WHEN** the backend returns an unrecognized error code
 - **THEN** the app SHALL display a generic "Đã có lỗi xảy ra, vui lòng thử lại" message with a retry option
+
+#### Scenario: Promo-specific error during checkout
+- **WHEN** the backend returns a promo error code (`PROMO_CODE_NOT_FOUND`, `PROMO_CODE_EXPIRED`, `PROMO_CODE_INACTIVE`, `PROMO_USAGE_LIMIT_EXCEEDED`, `PROMO_USER_LIMIT_EXCEEDED`, `PROMO_NOT_APPLICABLE`, `PROMO_CODE_NOT_YET_VALID`)
+- **THEN** the app SHALL display the corresponding Vietnamese error message as an inline Alert and allow the user to remove the promo code and retry

@@ -59,9 +59,14 @@ The shared contract package SHALL contain only framework-independent public HTTP
 - **WHEN** a role value crosses an HTTP boundary
 - **THEN** it SHALL use the public `RoleCode` contract without relocating or replacing the backend domain `Role` or persisted database role enum
 
+#### Scenario: Promotion contracts stay framework-independent
+
+- **WHEN** promotion-related contract files are compiled
+- **THEN** they SHALL depend only on Zod and SHALL NOT import backend, mobile, NestJS, React Native, Prisma, or application workspace code
+
 ### Requirement: Canonical runtime wire validation
 
-The shared contract package SHALL provide framework-independent Zod schemas as the canonical runtime definitions for its scoped wire contracts and SHALL infer the corresponding TypeScript wire types from those schemas.
+The shared contract package SHALL provide framework-independent Zod schemas as the canonical runtime definitions for its scoped wire contracts, including ordering contracts with pricing breakdown fields and promotion error codes, and SHALL infer the corresponding TypeScript wire types from those schemas.
 
 #### Scenario: Mobile validates successful responses
 
@@ -112,6 +117,46 @@ The shared contract package SHALL provide framework-independent Zod schemas as t
 
 - **WHEN** a scoped endpoint returns HTTP `401` or `403`
 - **THEN** the mobile client SHALL classify the failure by HTTP status before success-schema parsing, and `@ticketbox/api-types` SHALL NOT define the authorization error body or include `unauthorized` in a successful business response
+
+#### Scenario: OrderSummaryResponse includes pricing breakdown
+
+- **WHEN** `OrderSummaryResponseSchema` is used to parse an order summary
+- **THEN** parsing SHALL succeed when the object includes `subtotalVnd` (non-negative integer), `discountAmountVnd` (non-negative integer), `serviceFeeVnd` (non-negative integer), and `promoCode` (nullable string) in addition to existing fields
+
+#### Scenario: OrderDetailResponse includes pricing breakdown
+
+- **WHEN** `OrderDetailResponseSchema` is used to parse an order detail
+- **THEN** parsing SHALL succeed when the object includes `subtotalVnd`, `discountAmountVnd`, `serviceFeeVnd`, and `promoCode` in addition to existing fields
+
+#### Scenario: CreateOrderRequest accepts optional promoCode
+
+- **WHEN** `CreateOrderRequestSchema` is used to parse a checkout request with `promoCode: "SUMMER2026"`
+- **THEN** parsing SHALL succeed with `promoCode` present as an optional trimmed non-empty string
+
+#### Scenario: CreateOrderRequest without promoCode remains valid
+
+- **WHEN** `CreateOrderRequestSchema` is used to parse a checkout request without a `promoCode` field
+- **THEN** parsing SHALL succeed with `promoCode` undefined
+
+#### Scenario: Promo validation request schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `ValidatePromoRequestSchema` and inferred `ValidatePromoRequest` type with fields `code` (required string), `concertId` (required UUID string), and `ticketTypeIds` (required array of UUID strings)
+
+#### Scenario: Promo validation response schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `ValidatePromoResponseSchema` and inferred `ValidatePromoResponse` type as a discriminated union on `valid`: `{ valid: true, discountType, discountValue, maxDiscountVnd, message }` or `{ valid: false, errorCode, message }`
+
+#### Scenario: Promo error code enum is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `PromoErrorCodeSchema` Zod enum and inferred `PromoErrorCode` type covering `PROMO_CODE_NOT_FOUND`, `PROMO_CODE_INACTIVE`, `PROMO_CODE_EXPIRED`, `PROMO_CODE_NOT_YET_VALID`, `PROMO_USAGE_LIMIT_EXCEEDED`, `PROMO_USER_LIMIT_EXCEEDED`, and `PROMO_NOT_APPLICABLE`
+
+#### Scenario: Audience app validates promo and order responses
+
+- **WHEN** the audience web app receives a successful promo validation or order response
+- **THEN** it SHALL validate the payload with the matching shared schema before returning data to feature code
 
 ### Requirement: Contract compatibility is tested across the HTTP boundary
 
