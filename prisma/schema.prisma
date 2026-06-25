@@ -910,6 +910,7 @@ model Promotion {
   validFrom               DateTime?    @map("valid_from") @db.Timestamptz(6)
   validUntil              DateTime?    @map("valid_until") @db.Timestamptz(6)
   isActive                Boolean      @default(true) @map("is_active")
+  usedCount               Int          @default(0) @map("used_count")
   applicableEventIds      String[]     @map("applicable_event_ids") @db.Uuid
   applicableCategoryIds   String[]     @map("applicable_category_ids") @db.Uuid
   applicableTicketTypeIds String[]     @map("applicable_ticket_type_ids") @db.Uuid
