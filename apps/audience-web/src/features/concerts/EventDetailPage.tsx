@@ -10,6 +10,8 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
+import { VenueMapModal } from './components/VenueMapModal';
+import { getVenueCoordinates } from './utils/venue-coordinates';
 import { SeoHead } from '../../shared/ui/seo/SeoHead';
 import { EVENT_TYPE_LABELS } from '../../shared/utils/event-types';
 import type { PublicTicketType, PublicConcertDetailResponse } from '@ticketbox/api-types';
@@ -69,6 +71,7 @@ export function EventDetailPage() {
   const [posterError, setPosterError] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map());
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     setPosterError(false);
@@ -239,6 +242,13 @@ export function EventDetailPage() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">{data.venueName}, {data.city}</p>
                   {data.venueAddress && <p className="text-sm leading-6 text-muted-foreground">{data.venueAddress}</p>}
+                  <button
+                    onClick={() => setShowMap(true)}
+                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                  >
+                    <MapIcon className="size-3" />
+                    Xem bản đồ
+                  </button>
                 </div>
               </div>
             </CardContent>
@@ -352,6 +362,20 @@ export function EventDetailPage() {
           )}
         </div>
       </div>
+      {/* Venue Map Modal */}
+      {(() => {
+        const coords = getVenueCoordinates(data.venueName);
+        return (
+          <VenueMapModal
+            latitude={coords.latitude}
+            longitude={coords.longitude}
+            venueName={data.venueName}
+            address={data.venueAddress}
+            open={showMap}
+            onClose={() => setShowMap(false)}
+          />
+        );
+      })()}
     </div>
   );
 }
