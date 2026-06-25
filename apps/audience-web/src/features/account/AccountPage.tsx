@@ -3,9 +3,10 @@ import { useMyProfile } from '../../shared/api/profile';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
-import { User, AlertCircle, Mail, ShieldAlert } from 'lucide-react';
+import { AlertCircle, Bell, LifeBuoy, Mail, ReceiptText, ShieldAlert, Ticket, User } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
+import { Link } from 'react-router-dom';
 
 export function AccountPage() {
   const { data: profile, isLoading, isError, refetch } = useMyProfile();
@@ -80,6 +81,67 @@ export function AccountPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LifeBuoy className="h-5 w-5 text-primary" />
+                Hỗ trợ sau mua
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Tạo yêu cầu hỗ trợ, theo dõi hoàn tiền, gửi lại email vé và tải xác nhận mua.
+              </p>
+              <Button variant="outline" asChild>
+                <Link to="/account/support">Mở trung tâm hỗ trợ</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                Thông báo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Xem xác nhận mua vé, nhắc lịch và cập nhật hỗ trợ hoặc hoàn tiền.
+              </p>
+              <Button variant="outline" asChild>
+                <Link to="/account/notifications">Xem thông báo</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ReceiptText className="h-5 w-5 text-primary" />
+                Đơn hàng
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/account/orders">Quản lý đơn hàng</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-primary" />
+                Vé của tôi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/account/tickets">Mở ví vé</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AudienceProtectedRoute>
   );
