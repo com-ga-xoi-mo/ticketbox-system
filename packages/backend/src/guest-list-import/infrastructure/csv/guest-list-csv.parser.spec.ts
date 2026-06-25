@@ -48,4 +48,17 @@ describe('GuestListCsvParser', () => {
       expect.objectContaining({ code: 'INVALID_CSV' }),
     );
   });
+
+  it('parses Vietnamese text with diacritics correctly', () => {
+    const csvContent = 'guest_name,email,phone,external_ref\nNguyễn Văn Ân,an@x.test,,\nTrần Thị Bích Hường,huong@x.test,,';
+    const rows = parser.parse(Buffer.from(csvContent, 'utf-8'), 'text/csv');
+    expect(rows[0].guestName).toBe('Nguyễn Văn Ân');
+    expect(rows[1].guestName).toBe('Trần Thị Bích Hường');
+  });
+
+  it('strips BOM and preserves Vietnamese text', () => {
+    const csvContent = '\uFEFFguest_name,email,phone,external_ref\nLê Thảo,thao@x.test,,';
+    const rows = parser.parse(Buffer.from(csvContent, 'utf-8'), 'text/csv');
+    expect(rows[0].guestName).toBe('Lê Thảo');
+  });
 });
