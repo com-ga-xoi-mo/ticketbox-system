@@ -63,6 +63,13 @@ export type ConcertAvailabilitySummary = {
   ticketTypeCount: number;
 };
 
+export type ConcertArtistSummary = {
+  id: string;
+  slug: string;
+  displayName: string;
+  avatarAsset: AssetMetadata | null;
+};
+
 export type ConcertSummary = {
   id: string;
   slug: string;
@@ -75,6 +82,7 @@ export type ConcertSummary = {
   eventType: string;
   posterAsset: AssetMetadata | null;
   availabilitySummary: ConcertAvailabilitySummary;
+  artists?: ConcertArtistSummary[];
 };
 
 export type ConcertDetail = {

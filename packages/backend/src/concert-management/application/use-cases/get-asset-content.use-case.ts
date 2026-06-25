@@ -25,7 +25,7 @@ export class GetAssetContentUseCase {
       throw new AssetNotServableError(assetId, 'Asset is archived');
     }
 
-    if (asset.kind !== 'POSTER' && asset.kind !== 'SEATING_MAP') {
+    if (asset.kind !== 'POSTER' && asset.kind !== 'SEATING_MAP' && asset.kind !== 'ARTIST_AVATAR' && asset.kind !== 'ARTIST_POSTER') {
       throw new AssetNotServableError(assetId, 'Asset kind is not servable');
     }
 
