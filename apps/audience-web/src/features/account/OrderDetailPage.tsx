@@ -12,6 +12,7 @@ import { ReservationCountdown } from './components/ReservationCountdown';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import type { PaymentProvider } from '@ticketbox/api-types';
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +21,7 @@ export function OrderDetailPage() {
   const paymentMutation = useInitiatePayment();
   
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [paymentProvider, setPaymentProvider] = useState('VNPAY');
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('VNPAY');
   const [reservationExpired, setReservationExpired] = useState(false);
 
   const handleCancelOrder = () => {
@@ -177,7 +178,7 @@ export function OrderDetailPage() {
                   </Dialog>
 
                   <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                    <Select value={paymentProvider} onValueChange={setPaymentProvider}>
+                    <Select value={paymentProvider} onValueChange={(value) => setPaymentProvider(value as PaymentProvider)}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Phương thức" />
                       </SelectTrigger>

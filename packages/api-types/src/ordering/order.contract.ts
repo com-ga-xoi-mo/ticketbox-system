@@ -30,17 +30,17 @@ export const OrderSummaryResponseSchema = z.object({
   idempotencyKey: z.string().nullable().optional(),
   status: OrderStatusSchema,
   totalAmountVnd: z.number().int().min(0),
-  reservationExpiresAt: z.union([z.string(), z.date()]).nullable().optional(),
-  createdAt: z.union([z.string(), z.date()]),
-  updatedAt: z.union([z.string(), z.date()]),
+  reservationExpiresAt: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   items: z.array(OrderItemSummarySchema),
 });
 export type OrderSummaryResponse = z.infer<typeof OrderSummaryResponseSchema>;
 
 export const OrderDetailResponseSchema = OrderSummaryResponseSchema.extend({
-  paidAt: z.union([z.string(), z.date()]).nullable().optional(),
-  expiredAt: z.union([z.string(), z.date()]).nullable().optional(),
-  cancelledAt: z.union([z.string(), z.date()]).nullable().optional(),
+  paidAt: z.string().nullable().optional(),
+  expiredAt: z.string().nullable().optional(),
+  cancelledAt: z.string().nullable().optional(),
 });
 export type OrderDetailResponse = z.infer<typeof OrderDetailResponseSchema>;
 
