@@ -71,6 +71,13 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       >
         Sự kiện
       </Link>
+      <Link
+        to="/artists"
+        onClick={onClick}
+        className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        Nghệ sĩ
+      </Link>
       {session ? (
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="relative rounded-full" asChild onClick={onClick}>

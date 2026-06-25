@@ -21,6 +21,8 @@ const RefundRequestDetailPage = lazy(() => import('../features/account/RefundReq
 const NotificationCenterPage = lazy(() => import('../features/account/NotificationCenterPage').then(m => ({ default: m.NotificationCenterPage })));
 const TicketDownloadPage = lazy(() => import('../features/account/TicketDownloadPage').then(m => ({ default: m.TicketDownloadPage })));
 const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
+const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
+const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -48,6 +50,8 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
+      { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
+      { path: '/artists/:slug', element: <SuspenseWrapper><ArtistProfilePage /></SuspenseWrapper> },
       { path: '/checkout', element: <CheckoutPage /> },
       { path: '/orders/:id/result', element: <PaymentResultPage /> },
       {
