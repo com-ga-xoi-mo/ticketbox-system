@@ -20,4 +20,13 @@ describe('AdminCheckinStaffAssignmentsController route protection', () => {
 
     expect(roles).toEqual([Role.ORGANIZER, Role.ADMIN]);
   });
+
+  it('restricts bulk account creation to ADMIN only', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      AdminCheckinStaffAssignmentsController.prototype.bulkCreate,
+    );
+
+    expect(roles).toEqual([Role.ADMIN]);
+  });
 });

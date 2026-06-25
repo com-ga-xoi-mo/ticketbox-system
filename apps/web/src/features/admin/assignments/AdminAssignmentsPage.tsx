@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useConcerts } from '../concerts/hooks';
 import { AssignmentPicker } from './components/AssignmentPicker';
+import { BulkCreateStaffPanel } from './components/BulkCreateStaffPanel';
 import { AssignmentList } from './components/AssignmentList';
 import { SearchableConcertSelect } from './components/SearchableConcertSelect';
 import { Calendar } from 'lucide-react';
@@ -43,6 +44,7 @@ export const AdminAssignmentsPage = () => {
 
       {selectedConcertId ? (
         <div className="flex flex-col gap-6">
+          <BulkCreateStaffPanel concertId={selectedConcertId} />
           <AssignmentPicker concertId={selectedConcertId} />
           <AssignmentList concertId={selectedConcertId} />
         </div>

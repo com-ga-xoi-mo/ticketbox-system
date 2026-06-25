@@ -1,5 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAssignments, assignStaff, revokeAssignment, AssignStaffPayload } from './api';
+import { adminAccountKeys } from '../accounts/hooks';
+import {
+  getAssignments,
+  assignStaff,
+  revokeAssignment,
+  bulkCreateStaff,
+  AssignStaffPayload,
+  BulkCreateStaffPayload,
+} from './api';
 
 export const assignmentKeys = {
   all: ['assignments'] as const,
@@ -22,6 +30,18 @@ export function useAssignStaff() {
       assignStaff(concertId, payload),
     onSuccess: (_, { concertId }) => {
       queryClient.invalidateQueries({ queryKey: assignmentKeys.list(concertId) });
+    },
+  });
+}
+
+export function useBulkCreateStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ concertId, payload }: { concertId: string; payload: BulkCreateStaffPayload }) =>
+      bulkCreateStaff(concertId, payload),
+    onSuccess: (_, { concertId }) => {
+      queryClient.invalidateQueries({ queryKey: assignmentKeys.list(concertId) });
+      queryClient.invalidateQueries({ queryKey: adminAccountKeys.lists() });
     },
   });
 }
