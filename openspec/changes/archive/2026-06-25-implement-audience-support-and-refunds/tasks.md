@@ -32,28 +32,28 @@
 
 ## 4. Audience Web API Clients
 
-- [ ] 4.1 Add audience web API clients and React Query hooks for support request and refund request flows using shared schemas.
-- [ ] 4.2 Add audience web API clients and hooks for notification inbox, unread count, mark-read, and mark-all-read flows.
-- [ ] 4.3 Add audience web API clients and mutations for ticket resend, ticket download, and order confirmation download flows.
-- [ ] 4.4 Add localized error parsing for support, refund eligibility, resend cooldown, and download unavailable responses.
-- [ ] 4.5 Add API-client tests covering successful parsing and controlled error handling.
+- [x] 4.1 Add audience web API clients and React Query hooks for support request and refund request flows using shared schemas.
+- [x] 4.2 Add audience web API clients and hooks for notification inbox, unread count, mark-read, and mark-all-read flows.
+- [x] 4.3 Add audience web API clients and mutations for ticket resend, ticket download, and order confirmation download flows.
+- [x] 4.4 Add localized error parsing for support, refund eligibility, resend cooldown, and download unavailable responses.
+- [x] 4.5 Add API-client tests covering successful parsing and controlled error handling.
 
 ## 5. Audience Web UI
 
-- [ ] 5.1 Add authenticated support center routes/pages in `apps/audience-web`, linked from account navigation.
-- [ ] 5.2 Build support request list/detail/create UI with responsive shadcn-style primitives and Ant Design components where they improve forms, tabs, timeline, result states, modal confirmations, or uploads.
-- [ ] 5.3 Build refund eligibility and refund request UI for order and ticket contexts with clear non-settlement copy.
-- [ ] 5.4 Add notification center route/page with tabs or filters, unread count, mark-read actions, and resource deep links.
-- [ ] 5.5 Extend order detail pages with support, refund, resend, and order confirmation actions based on order status and eligibility.
-- [ ] 5.6 Extend ticket detail pages with support, refund, resend, and ticket download actions based on ticket status and eligibility.
-- [ ] 5.7 Add printable/downloadable ticket and order confirmation views that label confirmations accurately and keep QR display scannable.
-- [ ] 5.8 Add loading, empty, success, error, cooldown, and unauthorized states for all new audience flows.
-- [ ] 5.9 Add audience web component/page tests for support center, refund flow, notification center, order actions, and ticket actions.
+- [x] 5.1 Add authenticated support center routes/pages in `apps/audience-web`, linked from account navigation.
+- [x] 5.2 Build support request list/detail/create UI with responsive shadcn-style primitives and Ant Design components where they improve forms, tabs, timeline, result states, modal confirmations, or uploads.
+- [x] 5.3 Build refund eligibility and refund request UI for order and ticket contexts with clear non-settlement copy.
+- [x] 5.4 Add notification center route/page with tabs or filters, unread count, mark-read actions, and resource deep links.
+- [x] 5.5 Extend order detail pages with support, refund, resend, and order confirmation actions based on order status and eligibility.
+- [x] 5.6 Extend ticket detail pages with support, refund, resend, and ticket download actions based on ticket status and eligibility.
+- [x] 5.7 Add printable/downloadable ticket and order confirmation views that label confirmations accurately and keep QR display scannable.
+- [x] 5.8 Add loading, empty, success, error, cooldown, and unauthorized states for all new audience flows.
+- [x] 5.9 Add audience web component/page tests for support center, refund flow, notification center, order actions, and ticket actions.
 
 ## 6. Integration and Verification
 
-- [ ] 6.1 Run shared contract tests for `@ticketbox/api-types`.
-- [ ] 6.2 Run backend unit and e2e tests covering support, refund, notification inbox, resend, and download behavior.
-- [ ] 6.3 Run audience web tests and verify responsive layouts for mobile and desktop account/support flows.
-- [ ] 6.4 Run repository lint/typecheck/build commands required by the affected workspaces.
-- [ ] 6.5 Manually verify an end-to-end audience path: paid order -> ticket detail -> support request -> refund request -> notification update -> resend -> download confirmation.
+- [x] 6.1 Run shared contract tests for `@ticketbox/api-types`.
+- [x] 6.2 Run backend unit and e2e tests covering support, refund, notification inbox, resend, and download behavior.
+- [x] 6.3 Run audience web tests and verify responsive layouts for mobile and desktop account/support flows.
+- [x] 6.4 Run repository lint/typecheck/build commands required by the affected workspaces.
+- [x] 6.5 Manually verify an end-to-end audience path: paid order -> ticket detail -> support request -> refund request -> notification update -> resend -> download confirmation.
