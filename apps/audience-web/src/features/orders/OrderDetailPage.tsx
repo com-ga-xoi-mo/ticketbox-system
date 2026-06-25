@@ -14,6 +14,7 @@ import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Separator } from '../../components/ui/separator';
 import { PageError, PageLoading, PageUnavailable } from '../../shared/ui/PageStates';
+import { OrderPricingBreakdown } from '../checkout/components/OrderPricingBreakdown';
 
 function TicketQRDisplay({ ticketId }: { ticketId: string }) {
   const { data: ticket, isLoading, isError } = useMyTicketDetail(ticketId);
@@ -262,12 +263,13 @@ export function OrderDetailPage() {
                 ))}
               </div>
               
-              <Separator />
-              
-              <div className="flex justify-between font-bold text-lg">
-                <span>Tổng cộng</span>
-                <span className="text-primary">{formatPrice(order.totalAmountVnd)}</span>
-              </div>
+              <OrderPricingBreakdown
+                subtotalVnd={order.subtotalVnd ?? order.totalAmountVnd}
+                discountAmountVnd={order.discountAmountVnd ?? 0}
+                serviceFeeVnd={order.serviceFeeVnd ?? 0}
+                totalAmountVnd={order.totalAmountVnd}
+                promoCode={order.promoCode}
+              />
             </CardContent>
           </Card>
         </div>

@@ -6,19 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../comp
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { AlertCircle, Calendar, ReceiptText, ChevronLeft, CreditCard } from 'lucide-react';
+import { AlertCircle, Calendar, Download, LifeBuoy, Mail, ReceiptText, ChevronLeft, CreditCard, RefreshCw } from 'lucide-react';
 import { OrderStatusBadge } from './components/OrderStatusBadge';
 import { ReservationCountdown } from './components/ReservationCountdown';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import type { PaymentProvider } from '@ticketbox/api-types';
+import { useRefundEligibility } from '../../shared/api/support';
+import { useResendOrderTickets } from '../../shared/api/downloads';
+import { parseSupportError } from '../../shared/api/support';
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: order, isLoading, isError, refetch } = useOrderDetail(id as string);
   const cancelMutation = useCancelOrder();
   const paymentMutation = useInitiatePayment();
+  const refundEligibility = useRefundEligibility({ orderId: id });
+  const resendOrder = useResendOrderTickets();
   
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('VNPAY');
@@ -45,6 +50,10 @@ export function OrderDetailPage() {
         }
       }
     });
+  };
+
+  const handleResendTickets = () => {
+    if (id) resendOrder.mutate(id);
   };
 
   return (
@@ -206,6 +215,66 @@ export function OrderDetailPage() {
                   )}
                 </CardFooter>
               )}
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <LifeBuoy className="h-5 w-5" />
+                  Hỗ trợ đơn hàng
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button variant="outline" asChild>
+                    <Link to={`/account/support?orderId=${order.id}`}>
+                      <LifeBuoy className="mr-2 h-4 w-4" />
+                      Liên hệ hỗ trợ
+                    </Link>
+                  </Button>
+                  {order.status === 'PAID' && (
+                    <Button variant="outline" asChild>
+                      <Link to={`/account/orders/${order.id}/confirmation`}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Tải xác nhận mua
+                      </Link>
+                    </Button>
+                  )}
+                  {order.status === 'PAID' && (
+                    <Button variant="outline" onClick={handleResendTickets} disabled={resendOrder.isPending}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      {resendOrder.isPending ? 'Đang gửi...' : 'Gửi lại email vé'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    asChild
+                    disabled={!refundEligibility.data?.eligible}
+                  >
+                    <Link to={`/account/support?orderId=${order.id}&tab=refund`}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Yêu cầu hoàn tiền
+                    </Link>
+                  </Button>
+                </div>
+                {refundEligibility.data && (
+                  <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+                    {refundEligibility.data.eligible
+                      ? refundEligibility.data.message
+                      : `Hoàn tiền chưa khả dụng: ${refundEligibility.data.message}`}
+                  </p>
+                )}
+                {resendOrder.isSuccess && (
+                  <p className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700">
+                    {resendOrder.data.message}
+                  </p>
+                )}
+                {resendOrder.isError && (
+                  <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    {parseSupportError(resendOrder.error)}
+                  </p>
+                )}
+              </CardContent>
             </Card>
           </div>
         )}

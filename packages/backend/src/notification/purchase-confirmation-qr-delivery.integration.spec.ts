@@ -154,7 +154,7 @@ describe('purchase confirmation QR delivery integration', () => {
     const publisher = new TicketIssuingOrderEventPublisher(issueTickets as never, {
       notifyOrderPaid: (orderId: string, paidAt: Date) =>
         enqueueConfirmation.execute(orderId, paidAt),
-    });
+    }, { rollbackUsage: vi.fn() } as never);
     const paidAt = new Date('2026-06-24T01:00:00.000Z');
     const event: OrderDomainEvent = {
       type: 'OrderPaid',

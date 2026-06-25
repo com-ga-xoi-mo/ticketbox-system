@@ -20,6 +20,19 @@ export enum NotificationType {
   GENERAL = 'GENERAL',
   PURCHASE_CONFIRMATION = 'PURCHASE_CONFIRMATION',
   CONCERT_REMINDER = 'CONCERT_REMINDER',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
+  SUPPORT_UPDATE = 'SUPPORT_UPDATE',
+  REFUND_UPDATE = 'REFUND_UPDATE',
+  TICKET_UPDATE = 'TICKET_UPDATE',
+  TICKET_RESEND = 'TICKET_RESEND',
+}
+
+export enum NotificationResourceType {
+  ORDER = 'ORDER',
+  TICKET = 'TICKET',
+  SUPPORT_REQUEST = 'SUPPORT_REQUEST',
+  REFUND_REQUEST = 'REFUND_REQUEST',
+  CONCERT = 'CONCERT',
 }
 
 export interface NotificationRecord {
@@ -32,8 +45,15 @@ export interface NotificationRecord {
   status: NotificationStatus;
   subject: string | null;
   body: string;
+  actionUrl?: string | null;
+  resourceType?: NotificationResourceType | string | null;
+  resourceId?: string | null;
+  metadata?: unknown;
+  readAt?: Date | null;
   scheduledAt: Date | null;
   sentAt: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
   failedAttemptCount: number;
 }
 

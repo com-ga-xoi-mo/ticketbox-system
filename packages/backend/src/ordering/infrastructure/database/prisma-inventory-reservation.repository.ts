@@ -42,7 +42,12 @@ interface PrismaOrderWithItems {
   concertId: string;
   idempotencyKey: string | null;
   status: string;
+  subtotalVnd: number;
+  discountAmountVnd: number;
+  serviceFeeVnd: number;
   totalAmountVnd: number;
+  promoCode: string | null;
+  promotionId: string | null;
   reservationExpiresAt: Date | null;
   paidAt: Date | null;
   expiredAt: Date | null;
@@ -119,7 +124,12 @@ export class PrismaInventoryReservationRepository
             concertId: order.concertId,
             idempotencyKey: order.idempotencyKey,
             status: order.status,
-            totalAmountVnd: order.totalAmountVnd,
+            subtotalVnd: order.subtotalVnd,
+      discountAmountVnd: order.discountAmountVnd,
+      serviceFeeVnd: order.serviceFeeVnd,
+      totalAmountVnd: order.totalAmountVnd,
+            promoCode: order.promoCode,
+            promotionId: order.promotionId,
             reservationExpiresAt: order.reservationExpiresAt,
             paidAt: order.paidAt,
             expiredAt: order.expiredAt,
@@ -150,7 +160,21 @@ export class PrismaInventoryReservationRepository
           });
         }
 
-        return this.toDomain(createdOrder);
+        
+          if (order.promotionId) {
+            await tx.promotionUsage.create({
+              data: {
+                promotionId: order.promotionId,
+                userId: order.userId,
+                orderId: order.id,
+              },
+            });
+            await tx.promotion.update({
+              where: { id: order.promotionId },
+              data: { usedCount: { increment: 1 } },
+            });
+          }
+          return this.toDomain(createdOrder);
       });
     } catch (err: unknown) {
       if (this.isUniqueConstraintError(err)) {
@@ -468,7 +492,12 @@ export class PrismaInventoryReservationRepository
       concertId: order.concertId,
       idempotencyKey: order.idempotencyKey,
       status: order.status as OrderStatus,
+      subtotalVnd: order.subtotalVnd,
+      discountAmountVnd: order.discountAmountVnd,
+      serviceFeeVnd: order.serviceFeeVnd,
       totalAmountVnd: order.totalAmountVnd,
+      promoCode: order.promoCode,
+      promotionId: order.promotionId,
       reservationExpiresAt: order.reservationExpiresAt,
       paidAt: order.paidAt,
       expiredAt: order.expiredAt,

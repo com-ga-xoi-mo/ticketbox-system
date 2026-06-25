@@ -59,9 +59,14 @@ The shared contract package SHALL contain only framework-independent public HTTP
 - **WHEN** a role value crosses an HTTP boundary
 - **THEN** it SHALL use the public `RoleCode` contract without relocating or replacing the backend domain `Role` or persisted database role enum
 
+#### Scenario: Promotion contracts stay framework-independent
+
+- **WHEN** promotion-related contract files are compiled
+- **THEN** they SHALL depend only on Zod and SHALL NOT import backend, mobile, NestJS, React Native, Prisma, or application workspace code
+
 ### Requirement: Canonical runtime wire validation
 
-The shared contract package SHALL provide framework-independent Zod schemas as the canonical runtime definitions for its scoped wire contracts and SHALL infer the corresponding TypeScript wire types from those schemas.
+The shared contract package SHALL provide framework-independent Zod schemas as the canonical runtime definitions for its scoped wire contracts, including ordering contracts with pricing breakdown fields and promotion error codes, and SHALL infer the corresponding TypeScript wire types from those schemas.
 
 #### Scenario: Mobile validates successful responses
 
@@ -112,6 +117,46 @@ The shared contract package SHALL provide framework-independent Zod schemas as t
 
 - **WHEN** a scoped endpoint returns HTTP `401` or `403`
 - **THEN** the mobile client SHALL classify the failure by HTTP status before success-schema parsing, and `@ticketbox/api-types` SHALL NOT define the authorization error body or include `unauthorized` in a successful business response
+
+#### Scenario: OrderSummaryResponse includes pricing breakdown
+
+- **WHEN** `OrderSummaryResponseSchema` is used to parse an order summary
+- **THEN** parsing SHALL succeed when the object includes `subtotalVnd` (non-negative integer), `discountAmountVnd` (non-negative integer), `serviceFeeVnd` (non-negative integer), and `promoCode` (nullable string) in addition to existing fields
+
+#### Scenario: OrderDetailResponse includes pricing breakdown
+
+- **WHEN** `OrderDetailResponseSchema` is used to parse an order detail
+- **THEN** parsing SHALL succeed when the object includes `subtotalVnd`, `discountAmountVnd`, `serviceFeeVnd`, and `promoCode` in addition to existing fields
+
+#### Scenario: CreateOrderRequest accepts optional promoCode
+
+- **WHEN** `CreateOrderRequestSchema` is used to parse a checkout request with `promoCode: "SUMMER2026"`
+- **THEN** parsing SHALL succeed with `promoCode` present as an optional trimmed non-empty string
+
+#### Scenario: CreateOrderRequest without promoCode remains valid
+
+- **WHEN** `CreateOrderRequestSchema` is used to parse a checkout request without a `promoCode` field
+- **THEN** parsing SHALL succeed with `promoCode` undefined
+
+#### Scenario: Promo validation request schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `ValidatePromoRequestSchema` and inferred `ValidatePromoRequest` type with fields `code` (required string), `concertId` (required UUID string), and `ticketTypeIds` (required array of UUID strings)
+
+#### Scenario: Promo validation response schema is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `ValidatePromoResponseSchema` and inferred `ValidatePromoResponse` type as a discriminated union on `valid`: `{ valid: true, discountType, discountValue, maxDiscountVnd, message }` or `{ valid: false, errorCode, message }`
+
+#### Scenario: Promo error code enum is exported
+
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package SHALL export `PromoErrorCodeSchema` Zod enum and inferred `PromoErrorCode` type covering `PROMO_CODE_NOT_FOUND`, `PROMO_CODE_INACTIVE`, `PROMO_CODE_EXPIRED`, `PROMO_CODE_NOT_YET_VALID`, `PROMO_USAGE_LIMIT_EXCEEDED`, `PROMO_USER_LIMIT_EXCEEDED`, and `PROMO_NOT_APPLICABLE`
+
+#### Scenario: Audience app validates promo and order responses
+
+- **WHEN** the audience web app receives a successful promo validation or order response
+- **THEN** it SHALL validate the payload with the matching shared schema before returning data to feature code
 
 ### Requirement: Contract compatibility is tested across the HTTP boundary
 
@@ -301,3 +346,59 @@ The `@ticketbox/api-types` package SHALL export Zod schemas for the catalog sear
 #### Scenario: PublicConcertCitiesResponse schema validates string array
 - **WHEN** `PublicConcertCitiesResponseSchema` is used to parse `["HCMC", "Hanoi"]`
 - **THEN** parsing succeeds as `string[]`
+
+### Requirement: Audience support and refund contracts
+The shared contract package SHALL export framework-independent schemas and types for audience support request and refund request APIs.
+
+#### Scenario: Support request schemas are exported
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports schemas and inferred types for creating, listing, and reading audience support requests
+
+#### Scenario: Refund request schemas are exported
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports schemas and inferred types for refund eligibility, refund request creation, refund request listing, and refund request detail
+
+#### Scenario: Request status enums are bounded
+- **WHEN** support or refund status values are parsed by shared schemas
+- **THEN** unknown status values are rejected by the corresponding Zod enum
+
+### Requirement: Audience notification inbox contracts
+The shared contract package SHALL export schemas and types for audience notification inbox list, unread count, and read-state mutation responses.
+
+#### Scenario: Notification list schema validates inbox items
+- **WHEN** `AudienceNotificationListResponseSchema` parses a response
+- **THEN** each item includes ID, type, title or subject, body, created timestamp, nullable read timestamp, and optional resource link metadata
+
+#### Scenario: Unread count schema validates count
+- **WHEN** `AudienceNotificationUnreadCountResponseSchema` parses a response
+- **THEN** it accepts a non-negative integer unread count and rejects invalid counts
+
+#### Scenario: Mark read response schema validates result
+- **WHEN** a mark-read mutation response is parsed
+- **THEN** the shared schema validates the updated read timestamp or updated count result
+
+### Requirement: Audience resend and download contracts
+The shared contract package SHALL export schemas and types for ticket resend, ticket download, and order confirmation download flows.
+
+#### Scenario: Ticket resend response schema is exported
+- **WHEN** a consumer imports from `@ticketbox/api-types`
+- **THEN** the package exports the ticket resend response schema with delivery status and optional cooldown metadata
+
+#### Scenario: Ticket download schema validates QR payload
+- **WHEN** a ticket download response is parsed
+- **THEN** the schema validates ticket, concert, order, and nullable QR payload fields without exposing signing secrets
+
+#### Scenario: Order confirmation schema validates confirmation data
+- **WHEN** an order confirmation response is parsed
+- **THEN** the schema validates order summary, line items, payment summary, concert details, and purchase-confirmation labeling fields
+
+### Requirement: Contract package boundaries are preserved
+The new audience support, refund, notification, resend, and download contracts SHALL remain framework-independent.
+
+#### Scenario: Contracts compile without backend imports
+- **WHEN** `@ticketbox/api-types` is built
+- **THEN** the new contract files depend only on Zod and local contract modules, not backend, Prisma, NestJS, React, or audience web code
+
+#### Scenario: Backend and audience clients validate same contracts
+- **WHEN** backend HTTP adapter contract tests and audience web API-client tests run
+- **THEN** both sides validate support, refund, notification, resend, and download payloads with the shared schemas

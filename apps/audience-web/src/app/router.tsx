@@ -16,6 +16,12 @@ const MyOrdersPage = lazy(() => import('../features/account/MyOrdersPage').then(
 const OrderDetailPage = lazy(() => import('../features/account/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));
 const MyTicketsPage = lazy(() => import('../features/account/MyTicketsPage').then(m => ({ default: m.MyTicketsPage })));
 const TicketDetailPage = lazy(() => import('../features/account/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));
+const SupportCenterPage = lazy(() => import('../features/account/SupportCenterPage').then(m => ({ default: m.SupportCenterPage })));
+const SupportRequestDetailPage = lazy(() => import('../features/account/SupportRequestDetailPage').then(m => ({ default: m.SupportRequestDetailPage })));
+const RefundRequestDetailPage = lazy(() => import('../features/account/RefundRequestDetailPage').then(m => ({ default: m.RefundRequestDetailPage })));
+const NotificationCenterPage = lazy(() => import('../features/account/NotificationCenterPage').then(m => ({ default: m.NotificationCenterPage })));
+const TicketDownloadPage = lazy(() => import('../features/account/TicketDownloadPage').then(m => ({ default: m.TicketDownloadPage })));
+const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -61,12 +67,36 @@ export const router = createBrowserRouter([
         element: <SuspenseWrapper><OrderDetailPage /></SuspenseWrapper>
       },
       {
+        path: '/account/orders/:id/confirmation',
+        element: <SuspenseWrapper><OrderConfirmationPage /></SuspenseWrapper>
+      },
+      {
         path: '/account/tickets',
         element: <SuspenseWrapper><MyTicketsPage /></SuspenseWrapper>
       },
       {
         path: '/account/tickets/:id',
         element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/tickets/:id/download',
+        element: <SuspenseWrapper><TicketDownloadPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/support',
+        element: <SuspenseWrapper><SupportCenterPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/support/requests/:id',
+        element: <SuspenseWrapper><SupportRequestDetailPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/support/refunds/:id',
+        element: <SuspenseWrapper><RefundRequestDetailPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/notifications',
+        element: <SuspenseWrapper><NotificationCenterPage /></SuspenseWrapper>
       },
       { path: '*', element: <NotFoundPage /> },
     ],

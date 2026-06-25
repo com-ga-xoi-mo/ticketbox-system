@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateOrderItemDto {
@@ -27,6 +28,10 @@ export class CreateOrderDto {
   @IsNotEmpty()
   @MaxLength(80)
   idempotencyKey!: string;
+
+  @IsString()
+  @IsOptional()
+  promoCode?: string;
 
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

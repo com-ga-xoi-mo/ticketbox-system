@@ -169,6 +169,57 @@ enum NotificationAttemptStatus {
   @@map("notification_attempt_status")
 }
 
+enum NotificationResourceType {
+  ORDER
+  TICKET
+  SUPPORT_REQUEST
+  REFUND_REQUEST
+  CONCERT
+
+  @@map("notification_resource_type")
+}
+
+enum SupportRequestStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  CANCELLED
+
+  @@map("support_request_status")
+}
+
+enum SupportRequestCategory {
+  ORDER_HELP
+  TICKET_HELP
+  PAYMENT_HELP
+  REFUND_HELP
+  ACCOUNT_HELP
+  OTHER
+
+  @@map("support_request_category")
+}
+
+enum RefundRequestStatus {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("refund_request_status")
+}
+
+enum RefundRequestReason {
+  CANNOT_ATTEND
+  EVENT_CHANGED
+  DUPLICATE_PURCHASE
+  PAYMENT_ISSUE
+  OTHER
+
+  @@map("refund_request_reason")
+}
+
 enum GuestListBatchStatus {
   PENDING
   PROCESSING
@@ -234,10 +285,13 @@ model User {
   checkinAssignments  CheckinStaffAssignment[] @relation("CheckinStaffAssignments")
   checkinEvents       CheckinEvent[]           @relation("CheckinStaffEvents")
   notifications       Notification[]
+  supportRequests     SupportRequest[]
+  refundRequests      RefundRequest[]
   guestListBatches    GuestListBatch[]         @relation("GuestListUploader")
   idempotencyRecords  IdempotencyRecord[]
   reviewedArtistBios  ArtistBio[]              @relation("ArtistBioReviewer")
   requestedArtistBios ArtistBio[]              @relation("ArtistBioRequester")
+  promotionUsages     PromotionUsage[]
 
   @@map("users")
 }
@@ -413,7 +467,12 @@ model Order {
   concertId            String      @map("concert_id") @db.Uuid
   idempotencyKey       String?     @map("idempotency_key") @db.VarChar(80)
   status               OrderStatus @default(PENDING_PAYMENT)
+  subtotalVnd          Int         @default(0) @map("subtotal_vnd")
+  discountAmountVnd    Int         @default(0) @map("discount_amount_vnd")
+  serviceFeeVnd        Int         @default(0) @map("service_fee_vnd")
   totalAmountVnd       Int         @map("total_amount_vnd")
+  promoCode            String?     @map("promo_code") @db.VarChar(80)
+  promotionId          String?     @map("promotion_id") @db.Uuid
   reservationExpiresAt DateTime?   @map("reservation_expires_at") @db.Timestamptz(6)
   paidAt               DateTime?   @map("paid_at") @db.Timestamptz(6)
   expiredAt            DateTime?   @map("expired_at") @db.Timestamptz(6)
@@ -421,16 +480,20 @@ model Order {
   createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user     User        @relation("CustomerOrders", fields: [userId], references: [id], onDelete: Restrict)
-  concert  Concert     @relation(fields: [concertId], references: [id], onDelete: Restrict)
-  items    OrderItem[]
-  payments Payment[]
-  tickets  Ticket[]
+  user            User             @relation("CustomerOrders", fields: [userId], references: [id], onDelete: Restrict)
+  concert         Concert          @relation(fields: [concertId], references: [id], onDelete: Restrict)
+  items           OrderItem[]
+  payments        Payment[]
+  tickets         Ticket[]
+  supportRequests SupportRequest[]
+  refundRequests  RefundRequest[]
+  promotion       Promotion?       @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  promotionUsages PromotionUsage[]
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, status])
   @@index([concertId, status])
   @@index([status, reservationExpiresAt])
-  @@unique([userId, idempotencyKey])
   @@map("orders")
 }
 
@@ -505,12 +568,14 @@ model Ticket {
   checkedInAt  DateTime?    @map("checked_in_at") @db.Timestamptz(6)
   voidedAt     DateTime?    @map("voided_at") @db.Timestamptz(6)
 
-  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderItem     OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  user          User           @relation("TicketOwner", fields: [userId], references: [id], onDelete: Restrict)
-  concert       Concert        @relation(fields: [concertId], references: [id], onDelete: Restrict)
-  ticketType    TicketType     @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
-  checkinEvents CheckinEvent[]
+  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  user            User             @relation("TicketOwner", fields: [userId], references: [id], onDelete: Restrict)
+  concert         Concert          @relation(fields: [concertId], references: [id], onDelete: Restrict)
+  ticketType      TicketType       @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  checkinEvents   CheckinEvent[]
+  supportRequests SupportRequest[]
+  refundRequests  RefundRequest[]
 
   @@index([userId, status])
   @@index([concertId, status])
@@ -562,28 +627,110 @@ model CheckinEvent {
 }
 
 model Notification {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @map("user_id") @db.Uuid
-  concertId   String?             @map("concert_id") @db.Uuid
-  channel     NotificationChannel
-  type        String              @default("GENERAL") @db.VarChar(80)
-  dedupeKey   String              @unique @map("dedupe_key") @db.VarChar(220)
-  status      NotificationStatus  @default(PENDING)
-  subject     String?             @db.VarChar(240)
-  body        String
-  scheduledAt DateTime?           @map("scheduled_at") @db.Timestamptz(6)
-  sentAt      DateTime?           @map("sent_at") @db.Timestamptz(6)
-  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String                    @id @default(uuid()) @db.Uuid
+  userId       String                    @map("user_id") @db.Uuid
+  concertId    String?                   @map("concert_id") @db.Uuid
+  channel      NotificationChannel
+  type         String                    @default("GENERAL") @db.VarChar(80)
+  dedupeKey    String                    @unique @map("dedupe_key") @db.VarChar(220)
+  status       NotificationStatus        @default(PENDING)
+  subject      String?                   @db.VarChar(240)
+  body         String
+  actionUrl    String?                   @map("action_url") @db.VarChar(500)
+  resourceType NotificationResourceType? @map("resource_type")
+  resourceId   String?                   @map("resource_id") @db.Uuid
+  metadata     Json?
+  readAt       DateTime?                 @map("read_at") @db.Timestamptz(6)
+  scheduledAt  DateTime?                 @map("scheduled_at") @db.Timestamptz(6)
+  sentAt       DateTime?                 @map("sent_at") @db.Timestamptz(6)
+  createdAt    DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   concert  Concert?              @relation(fields: [concertId], references: [id], onDelete: SetNull)
   attempts NotificationAttempt[]
 
   @@index([userId, status])
+  @@index([userId, readAt])
+  @@index([resourceType, resourceId])
   @@index([concertId])
   @@index([status, scheduledAt])
   @@map("notifications")
+}
+
+model SupportRequest {
+  id        String                 @id @default(uuid()) @db.Uuid
+  userId    String                 @map("user_id") @db.Uuid
+  orderId   String?                @map("order_id") @db.Uuid
+  ticketId  String?                @map("ticket_id") @db.Uuid
+  category  SupportRequestCategory
+  status    SupportRequestStatus   @default(OPEN)
+  subject   String                 @db.VarChar(180)
+  message   String
+  createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order         Order?                        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  ticket        Ticket?                       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  statusHistory SupportRequestStatusHistory[]
+
+  @@index([userId, updatedAt])
+  @@index([orderId])
+  @@index([ticketId])
+  @@index([status])
+  @@map("support_requests")
+}
+
+model SupportRequestStatusHistory {
+  id               String               @id @default(uuid()) @db.Uuid
+  supportRequestId String               @map("support_request_id") @db.Uuid
+  status           SupportRequestStatus
+  note             String?
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  supportRequest SupportRequest @relation(fields: [supportRequestId], references: [id], onDelete: Cascade)
+
+  @@index([supportRequestId, createdAt])
+  @@map("support_request_status_history")
+}
+
+model RefundRequest {
+  id                   String              @id @default(uuid()) @db.Uuid
+  userId               String              @map("user_id") @db.Uuid
+  orderId              String              @map("order_id") @db.Uuid
+  ticketId             String?             @map("ticket_id") @db.Uuid
+  status               RefundRequestStatus @default(REQUESTED)
+  reason               RefundRequestReason
+  message              String?
+  requestedAmountVnd   Int?                @map("requested_amount_vnd")
+  requestedTicketCount Int?                @map("requested_ticket_count")
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order         Order                        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticket        Ticket?                      @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  statusHistory RefundRequestStatusHistory[]
+
+  @@index([userId, updatedAt])
+  @@index([orderId, status])
+  @@index([ticketId, status])
+  @@index([status])
+  @@map("refund_requests")
+}
+
+model RefundRequestStatusHistory {
+  id              String              @id @default(uuid()) @db.Uuid
+  refundRequestId String              @map("refund_request_id") @db.Uuid
+  status          RefundRequestStatus
+  note            String?
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  refundRequest RefundRequest @relation(fields: [refundRequestId], references: [id], onDelete: Cascade)
+
+  @@index([refundRequestId, createdAt])
+  @@map("refund_request_status_history")
 }
 
 model NotificationAttempt {
@@ -743,4 +890,51 @@ model IdempotencyRecord {
   @@unique([userId, operation, idempotencyKey])
   @@index([expiresAt])
   @@map("idempotency_records")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+
+  @@map("discount_type")
+}
+
+model Promotion {
+  id                      String       @id @default(uuid()) @db.Uuid
+  code                    String       @unique @db.VarChar(80)
+  discountType            DiscountType @map("discount_type")
+  discountValue           Int          @map("discount_value")
+  maxDiscountVnd          Int?         @map("max_discount_vnd")
+  maxUsageCount           Int?         @map("max_usage_count")
+  maxUsagePerUser         Int?         @map("max_usage_per_user")
+  validFrom               DateTime?    @map("valid_from") @db.Timestamptz(6)
+  validUntil              DateTime?    @map("valid_until") @db.Timestamptz(6)
+  isActive                Boolean      @default(true) @map("is_active")
+  usedCount               Int          @default(0) @map("used_count")
+  applicableEventIds      String[]     @map("applicable_event_ids") @db.Uuid
+  applicableCategoryIds   String[]     @map("applicable_category_ids") @db.Uuid
+  applicableTicketTypeIds String[]     @map("applicable_ticket_type_ids") @db.Uuid
+  createdAt               DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  orders Order[]
+  usages PromotionUsage[]
+
+  @@map("promotions")
+}
+
+model PromotionUsage {
+  id          String   @id @default(uuid()) @db.Uuid
+  promotionId String   @map("promotion_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, orderId])
+  @@index([promotionId, userId])
+  @@map("promotion_usages")
 }

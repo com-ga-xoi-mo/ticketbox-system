@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../platform/database/prisma.service';
 import type {
@@ -10,6 +11,7 @@ import type {
 import {
   NotificationAttemptStatus,
   NotificationChannel,
+  NotificationResourceType,
   NotificationStatus,
   type DeliveryAttemptRecord,
   type NotificationRecord,
@@ -32,11 +34,18 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
         status: input.status,
         subject: input.subject ?? null,
         body: input.body,
+        actionUrl: input.actionUrl ?? null,
+        resourceType: input.resourceType ?? null,
+        resourceId: input.resourceId ?? null,
+        metadata:
+          input.metadata === undefined
+            ? undefined
+            : input.metadata === null
+              ? Prisma.JsonNull
+              : (input.metadata as Prisma.InputJsonValue),
+        readAt: input.readAt ?? null,
         scheduledAt: input.scheduledAt ?? null,
         sentAt: input.sentAt ?? null,
-      },
-      include: {
-        attempts: true,
       },
     });
 
@@ -52,6 +61,68 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
     });
 
     return notification ? this.toNotificationRecord(notification) : null;
+  }
+
+  async listInbox(input: {
+    userId: string;
+    unreadOnly?: boolean;
+    type?: string;
+  }): Promise<NotificationRecord[]> {
+    const notifications = await this.prisma.notification.findMany({
+      where: {
+        userId: input.userId,
+        channel: NotificationChannel.IN_APP,
+        ...(input.unreadOnly ? { readAt: null } : {}),
+        ...(input.type ? { type: input.type } : {}),
+      },
+      include: { attempts: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return notifications.map((notification) => this.toNotificationRecord(notification));
+  }
+
+  countUnread(userId: string): Promise<number> {
+    return this.prisma.notification.count({
+      where: {
+        userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+      },
+    });
+  }
+
+  async markRead(input: {
+    userId: string;
+    notificationId: string;
+    readAt: Date;
+  }): Promise<NotificationRecord | null> {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: input.notificationId,
+        userId: input.userId,
+      },
+      data: {
+        readAt: input.readAt,
+      },
+    });
+
+    if (result.count !== 1) return null;
+    return this.findById(input.notificationId);
+  }
+
+  async markAllRead(input: { userId: string; readAt: Date }): Promise<number> {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        userId: input.userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+      },
+      data: {
+        readAt: input.readAt,
+      },
+    });
+    return result.count;
   }
 
   async recordDeliveryAttempt(input: RecordDeliveryAttemptInput): Promise<DeliveryAttemptRecord> {
@@ -93,9 +164,16 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
     status: string;
     subject: string | null;
     body: string;
+    actionUrl: string | null;
+    resourceType: string | null;
+    resourceId: string | null;
+    metadata: unknown;
+    readAt: Date | null;
     scheduledAt: Date | null;
     sentAt: Date | null;
-    attempts: Array<{ status: string }>;
+    createdAt: Date;
+    updatedAt: Date;
+    attempts?: Array<{ status: string }>;
   }): NotificationRecord {
     return {
       id: notification.id,
@@ -107,9 +185,16 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
       status: notification.status as NotificationStatus,
       subject: notification.subject,
       body: notification.body,
+      actionUrl: notification.actionUrl,
+      resourceType: notification.resourceType as NotificationResourceType | null,
+      resourceId: notification.resourceId,
+      metadata: notification.metadata,
+      readAt: notification.readAt,
       scheduledAt: notification.scheduledAt,
       sentAt: notification.sentAt,
-      failedAttemptCount: notification.attempts.filter(
+      createdAt: notification.createdAt,
+      updatedAt: notification.updatedAt,
+      failedAttemptCount: (notification.attempts ?? []).filter(
         (attempt) => attempt.status === NotificationAttemptStatus.FAILED,
       ).length,
     };

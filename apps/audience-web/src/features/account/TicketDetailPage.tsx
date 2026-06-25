@@ -6,12 +6,20 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { AlertCircle, ChevronLeft, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, MapPin, Calendar, CheckCircle2, Download, LifeBuoy, Mail, RefreshCw } from 'lucide-react';
 import { TicketStatusBadge } from './components/TicketStatusBadge';
+import { useRefundEligibility, parseSupportError } from '../../shared/api/support';
+import { useResendTicket } from '../../shared/api/downloads';
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: ticket, isLoading, isError, refetch } = useTicketDetail(id as string);
+  const refundEligibility = useRefundEligibility({ ticketId: id });
+  const resendTicket = useResendTicket();
+
+  const handleResendTicket = () => {
+    if (id) resendTicket.mutate(id);
+  };
 
   return (
     <AudienceProtectedRoute>
@@ -147,6 +155,54 @@ export function TicketDetailPage() {
                       </p>
                     </div>
                   )}
+
+                  <div className="mt-6 rounded-lg border bg-background p-4 print:hidden">
+                    <h3 className="mb-3 flex items-center gap-2 font-semibold">
+                      <LifeBuoy className="h-4 w-4 text-primary" />
+                      Hỗ trợ vé
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button variant="outline" asChild>
+                        <Link to={`/account/support?ticketId=${ticket.id}`}>
+                          <LifeBuoy className="mr-2 h-4 w-4" />
+                          Liên hệ hỗ trợ
+                        </Link>
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link to={`/account/tickets/${ticket.id}/download`}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Tải vé
+                        </Link>
+                      </Button>
+                      <Button variant="outline" onClick={handleResendTicket} disabled={resendTicket.isPending}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        {resendTicket.isPending ? 'Đang gửi...' : 'Gửi lại email'}
+                      </Button>
+                      <Button variant="outline" asChild disabled={!refundEligibility.data?.eligible}>
+                        <Link to={`/account/support?ticketId=${ticket.id}&tab=refund`}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Yêu cầu hoàn tiền
+                        </Link>
+                      </Button>
+                    </div>
+                    {refundEligibility.data && (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {refundEligibility.data.eligible
+                          ? refundEligibility.data.message
+                          : `Hoàn tiền chưa khả dụng: ${refundEligibility.data.message}`}
+                      </p>
+                    )}
+                    {resendTicket.isSuccess && (
+                      <p className="mt-3 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700">
+                        {resendTicket.data.message}
+                      </p>
+                    )}
+                    {resendTicket.isError && (
+                      <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                        {parseSupportError(resendTicket.error)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

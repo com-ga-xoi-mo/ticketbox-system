@@ -1,20 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AudienceNotificationListResponseSchema,
+  AudienceNotificationMarkAllReadResponseSchema,
+  AudienceNotificationMarkReadResponseSchema,
+  AudienceNotificationUnreadCountResponseSchema,
   BatchSyncEventResultSchema,
   BatchSyncRequestSchema,
   BatchSyncResponseSchema,
+  CreateRefundRequestSchema,
+  CreateSupportRequestSchema,
   LoginRequestSchema,
   LoginResponseSchema,
   OnlineScanRequestSchema,
   OnlineScanResponseSchema,
+  OrderConfirmationResponseSchema,
   PublicConcertAvailabilityResponseSchema,
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
+  RefundEligibilityResponseSchema,
+  RefundRequestResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  SupportRequestResponseSchema,
   TicketCacheDeltaResponseSchema,
   TicketCacheFullResponseSchema,
+  TicketDownloadResponseSchema,
+  TicketResendResponseSchema,
   VipLookupRequestSchema,
   VipLookupResponseSchema,
 } from './index';
@@ -150,6 +162,250 @@ describe('public concert catalog contracts', () => {
         ticketTypes: [{ ticketTypeId, availableQuantity: -1 }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('audience support and refund contracts', () => {
+  const statusHistoryItem = {
+    id: eventId,
+    status: 'OPEN',
+    note: null,
+    createdAt: timestamp,
+  };
+
+  it('accepts support create and response payloads', () => {
+    expect(
+      CreateSupportRequestSchema.parse({
+        orderId: assignmentId,
+        category: 'ORDER_HELP',
+        subject: 'Need order help',
+        message: 'Please help me with this order.',
+      }),
+    ).toMatchObject({ category: 'ORDER_HELP' });
+
+    expect(
+      SupportRequestResponseSchema.safeParse({
+        id: eventId,
+        userId: assignmentId,
+        orderId: assignmentId,
+        ticketId: null,
+        category: 'ORDER_HELP',
+        status: 'OPEN',
+        subject: 'Need order help',
+        message: 'Please help me with this order.',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        statusHistory: [statusHistoryItem],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects malformed support payloads', () => {
+    expect(
+      CreateSupportRequestSchema.safeParse({
+        orderId: assignmentId,
+        ticketId,
+        category: 'ORDER_HELP',
+        subject: 'Need order help',
+        message: 'Please help me with this order.',
+      }).success,
+    ).toBe(false);
+    expect(
+      SupportRequestResponseSchema.safeParse({
+        id: eventId,
+        userId: assignmentId,
+        category: 'UNKNOWN',
+        status: 'OPEN',
+        subject: 'Need order help',
+        message: 'Please help me with this order.',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        statusHistory: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts refund eligibility, create, and response payloads', () => {
+    expect(
+      RefundEligibilityResponseSchema.safeParse({
+        eligible: true,
+        reasonCode: 'ELIGIBLE',
+        message: 'Eligible for refund request.',
+        orderId: assignmentId,
+        ticketId: null,
+        refundableAmountVnd: 450000,
+        refundableTicketCount: 1,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      CreateRefundRequestSchema.parse({
+        ticketId,
+        reason: 'CANNOT_ATTEND',
+        message: 'I cannot attend the event anymore.',
+      }),
+    ).toMatchObject({ ticketId, reason: 'CANNOT_ATTEND' });
+
+    expect(
+      RefundRequestResponseSchema.safeParse({
+        id: eventId,
+        userId: assignmentId,
+        orderId: assignmentId,
+        ticketId,
+        status: 'REQUESTED',
+        reason: 'CANNOT_ATTEND',
+        message: 'I cannot attend the event anymore.',
+        requestedAmountVnd: 450000,
+        requestedTicketCount: 1,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        statusHistory: [{ ...statusHistoryItem, status: 'REQUESTED' }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects invalid refund boundaries', () => {
+    expect(
+      CreateRefundRequestSchema.safeParse({
+        reason: 'CANNOT_ATTEND',
+        message: 'I cannot attend the event anymore.',
+      }).success,
+    ).toBe(false);
+    expect(
+      RefundRequestResponseSchema.safeParse({
+        id: eventId,
+        userId: assignmentId,
+        orderId: assignmentId,
+        status: 'REFUNDED',
+        reason: 'OTHER',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        statusHistory: [],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('audience notification and download contracts', () => {
+  it('accepts notification inbox responses and read mutations', () => {
+    expect(
+      AudienceNotificationListResponseSchema.safeParse([
+        {
+          id: eventId,
+          type: 'REFUND_UPDATE',
+          subject: 'Refund update',
+          body: 'Your refund request is under review.',
+          actionUrl: '/account/support/refunds/1',
+          resourceType: 'REFUND_REQUEST',
+          resourceId: eventId,
+          readAt: null,
+          createdAt: timestamp,
+          sentAt: timestamp,
+        },
+      ]).success,
+    ).toBe(true);
+    expect(
+      AudienceNotificationUnreadCountResponseSchema.safeParse({ unreadCount: 2 }).success,
+    ).toBe(true);
+    expect(
+      AudienceNotificationMarkReadResponseSchema.safeParse({ id: eventId, readAt: timestamp })
+        .success,
+    ).toBe(true);
+    expect(
+      AudienceNotificationMarkAllReadResponseSchema.safeParse({
+        updatedCount: 2,
+        readAt: timestamp,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects invalid notification payloads', () => {
+    expect(
+      AudienceNotificationUnreadCountResponseSchema.safeParse({ unreadCount: -1 }).success,
+    ).toBe(false);
+    expect(
+      AudienceNotificationListResponseSchema.safeParse([
+        {
+          id: eventId,
+          type: 'REFUND_UPDATE',
+          body: 'Body',
+          resourceType: 'BAD',
+          createdAt: timestamp,
+        },
+      ]).success,
+    ).toBe(false);
+  });
+
+  it('accepts resend, ticket download, and order confirmation payloads', () => {
+    expect(
+      TicketResendResponseSchema.safeParse({
+        status: 'QUEUED',
+        notificationId: eventId,
+        cooldownUntil: null,
+        message: 'Ticket email queued.',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      TicketDownloadResponseSchema.safeParse({
+        label: 'Ticket',
+        ticket: {
+          id: ticketId,
+          ticketNumber: 'TB-1',
+          status: 'ISSUED',
+          ticketTypeName: 'GA',
+          ticketTypeCode: 'GA',
+          issuedAt: timestamp,
+          qrPayload: 'ticket-token',
+        },
+        order: {
+          id: assignmentId,
+          orderNumber: 'ORD-1',
+          status: 'PAID',
+        },
+        concert: {
+          id: concertId,
+          title: 'TicketBox Live',
+          venueName: 'TicketBox Arena',
+          startsAt: timestamp,
+        },
+        generatedAt: timestamp,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      OrderConfirmationResponseSchema.safeParse({
+        label: 'Purchase confirmation',
+        order: {
+          id: assignmentId,
+          orderNumber: 'ORD-1',
+          status: 'PAID',
+          totalAmountVnd: 450000,
+          paidAt: timestamp,
+          createdAt: timestamp,
+        },
+        concert: {
+          id: concertId,
+          title: 'TicketBox Live',
+          venueName: 'TicketBox Arena',
+          startsAt: timestamp,
+        },
+        lineItems: [
+          {
+            ticketTypeId,
+            ticketTypeName: 'GA',
+            quantity: 1,
+            unitPriceVnd: 450000,
+            totalPriceVnd: 450000,
+          },
+        ],
+        payment: {
+          provider: 'VNPAY',
+          completedAt: timestamp,
+        },
+        generatedAt: timestamp,
+      }).success,
+    ).toBe(true);
   });
 });
 

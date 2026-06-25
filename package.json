@@ -42,7 +42,8 @@
     "verify:checkin-mobile": "npm run build:api-types && npm --workspace @ticketbox/checkin-mobile run verify",
     "verify:api-boundaries": "node tools/verify-api-types-boundaries.mjs",
     "verify:web": "npm --workspace @ticketbox/web run verify",
-    "verify:audience-web": "npm --workspace @ticketbox/audience-web run verify"
+    "verify:audience-web": "npm --workspace @ticketbox/audience-web run verify",
+    "tunnel": "node tools/start-tunnel.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1072.0",

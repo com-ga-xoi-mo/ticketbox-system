@@ -166,3 +166,84 @@ export type {
   TicketDetailResponse,
   TicketListResponse,
 } from './ordering/ticket.contract';
+
+export {
+  CreateSupportRequestSchema,
+  SupportRequestCategorySchema,
+  SupportRequestListResponseSchema,
+  SupportRequestResponseSchema,
+  SupportRequestStatusHistoryItemSchema,
+  SupportRequestStatusSchema,
+} from './audience/support.contract';
+export type {
+  CreateSupportRequest,
+  SupportRequestCategory,
+  SupportRequestListResponse,
+  SupportRequestResponse,
+  SupportRequestStatus,
+  SupportRequestStatusHistoryItem,
+} from './audience/support.contract';
+
+export {
+  CreateRefundRequestSchema,
+  RefundEligibilityResponseSchema,
+  RefundRequestListResponseSchema,
+  RefundRequestReasonSchema,
+  RefundRequestResponseSchema,
+  RefundRequestStatusHistoryItemSchema,
+  RefundRequestStatusSchema,
+} from './audience/refund.contract';
+export type {
+  CreateRefundRequest,
+  RefundEligibilityResponse,
+  RefundRequestListResponse,
+  RefundRequestReason,
+  RefundRequestResponse,
+  RefundRequestStatus,
+  RefundRequestStatusHistoryItem,
+} from './audience/refund.contract';
+
+export {
+  AudienceNotificationItemSchema,
+  AudienceNotificationListResponseSchema,
+  AudienceNotificationMarkAllReadResponseSchema,
+  AudienceNotificationMarkReadResponseSchema,
+  AudienceNotificationResourceTypeSchema,
+  AudienceNotificationTypeSchema,
+  AudienceNotificationUnreadCountResponseSchema,
+} from './audience/notification.contract';
+export type {
+  AudienceNotificationItem,
+  AudienceNotificationListResponse,
+  AudienceNotificationMarkAllReadResponse,
+  AudienceNotificationMarkReadResponse,
+  AudienceNotificationResourceType,
+  AudienceNotificationType,
+  AudienceNotificationUnreadCountResponse,
+} from './audience/notification.contract';
+
+export {
+  OrderConfirmationResponseSchema,
+  TicketDownloadResponseSchema,
+  TicketResendResponseSchema,
+  TicketResendStatusSchema,
+} from './audience/download.contract';
+export type {
+  OrderConfirmationResponse,
+  TicketDownloadResponse,
+  TicketResendResponse,
+  TicketResendStatus,
+} from './audience/download.contract';
+
+export {
+  DiscountTypeSchema,
+  PromoErrorCodeSchema,
+  ValidatePromoRequestSchema,
+  ValidatePromoResponseSchema,
+} from './promotion/promotion.contract';
+export type {
+  DiscountType,
+  PromoErrorCode,
+  ValidatePromoRequest,
+  ValidatePromoResponse,
+} from './promotion/promotion.contract';
