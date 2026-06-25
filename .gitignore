@@ -30,6 +30,7 @@ build/
 coverage/
 .nyc_output/
 .npm/
+data/
 
 # Environment Variables
 .env
@@ -69,3 +70,17 @@ docker-compose.override.yml
 
 .agent/
 .codex/
+.agents/skills
+.cursor/
+.expo/
+.npmrc
+
+# Ignore agent and extra files
+CLAUDE.md
+docs/manual-tests/
+DECISIONS.md
+press-kit.pdf
+
+skills-lock.json
+.opencode/
+opencode.json

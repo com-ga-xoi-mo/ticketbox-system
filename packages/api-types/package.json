@@ -1,0 +1,26 @@
+{
+  "name": "@ticketbox/api-types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-independent public HTTP contracts for TicketBox clients and adapters.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --root ../.. run packages/api-types/src/contracts.spec.ts --config vitest.config.mts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

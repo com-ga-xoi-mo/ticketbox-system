@@ -14,25 +14,566 @@ The system SHALL validate QR tickets online and record at most one accepted chec
 - **WHEN** check-in staff scans a ticket that was already accepted
 - **THEN** the system SHALL reject the scan as duplicate
 
+### Requirement: Mobile offline scan queue persistence
+
+The mobile check-in app SHALL persist offline scan events in a local SQLite database that survives app restart, using a port/adapter pattern for testability.
+
+#### Scenario: Offline scan is enqueued with safe account-owned context
+
+- **WHEN** the scan workflow is offline and staff scans a QR ticket with a selected assignment
+- **THEN** the app SHALL hash the decoded QR payload as lowercase SHA-256 hexadecimal and store the scan event with `localId`, `staffUserId`, `deviceId`, `scannedAt` ISO timestamp, `qrPayloadHash`, `assignmentId`, `concertId`, optional `gate`, and sync status set to `pending`, without persisting or logging the raw QR payload
+
+#### Scenario: Offline queue survives app restart
+
+- **WHEN** the app is closed and reopened before network returns
+- **THEN** all previously enqueued pending scan events SHALL remain available in the offline queue
+
+#### Scenario: Enqueue returns a queued confirmation
+
+- **WHEN** a scan event is successfully enqueued offline
+- **THEN** the scan workflow SHALL return a `queued` result with the `localId` and a human-readable message
+
+#### Scenario: Local event identifier survives process lifecycle safely
+
+- **WHEN** the app creates a new queued scan before or after app restart, including scans created in the same millisecond
+- **THEN** it SHALL generate a collision-resistant UUID `localId` independent of device clock and in-memory counters and SHALL persist that value unchanged for server idempotency
+
+#### Scenario: Queue adapter implements an account-scoped OfflineScanQueue port
+
+- **WHEN** the offline scan queue is compiled or tested
+- **THEN** the SQLite adapter SHALL implement account-scoped pending reads, counts, and clearing so the current staff user cannot read, sync, or clear another staff user's events
+
+#### Scenario: Logout preserves pending scans
+
+- **WHEN** a staff user logs out with pending offline scans
+- **THEN** the app SHALL retain those scans and SHALL make them eligible for sync only after the same `staffUserId` authenticates again
+
 ### Requirement: Offline scan queue
+
 The check-in app SHALL allow staff to scan tickets without network connectivity and persist scan events locally until sync.
 
 #### Scenario: Offline scan is stored locally
+
 - **WHEN** the check-in app is offline and staff scans a QR ticket
-- **THEN** the app SHALL store the scan event with device ID, timestamp, and QR payload hash
+- **THEN** the app SHALL store the scan event in a local SQLite database with staff account ID, device ID, timestamp, SHA-256 QR payload hash, assignment context, and a client-generated local identifier, without storing the raw QR payload
 
 #### Scenario: Offline queue survives refresh
+
 - **WHEN** the check-in app is refreshed before network returns
-- **THEN** unsynced scan events SHALL remain available for later sync
+- **THEN** unsynced scan events SHALL remain available in the SQLite queue for later sync
+
+### Requirement: Network-aware scan workflow mode
+
+The scan workflow SHALL detect network connectivity and route scans to the API when online or to the local offline queue when offline.
+
+#### Scenario: Online mode submits to API
+
+- **WHEN** the device has network connectivity and staff scans a QR ticket
+- **THEN** the scan workflow SHALL submit the scan to the check-in API and return the API result
+
+#### Scenario: Retryable online failure falls back to the queue
+
+- **WHEN** an online scan fails because of a network error, timeout, HTTP 5xx response, or unparseable successful response with unknown commit status
+- **THEN** the scan workflow SHALL enqueue the scan once for later sync and return `queued` only after local persistence succeeds
+
+#### Scenario: Authorization failure is not queued
+
+- **WHEN** an online scan returns HTTP `401` or `403`
+- **THEN** the app SHALL expose the authentication or authorization failure and SHALL NOT convert it into a queued scan
+
+#### Scenario: Offline mode enqueues locally
+
+- **WHEN** the device has no network connectivity and staff scans a QR ticket
+- **THEN** the scan workflow SHALL enqueue the scan in the offline queue and return a `queued` result
+
+#### Scenario: Mode indicator reflects connectivity
+
+- **WHEN** network connectivity changes
+- **THEN** the scan workflow SHALL expose a reactive `mode` property set to `online` or `offline`
+
+#### Scenario: Network monitor uses port abstraction
+
+- **WHEN** the scan workflow or sync service detects connectivity
+- **THEN** it SHALL consume a `NetworkMonitor` port interface, not a concrete platform API
+
+### Requirement: Mobile batch sync service
+
+The mobile app SHALL provide a sync service that sends pending offline scan events to the server in a batch, processes per-event results, and retries on failure with exponential backoff.
+
+#### Scenario: Sync reads a bounded current-user chunk
+
+- **WHEN** a sync cycle starts
+- **THEN** the sync service SHALL read at most 100 `pending` events owned by the authenticated `staffUserId`, submit that chunk, and continue sequentially until no eligible pending events remain
+
+#### Scenario: Sync sends batch to server
+
+- **WHEN** pending events are available
+- **THEN** the sync service SHALL send them as a `BatchSyncRequest` to `POST /checkin/sync` via the `CheckinApiClient`
+
+#### Scenario: Sync processes per-event results
+
+- **WHEN** the server returns a `BatchSyncResponse`
+- **THEN** the sync service SHALL mark each event as `synced` or `failed` based on its individual result status
+
+#### Scenario: Accepted and duplicate events are marked synced
+
+- **WHEN** the server returns `accepted` or `duplicate` for an event
+- **THEN** the sync service SHALL mark that event as `synced` in the offline queue
+
+#### Scenario: Invalid, conflict, and unassigned events are marked failed
+
+- **WHEN** the server returns `invalid`, `conflict`, or `unassigned` for an event
+- **THEN** the sync service SHALL mark that event as terminal `failed` with the server-provided reason and SHALL NOT include it in automatic retry batches
+
+#### Scenario: Network failure during sync retries with exponential backoff
+
+- **WHEN** the batch sync POST fails due to a network error
+- **THEN** the sync service SHALL retry with exponential backoff (base 1s, max 30s, with jitter) and SHALL NOT mark any events as synced or failed
+
+#### Scenario: Server failure during sync remains retryable
+
+- **WHEN** the batch sync POST returns HTTP 5xx
+- **THEN** the sync service SHALL preserve unconfirmed events as `pending` and apply the same bounded backoff policy
+
+#### Scenario: Expired authentication pauses sync
+
+- **WHEN** the batch sync POST returns HTTP `401`
+- **THEN** the sync service SHALL stop automatic retries, preserve pending events, expose `authentication-required`, and resume only after authentication succeeds
+
+#### Scenario: Forbidden sync is not retried
+
+- **WHEN** the batch sync POST returns HTTP `403`
+- **THEN** the sync service SHALL stop retries, preserve pending events, and expose a non-retryable authorization error
+
+#### Scenario: Sync execution is single-flight
+
+- **WHEN** automatic and manual sync triggers occur while a sync cycle is already running
+- **THEN** the sync service SHALL join or reuse the active cycle and SHALL NOT submit overlapping batches
+
+#### Scenario: Internal sync failure stops retrying
+
+- **WHEN** queue persistence, local database access, response correlation, or another internal invariant fails during sync
+- **THEN** the sync service SHALL enter local `error`, stop automatic retry for that run, preserve unconfirmed pending rows, and expose a retry action only after the underlying problem is resolved
+
+#### Scenario: Only explicit retryable failures use backoff
+
+- **WHEN** sync classifies a failure for retry
+- **THEN** that failure SHALL be a transport/timeout error, HTTP 5xx response, or unparseable successful response with unknown commit status rather than an arbitrary exception
+
+#### Scenario: Auto-sync on connectivity restore
+
+- **WHEN** network connectivity is restored after being offline
+- **THEN** the sync service SHALL automatically start a sync cycle if there are pending events
+
+#### Scenario: Manual sync trigger
+
+- **WHEN** staff triggers sync manually from the UI
+- **THEN** the sync service SHALL start a sync cycle regardless of the auto-sync schedule
+
+### Requirement: Sync status UI
+
+The mobile app SHALL display sync status information including pending count, last sync timestamp, in-progress indicator, and per-event results.
+
+#### Scenario: Pending queue badge shows unsynced count
+
+- **WHEN** there are unsynced events in the offline queue
+- **THEN** the app SHALL display a badge or counter showing the number of pending events
+
+#### Scenario: Sync progress is visible
+
+- **WHEN** a sync cycle is in progress
+- **THEN** the app SHALL show a sync-in-progress indicator
+
+#### Scenario: Last sync results are displayed
+
+- **WHEN** a sync cycle completes
+- **THEN** the app SHALL show the timestamp of the last sync attempt and counts per result status (accepted, duplicate, invalid, conflict, unassigned)
+
+#### Scenario: Failed events show reasons
+
+- **WHEN** events have failed status after sync
+- **THEN** the app SHALL display each failed event with its failure reason
+
+#### Scenario: Retry action for failed sync
+
+- **WHEN** a sync cycle fails due to network error
+- **THEN** the app SHALL provide a retry action to re-attempt sync
+
+#### Scenario: Staff can clear synced events
+
+- **WHEN** staff chooses to clear synced events
+- **THEN** the app SHALL remove all events with `synced` status from the offline queue
+
+### Requirement: Batch sync API contract
+
+The `@ticketbox/api-types` package SHALL provide Zod schemas for `BatchSyncRequest` and `BatchSyncResponse` following the same validation strategy as the online scan contract.
+
+#### Scenario: BatchSyncRequest validates a bounded array of offline events
+
+- **WHEN** a batch sync request is validated by the shared schema
+- **THEN** the schema SHALL allow at most 100 objects and require each object to contain `localId` (trimmed, 1-160), `assignmentId` (UUID), `concertId` (UUID), optional `gate` (trimmed, non-empty, max 120), `qrPayloadHash` (lowercase 64-character SHA-256 hexadecimal), `scannedAt` (ISO datetime with offset), and `deviceId` (trimmed, 1-160)
+
+#### Scenario: Request local identifiers are unique
+
+- **WHEN** a batch request repeats a `localId` within the same array
+- **THEN** `BatchSyncRequestSchema` SHALL reject the complete request before backend processing
+
+#### Scenario: BatchSyncResponse validates per-event results
+
+- **WHEN** a batch sync response is validated by the shared schema
+- **THEN** the schema SHALL require an array of objects, each with `localId` (string), `status` discriminated as `accepted`, `duplicate`, `invalid`, `conflict`, or `unassigned`, and `message` (string)
+
+#### Scenario: Accepted sync result includes check-in metadata
+
+- **WHEN** a sync event result has `status` set to `accepted`
+- **THEN** the result SHALL include `ticketId` (UUID) and `checkedInAt` (ISO datetime)
+
+#### Scenario: Conflict sync result includes conflict reason
+
+- **WHEN** a sync event result has `status` set to `conflict`
+- **THEN** the result SHALL include `conflictReason` (string) describing why the ticket was already accepted
+
+#### Scenario: Invalid sync result includes reason code
+
+- **WHEN** a sync event result has `status` set to `invalid`
+- **THEN** the result SHALL include `reasonCode` set to `INVALID_TICKET`, `WRONG_CONCERT`, or `TICKET_NOT_ISSUED`
+
+#### Scenario: Unassigned sync result includes reason code
+
+- **WHEN** a sync event result has `status` set to `unassigned`
+- **THEN** the result SHALL include `reasonCode` set to `REVOKED_ASSIGNMENT` or `ASSIGNMENT_MISMATCH`
+
+#### Scenario: Empty request array is valid
+
+- **WHEN** a batch sync request contains an empty array
+- **THEN** the schema SHALL accept it and the server SHALL return an empty result array
+
+#### Scenario: Oversized batch is rejected
+
+- **WHEN** a batch sync request contains more than 100 events
+- **THEN** the shared schema and backend HTTP adapter SHALL reject it with HTTP `400` before invoking the use case
+
+### Requirement: Backend batch sync endpoint
+
+The backend SHALL expose `POST /checkin/sync` for authenticated `CHECKIN_STAFF` users to submit offline scan events and receive per-event results.
+
+#### Scenario: Authenticated staff submits batch sync
+
+- **WHEN** an authenticated `CHECKIN_STAFF` user sends a valid `BatchSyncRequest` to `POST /checkin/sync`
+- **THEN** the system SHALL process each event independently and return a `BatchSyncResponse` with one result per submitted event
+
+#### Scenario: Missing or invalid token is rejected
+
+- **WHEN** a request to `POST /checkin/sync` has no valid bearer token
+- **THEN** the system SHALL reject the request with HTTP `401`
+
+#### Scenario: Non-staff user is rejected
+
+- **WHEN** an authenticated user without the `CHECKIN_STAFF` role calls `POST /checkin/sync`
+- **THEN** the system SHALL reject the request with HTTP `403`
+
+#### Scenario: One invalid event does not block others
+
+- **WHEN** a batch contains both valid and invalid events
+- **THEN** the system SHALL process each event independently and return individual results for every event
+
+#### Scenario: Unexpected infrastructure failure is not a business result
+
+- **WHEN** processing encounters an unexpected database or infrastructure failure
+- **THEN** the endpoint SHALL return an HTTP 5xx failure instead of mapping it to `invalid`, `conflict`, or `unassigned`, and the client SHALL leave every event without a confirmed response pending
+
+### Requirement: Backend batch sync validation
+
+The backend batch sync use case SHALL apply the same validation pipeline as the online scan for each offline event: assignment authorization, QR hash lookup, ticket lookup, concert match, and duplicate detection.
+
+#### Scenario: Valid offline event is accepted
+
+- **WHEN** an offline event has a valid unused ticket for the correct concert and the staff has an active assignment
+- **THEN** the system SHALL atomically claim the still-issued ticket, record one accepted check-in with `source` set to `OFFLINE_SYNC`, set `offlineEventId` to the request `localId`, and return `accepted`
+
+#### Scenario: Unassigned staff event is rejected per-event
+
+- **WHEN** an offline event is submitted by staff without an active assignment for that concert
+- **THEN** the system SHALL return `unassigned` for that event with the appropriate reason code
+
+#### Scenario: Invalid QR is rejected per-event
+
+- **WHEN** an offline event contains a QR payload that does not resolve to an issued ticket
+- **THEN** the system SHALL return `invalid` with `reasonCode` set to `INVALID_TICKET`
+
+#### Scenario: Wrong concert is rejected per-event
+
+- **WHEN** an offline event contains a ticket that belongs to a different concert
+- **THEN** the system SHALL return `invalid` with `reasonCode` set to `WRONG_CONCERT`
+
+#### Scenario: Offline event preserves device timestamps
+
+- **WHEN** an offline event is accepted
+- **THEN** the system SHALL record `occurredAt` from the device-reported `scannedAt` and set `syncedAt` to the server processing timestamp
+
+#### Scenario: Concurrent acceptance has one winner
+
+- **WHEN** online and/or offline requests concurrently submit the same unused ticket
+- **THEN** one transactional conditional ticket claim SHALL accept at most one request, all other requests SHALL return duplicate or conflict, and the system SHALL contain at most one accepted event for the ticket
+
+#### Scenario: Device time does not choose the winner
+
+- **WHEN** competing offline events have different device-reported `scannedAt` values
+- **THEN** the first successful server-side conditional ticket claim SHALL win and `scannedAt` SHALL remain audit metadata only
+
+### Requirement: Offline sync conflict detection
+
+The backend SHALL distinguish between duplicate re-sync from the same device and conflict from a different device for tickets already accepted.
+
+#### Scenario: Same device new event returns duplicate
+
+- **WHEN** a new offline event with a different `localId` arrives for a ticket already accepted by the same `deviceId`
+- **THEN** the system SHALL return `duplicate` for that event
+
+#### Scenario: Different device conflict returns conflict
+
+- **WHEN** an offline event arrives for a ticket already accepted by a different device (online or offline)
+- **THEN** the system SHALL return `conflict` with `conflictReason` indicating that another device accepted the ticket
+
+#### Scenario: Exact event replay returns the stored outcome
+
+- **WHEN** the same authenticated staff user submits the same offline event (`deviceId` + `offlineEventId`) more than once
+- **THEN** the system SHALL return the deterministic previously stored outcome and SHALL NOT create a second `checkin_events` row
+
+#### Scenario: Another staff user cannot replay an owned event
+
+- **WHEN** a different authenticated staff user submits an existing `deviceId` + `offlineEventId` pair
+- **THEN** the system SHALL NOT disclose the stored outcome, SHALL NOT transfer ownership, and SHALL NOT create a second `checkin_events` row
+
+#### Scenario: Concurrent or replayed non-accepted outcome is deterministic and not a 5xx
+
+- **WHEN** an offline event with an existing `(deviceId, offlineEventId)` non-accepted outcome is processed again concurrently or after its idempotency lookup, such that the outcome write encounters the unique constraint
+- **THEN** the system SHALL resolve the duplicate write to the same deterministic stored business result, SHALL NOT create a second `checkin_events` row, and SHALL NOT return an HTTP 5xx for the known duplicate; only genuine infrastructure failures SHALL surface as HTTP 5xx
 
 ### Requirement: Batch sync and conflict handling
+
 The system SHALL sync offline scan events in batches and return a per-event result.
 
 #### Scenario: Offline scan sync succeeds
-- **WHEN** network connectivity returns and the app syncs a locally stored valid scan
-- **THEN** the server SHALL accept the event if the ticket has not already been checked in
+
+- **WHEN** network connectivity returns and the app syncs a locally stored valid scan via `POST /checkin/sync`
+- **THEN** the server SHALL accept the event if the ticket has not already been checked in, record it with `source` set to `OFFLINE_SYNC`, and return `accepted` with check-in metadata
 
 #### Scenario: Offline duplicate conflict is reported
-- **WHEN** an offline scan syncs after the same ticket was already accepted elsewhere
-- **THEN** the server SHALL reject the event with duplicate or conflict status
 
+- **WHEN** an offline scan syncs after the same ticket was already accepted elsewhere
+- **THEN** the server SHALL reject the event with `duplicate` status (same device) or `conflict` status (different device) including a `conflictReason`
+
+### Requirement: Mode-aware sync control visibility
+
+The mobile sync status UI SHALL present the manual sync and queue-maintenance controls
+(manual sync trigger, clear synced events, clear terminal results) only when they are
+actionable — that is, when the device is offline or there are pending or failed offline
+events — and SHALL hide them while the device is online with an empty queue. Hiding the
+controls SHALL NOT remove the underlying capability; the same actions remain available
+whenever the conditions to show them are met.
+
+#### Scenario: Sync controls are hidden when online with an empty queue
+
+- **WHEN** the device is online and there are no pending or failed offline events
+- **THEN** the sync status UI SHALL hide the manual sync, clear-synced, and
+  clear-terminal controls
+
+#### Scenario: Sync controls appear when offline
+
+- **WHEN** the device is offline
+- **THEN** the sync status UI SHALL show the manual sync and queue-maintenance controls
+
+#### Scenario: Sync controls appear when there is queued or failed work
+
+- **WHEN** there are pending offline events awaiting sync or failed events with reasons,
+  regardless of connectivity
+- **THEN** the sync status UI SHALL show the relevant controls so the staff member can
+  trigger sync or clear results
+
+#### Scenario: Hidden controls preserve the sync capability
+
+- **WHEN** the controls are hidden because the device is online with an empty queue
+- **THEN** automatic sync on connectivity change and on the existing schedule SHALL
+  continue unaffected, and the controls SHALL reappear when they become actionable
+
+### Requirement: Assigned staff required for check-in acceptance
+
+The system SHALL require an authenticated check-in staff user with an active assignment for the ticket's concert before accepting online check-in or offline sync events.
+
+#### Scenario: Assigned staff online scan can be accepted
+
+- **WHEN** assigned check-in staff scans a valid unused ticket for their assigned concert
+- **THEN** the system SHALL continue ticket validation, with final acceptance governed by online check-in validation rules
+
+#### Scenario: Unassigned staff online scan is rejected
+
+- **WHEN** check-in staff scans a ticket for a concert where they have no active assignment
+- **THEN** the system SHALL reject the scan as unauthorized or `UNASSIGNED_STAFF`
+
+#### Scenario: Assigned staff offline sync can be accepted
+
+- **WHEN** assigned check-in staff syncs an offline event for their assigned concert
+- **THEN** the system SHALL continue offline conflict validation, with final acceptance governed by offline sync conflict rules
+
+#### Scenario: Unassigned staff offline sync is rejected per event
+
+- **WHEN** check-in staff syncs an offline event for a concert where they have no active assignment
+- **THEN** the system SHALL return a per-event rejected result with `unassigned` status without accepting the check-in
+
+### Requirement: Online check-in API contract
+The system SHALL expose an authenticated `POST /checkin/scan` backend endpoint whose request and successful response follow the canonical shared online scan schemas.
+
+#### Scenario: Staff submits online scan request
+- **WHEN** an authenticated `CHECKIN_STAFF` user submits `assignmentId`, `concertId`, optional `gate`, `qrPayload`, `scannedAt`, and required `deviceId` to `POST /checkin/scan`
+- **THEN** the system SHALL validate and process the request and return a structured business result containing `status`, `message`, and ticket/check-in metadata when available
+
+#### Scenario: Missing or invalid device identifier is rejected before processing
+- **WHEN** an online scan request omits `deviceId`, provides a blank value after trimming, or provides a value longer than 160 characters
+- **THEN** the backend SHALL reject the request with HTTP `400` before invoking check-in processing and SHALL NOT create or modify a ticket or check-in event
+
+#### Scenario: Device identifier represents an app installation
+- **WHEN** the mobile app constructs an online scan request
+- **THEN** `deviceId` SHALL be a stable non-empty identifier for that app installation and SHALL NOT depend on a hardware serial number or replace JWT staff identity
+
+#### Scenario: Missing or invalid token is rejected
+- **WHEN** a request to `POST /checkin/scan` has no valid bearer token
+- **THEN** the system SHALL reject the request with HTTP `401` and SHALL NOT return an online scan business result or accept a check-in
+
+#### Scenario: Non-staff user is rejected
+- **WHEN** an authenticated user without the `CHECKIN_STAFF` role calls `POST /checkin/scan`
+- **THEN** the system SHALL reject the request with HTTP `403` and SHALL NOT return an online scan business result or accept a check-in
+
+### Requirement: Online QR ticket validation
+The system SHALL validate the scanned QR payload against issued tickets before accepting an online check-in.
+
+#### Scenario: QR payload matches issued ticket for requested concert
+- **WHEN** assigned check-in staff scans a QR payload that resolves to an issued ticket for the requested concert
+- **THEN** the system SHALL continue to duplicate-prevention checks before accepting the scan
+
+#### Scenario: QR payload does not match a ticket
+- **WHEN** assigned check-in staff scans a QR payload that does not resolve to an issued ticket
+- **THEN** the system SHALL return `invalid` with `reasonCode` set to `INVALID_TICKET` and SHALL NOT mark any ticket as checked in
+
+#### Scenario: QR payload belongs to another concert
+- **WHEN** assigned check-in staff scans a valid ticket QR payload whose ticket belongs to a different concert than the requested `concertId`
+- **THEN** the system SHALL return `invalid` with `reasonCode` set to `WRONG_CONCERT` and SHALL NOT mark the ticket as checked in
+
+### Requirement: Online scan assignment authorization
+The system SHALL require active check-in staff assignment for the requested assignment, concert, and gate before accepting an online scan.
+
+#### Scenario: Assigned staff can scan for assigned concert
+- **WHEN** authenticated `CHECKIN_STAFF` submits an `assignmentId` that belongs to them and matches the requested concert and gate
+- **THEN** the system SHALL continue QR ticket validation and duplicate-prevention checks
+
+#### Scenario: Unassigned staff cannot accept scan
+- **WHEN** authenticated `CHECKIN_STAFF` has no active assignment for the requested concert or gate
+- **THEN** the system SHALL return `unassigned` and SHALL NOT accept the check-in
+
+#### Scenario: Revoked assignment is rejected
+- **WHEN** authenticated `CHECKIN_STAFF` only has a revoked assignment for the requested concert or gate
+- **THEN** the system SHALL return `unassigned` with `reasonCode` set to `REVOKED_ASSIGNMENT` and SHALL NOT accept the check-in
+
+#### Scenario: Assignment context does not match request
+- **WHEN** authenticated `CHECKIN_STAFF` submits an `assignmentId` that does not belong to them or does not match the requested concert or gate
+- **THEN** the system SHALL return `unassigned` with `reasonCode` set to `ASSIGNMENT_MISMATCH` and SHALL NOT accept the check-in
+
+### Requirement: Online accepted check-in persistence
+The system SHALL record an accepted online check-in exactly once per ticket.
+
+#### Scenario: Valid unused ticket is accepted
+- **WHEN** assigned check-in staff scans a valid unused issued ticket for the requested concert
+- **THEN** the system SHALL create an accepted online check-in event, mark the ticket as checked in, and return `accepted`
+
+#### Scenario: Already checked-in ticket is duplicate
+- **WHEN** assigned check-in staff scans a ticket that already has an accepted check-in
+- **THEN** the system SHALL return `duplicate` and SHALL NOT create another accepted check-in event for that ticket
+
+#### Scenario: Concurrent scans accept ticket once
+- **WHEN** two online scan requests concurrently submit the same valid unused ticket
+- **THEN** the system SHALL accept at most one request and SHALL return `duplicate` for the other request without creating a second accepted check-in event
+
+### Requirement: Online scan result model
+The system SHALL return stable mobile-facing online scan business result values independent of internal database enum names, backend domain types, HTTP authorization failures, and mobile transport or UI state.
+
+#### Scenario: Accepted result includes check-in metadata
+- **WHEN** a scan is accepted
+- **THEN** the response SHALL include `status` set to `accepted`, `message`, the checked-in `ticketId`, and `checkedInAt` as an ISO-8601 wire-format string
+
+#### Scenario: Incomplete accepted result is contract-invalid
+- **WHEN** an online scan payload has `status` set to `accepted` but omits `ticketId` or `checkedInAt`
+- **THEN** the payload SHALL fail the shared online scan response schema instead of being treated as a valid accepted result
+
+#### Scenario: Accepted persistence result supplies response invariants
+- **WHEN** the accepted check-in transaction completes successfully
+- **THEN** the backend persistence/application result SHALL already contain the accepted `ticketId` and `checkedInAt` before the HTTP response mapper runs
+
+#### Scenario: Scan response mapping does not add a post-commit failure stage
+- **WHEN** the backend maps a completed online scan result to the shared wire response
+- **THEN** it SHALL use a deterministic side-effect-free mapper whose variants are validated by contract tests, and SHALL NOT add runtime response-schema parsing after the accepted check-in transaction has committed
+
+#### Scenario: Duplicate result remains distinct
+- **WHEN** an authenticated assigned-staff scan is rejected because the ticket was already accepted
+- **THEN** the successful HTTP response SHALL include `status` set to `duplicate` and a human-readable `message`, with ticket/check-in metadata included only when available
+
+#### Scenario: Invalid result includes an invalid-ticket reason
+- **WHEN** a scan is rejected because the QR is invalid, belongs to another concert, or resolves to a ticket that cannot be issued
+- **THEN** the successful HTTP response SHALL include `status` set to `invalid`, a human-readable `message`, and `reasonCode` set to `INVALID_TICKET`, `WRONG_CONCERT`, or `TICKET_NOT_ISSUED`
+
+#### Scenario: Unassigned result includes an assignment reason
+- **WHEN** a scan is rejected because the selected assignment is revoked, missing, or does not match the staff, concert, or gate
+- **THEN** the successful HTTP response SHALL include `status` set to `unassigned`, a human-readable `message`, and `reasonCode` set to `REVOKED_ASSIGNMENT` or `ASSIGNMENT_MISMATCH`
+
+#### Scenario: Authorization error maps outside business result
+- **WHEN** the backend rejects a scan request with HTTP `401` or `403`
+- **THEN** the mobile client SHALL classify the failure by HTTP status before success-schema parsing and MAY map it to local `unauthorized`; the authorization error body SHALL remain outside `@ticketbox/api-types`, and `unauthorized` SHALL NOT become an online scan business status
+
+#### Scenario: Transport and UI states are not API results
+- **WHEN** the mobile client experiences network failure, service unavailability, loading, submitting, debounce, or camera state
+- **THEN** those states SHALL remain mobile-local and SHALL NOT appear in the shared online scan response schema
+
+#### Scenario: Backend and mobile validate one response contract
+- **WHEN** backend and mobile compatibility tests exercise `POST /checkin/scan`
+- **THEN** the backend response mapper and mobile response parser SHALL both conform to the same `@ticketbox/api-types` schema
+
+### Requirement: Mobile ticket cache freshness
+
+The mobile app SHALL keep the local ticket cache as current as possible while online by
+refreshing it incrementally on a recurring schedule and on connectivity restore, using
+the delta endpoint with the last successful sync timestamp, so that tickets issued or
+voided before the device loses connectivity are reflected in the local cache.
+
+#### Scenario: First cache load for an assignment is a full download
+
+- **WHEN** the staff selects an assignment and no successful cache sync timestamp exists yet for it
+- **THEN** the app SHALL request the full ticket cache and store it locally, recording the server-provided sync timestamp
+
+#### Scenario: Subsequent refresh uses an incremental delta
+
+- **WHEN** the app refreshes a cache that already has a recorded last-sync timestamp
+- **THEN** the app SHALL request the cache with `since` set to that timestamp and apply the returned upserted and voided entries to the local cache without re-downloading the full set
+
+#### Scenario: Cache refreshes on a recurring schedule while online
+
+- **WHEN** the device is online, authenticated, and on the scanning context
+- **THEN** the app SHALL re-refresh the ticket cache on a recurring interval so the local snapshot tracks server changes up to the moment connectivity is lost
+
+#### Scenario: Cache refreshes immediately on reconnect
+
+- **WHEN** connectivity is restored after being offline
+- **THEN** the app SHALL trigger a cache refresh so newly issued or voided tickets are reflected as soon as the network returns
+
+#### Scenario: Refresh is single-flight
+
+- **WHEN** a recurring or reconnect refresh is requested while a cache download is already in progress
+- **THEN** the app SHALL NOT start an overlapping download and SHALL reuse or skip in favor of the active refresh
+
+#### Scenario: Failed refresh preserves the existing cache
+
+- **WHEN** a cache refresh request fails (network or server error)
+- **THEN** the app SHALL keep the previously cached entries and SHALL NOT clear or corrupt the local cache, retrying on the next scheduled refresh or reconnect
+
+#### Scenario: Offline evaluation is unchanged
+
+- **WHEN** the device is offline and evaluates a scan against the local cache
+- **THEN** the cache freshness behavior SHALL NOT change how an offline scan is evaluated; it only affects how current the cached data is
