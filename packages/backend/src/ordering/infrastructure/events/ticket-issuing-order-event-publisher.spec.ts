@@ -10,6 +10,7 @@ describe('TicketIssuingOrderEventPublisher', () => {
     const publisher = new TicketIssuingOrderEventPublisher(
       issueTicketsForPaidOrderUseCase as never,
       orderPaidNotifier as never,
+      { rollbackUsage: vi.fn() } as never,
     );
     const paidAt = new Date('2026-06-16T10:30:00.000Z');
 
@@ -37,6 +38,7 @@ describe('TicketIssuingOrderEventPublisher', () => {
     const publisher = new TicketIssuingOrderEventPublisher(
       issueTicketsForPaidOrderUseCase as never,
       orderPaidNotifier as never,
+      { rollbackUsage: vi.fn() } as never,
     );
 
     await publisher.publishAll([
@@ -62,6 +64,7 @@ describe('TicketIssuingOrderEventPublisher', () => {
     const publisher = new TicketIssuingOrderEventPublisher(
       issueTicketsForPaidOrderUseCase as never,
       orderPaidNotifier as never,
+      { rollbackUsage: vi.fn() } as never,
     );
     const paidAt = new Date('2026-06-16T10:30:00.000Z');
 

@@ -101,6 +101,7 @@ export class Order {
         this.recordDomainEvent({
           type: 'OrderPaid',
           orderId: this.id,
+          promotionId: this.promotionId,
           previousStatus,
           newStatus: nextStatus,
           paidAt: occurredAt,
@@ -112,6 +113,7 @@ export class Order {
         this.recordDomainEvent({
           type: 'OrderExpired',
           orderId: this.id,
+          promotionId: this.promotionId,
           previousStatus,
           newStatus: nextStatus,
           expiredAt: occurredAt,
@@ -122,6 +124,7 @@ export class Order {
         this.recordDomainEvent({
           type: 'OrderFailed',
           orderId: this.id,
+          promotionId: this.promotionId,
           previousStatus,
           newStatus: nextStatus,
           failedAt: occurredAt,
@@ -133,6 +136,7 @@ export class Order {
         this.recordDomainEvent({
           type: 'OrderCancelled',
           orderId: this.id,
+          promotionId: this.promotionId,
           previousStatus,
           newStatus: nextStatus,
           cancelledAt: occurredAt,
@@ -143,6 +147,7 @@ export class Order {
         this.recordDomainEvent({
           type: 'OrderRefunded',
           orderId: this.id,
+          promotionId: this.promotionId,
           previousStatus,
           newStatus: nextStatus,
           refundedAt: occurredAt,

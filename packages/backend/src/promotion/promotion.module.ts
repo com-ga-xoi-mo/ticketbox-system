@@ -3,6 +3,7 @@ import { DatabaseModule } from '../platform/database/database.module';
 import { PrismaPromotionRepository } from './infrastructure/database/prisma-promotion.repository';
 import { ValidatePromotionUseCase } from './application/use-cases/validate-promotion.use-case';
 import { PromotionValidationService } from './promotion-validation.service';
+import { PromotionUsageRollbackService } from './promotion-usage-rollback.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -20,7 +21,11 @@ import { PromotionValidationService } from './promotion-validation.service';
       provide: 'PromotionValidationPort',
       useClass: PromotionValidationService,
     },
+    {
+      provide: 'PromotionUsageRollbackPort',
+      useClass: PromotionUsageRollbackService,
+    },
   ],
-  exports: ['PromotionValidationPort', ValidatePromotionUseCase],
+  exports: ['PromotionValidationPort', 'PromotionUsageRollbackPort', ValidatePromotionUseCase],
 })
 export class PromotionModule {}

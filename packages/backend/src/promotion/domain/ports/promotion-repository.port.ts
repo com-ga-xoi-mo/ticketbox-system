@@ -5,4 +5,5 @@ export interface IPromotionRepository {
   countUsages(promotionId: string): Promise<number>;
   countUserUsages(promotionId: string, userId: string): Promise<number>;
   createUsage(promotionId: string, userId: string, orderId: string, tx?: any): Promise<void>;
+  deleteUsageAndDecrementCount(promotionId: string, orderId: string, tx?: any): Promise<void>;
 }

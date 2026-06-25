@@ -66,4 +66,22 @@ export class PrismaPromotionRepository implements IPromotionRepository {
       },
     });
   }
+
+  async deleteUsageAndDecrementCount(promotionId: string, orderId: string, tx?: any): Promise<void> {
+    const client = tx ?? this.prisma;
+    await client.$transaction(async (prismaTx: any) => {
+      // 1. Delete usage
+      const deleted = await prismaTx.promotionUsage.deleteMany({
+        where: { promotionId, orderId },
+      });
+
+      // 2. Decrement if it was actually deleted
+      if (deleted.count > 0) {
+        await prismaTx.promotion.update({
+          where: { id: promotionId },
+          data: { usedCount: { decrement: 1 } },
+        });
+      }
+    });
+  }
 }

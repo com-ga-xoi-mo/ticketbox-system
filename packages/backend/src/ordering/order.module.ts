@@ -157,11 +157,12 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
     },
     {
       provide: ORDER_EVENT_PUBLISHER,
-      inject: [IssueTicketsForPaidOrderUseCase, ORDER_PAID_NOTIFIER],
+      inject: [IssueTicketsForPaidOrderUseCase, ORDER_PAID_NOTIFIER, 'PromotionUsageRollbackPort'],
       useFactory: (
         issueTickets: IssueTicketsForPaidOrderUseCase,
         orderPaidNotifier: OrderPaidNotifierPort,
-      ) => new TicketIssuingOrderEventPublisher(issueTickets, orderPaidNotifier),
+        promotionUsageRollbackPort: any,
+      ) => new TicketIssuingOrderEventPublisher(issueTickets, orderPaidNotifier, promotionUsageRollbackPort),
     },
     {
       provide: TICKET_REPOSITORY,

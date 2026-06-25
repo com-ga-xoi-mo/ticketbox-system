@@ -2,6 +2,7 @@ import type { OrderStatus } from './order-status.enum';
 
 export interface BaseOrderDomainEvent {
   orderId: string;
+  promotionId?: string | null;
   previousStatus: OrderStatus;
   newStatus: OrderStatus;
   occurredAt: Date;
