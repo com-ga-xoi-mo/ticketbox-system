@@ -5,6 +5,7 @@ import { Loader2, Ticket, CreditCard, CheckCircle2, ChevronLeft } from 'lucide-r
 import type { Order, PaymentProvider } from '@ticketbox/api-types';
 
 import { createOrder, initiatePayment, parseOrderError, validatePromoCode } from '../../shared/api/orders';
+import { apiPost } from '../../shared/api/client';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { useCountdown } from '../../shared/hooks/useCountdown';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
@@ -95,6 +96,17 @@ export function CheckoutPage() {
       if (!res.redirectUrl) {
         throw new Error('No redirect URL returned');
       }
+
+      // Simulator: auto-complete payment with SUCCESS and go straight to result page
+      if (selectedProvider === 'SIMULATOR' && res.simulatorToken) {
+        await apiPost('/payments/simulator/callback', {
+          token: res.simulatorToken,
+          outcome: 'success',
+        });
+        navigate(`/orders/${createdOrder.id}/result`);
+        return;
+      }
+
       window.location.href = res.redirectUrl;
     } catch (error) {
       setErrorMsg(parseOrderError(error));
