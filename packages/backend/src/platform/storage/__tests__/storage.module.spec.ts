@@ -6,29 +6,26 @@ import { OBJECT_STORAGE } from '../object-storage.port';
 import { StorageModule } from '../storage.module';
 
 describe('StorageModule', () => {
-  const originalEnv = process.env;
+  const originalEnv = { ...process.env };
 
   beforeEach(() => {
-    process.env = {
-      ...originalEnv,
-      DATABASE_URL: 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox?schema=public',
-      JWT_SECRET: 'test-secret',
-      STORAGE_DRIVER: 'local',
-      LOCAL_STORAGE_ROOT_DIR: 'data/test-uploads',
-      LOCAL_STORAGE_PUBLIC_BASE_URL: 'http://localhost:3000/storage',
-      S3_ENDPOINT: '',
-      S3_REGION: '',
-      S3_BUCKET: '',
-      S3_ACCESS_KEY_ID: '',
-      S3_SECRET_ACCESS_KEY: '',
-      S3_PUBLIC_BASE_URL: '',
-      MOMO_PARTNER_CODE: 'test',
-      MOMO_ACCESS_KEY: 'test',
-      MOMO_SECRET_KEY: 'test',
-      MOMO_PUBLIC_KEY: 'test',
-      VNPAY_TMN_CODE: 'test',
-      VNPAY_HASH_SECRET: 'test',
-    };
+    process.env.DATABASE_URL = 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox?schema=public';
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.STORAGE_DRIVER = 'local';
+    process.env.LOCAL_STORAGE_ROOT_DIR = 'data/test-uploads';
+    process.env.LOCAL_STORAGE_PUBLIC_BASE_URL = 'http://localhost:3000/storage';
+    process.env.S3_ENDPOINT = '';
+    process.env.S3_REGION = '';
+    process.env.S3_BUCKET = '';
+    process.env.S3_ACCESS_KEY_ID = '';
+    process.env.S3_SECRET_ACCESS_KEY = '';
+    process.env.S3_PUBLIC_BASE_URL = '';
+    process.env.MOMO_PARTNER_CODE = 'test';
+    process.env.MOMO_ACCESS_KEY = 'test';
+    process.env.MOMO_SECRET_KEY = 'test';
+    process.env.MOMO_PUBLIC_KEY = 'test';
+    process.env.VNPAY_TMN_CODE = 'test';
+    process.env.VNPAY_HASH_SECRET = 'test';
   });
 
   afterEach(() => {
@@ -43,7 +40,7 @@ describe('StorageModule', () => {
     try {
       const first = moduleRef.get(OBJECT_STORAGE);
       const second = moduleRef.get(OBJECT_STORAGE);
-
+      
       expect(first).toBeInstanceOf(LocalObjectStorageAdapter);
       expect(first).toBe(second);
     } finally {

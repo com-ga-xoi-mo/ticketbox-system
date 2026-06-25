@@ -1,7 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { SeatingMapMetadata, SeatingZone } from '../venue-map-types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+import { getAssetUrl } from '../../../shared/api/client';
+
+function hexToRgba(hex: string, alpha: number): string {
+  if (!/^#[0-9A-Fa-f]{6}$/i.test(hex)) return hex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 interface VenueMapSvgViewerProps {
   seatingMap: SeatingMapMetadata;
@@ -30,21 +38,32 @@ export function VenueMapSvgViewer({
       if (!seatingMap.assetId) return;
       setIsLoading(true);
       setError(null);
-      try {
-        const response = await fetch(`${API_BASE_URL}/assets/${seatingMap.assetId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch SVG');
+
+      const urls = [
+        ...(seatingMap.svgUrl ? [seatingMap.svgUrl] : []),
+        getAssetUrl(seatingMap.assetId),
+      ];
+
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) continue;
+          const text = await response.text();
+          if (text.trim().toLowerCase().startsWith('<svg') || text.includes('<svg')) {
+            setSvgContent(text);
+            setIsLoading(false);
+            return;
+          }
+        } catch {
+          // try next url
         }
-        const text = await response.text();
-        setSvgContent(text);
-      } catch (err: any) {
-        setError(err.message || 'Error loading SVG');
-      } finally {
-        setIsLoading(false);
       }
+
+      setError('Failed to load venue map SVG');
+      setIsLoading(false);
     }
     fetchSvg();
-  }, [seatingMap.assetId]);
+  }, [seatingMap.assetId, seatingMap.svgUrl]);
 
   useEffect(() => {
     if (!containerRef.current || !svgContent) return;
@@ -65,18 +84,31 @@ export function VenueMapSvgViewer({
       element.style.cursor = 'pointer';
       element.style.transition = 'all 0.2s ease-in-out';
       
+      const zoneColor = zone?.color;
+      
       if (isSelected) {
-        element.style.fill = 'rgba(99, 102, 241, 0.4)'; // indigo-500/40
-        element.style.stroke = zone?.color || '#6366f1'; // indigo-500
+        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.8) : 'rgba(99, 102, 241, 0.8)';
+        element.style.stroke = '#ffffff';
         element.style.strokeWidth = '3px';
       } else if (isHovered) {
-        element.style.fill = 'rgba(148, 163, 184, 0.4)'; // slate-400/40
-        element.style.stroke = zone?.color || '#94a3b8'; // slate-400
+        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.6) : 'rgba(148, 163, 184, 0.6)';
+        element.style.stroke = '#ffffff';
         element.style.strokeWidth = '2px';
       } else {
-        element.style.fill = 'rgba(30, 41, 59, 0.8)'; // slate-800/80
-        element.style.stroke = zone?.color || '#475569'; // slate-600
+        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.3) : 'rgba(30, 41, 59, 0.8)';
+        element.style.stroke = zoneColor || '#475569';
         element.style.strokeWidth = '1px';
+      }
+      
+      // Update text if there is a sibling or child text element
+      let textElement = element.nextElementSibling;
+      if (textElement && textElement.tagName.toLowerCase() === 'text') {
+        textElement.textContent = zone?.label || id;
+      } else {
+        const texts = element.parentElement?.querySelectorAll('text');
+        if (texts && texts.length === 1) {
+          texts[0].textContent = zone?.label || id;
+        }
       }
     });
 

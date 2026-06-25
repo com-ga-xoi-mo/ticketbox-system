@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
@@ -10,6 +10,8 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
+import { SeoHead } from '../../shared/ui/seo/SeoHead';
+import { EVENT_TYPE_LABELS } from '../../shared/utils/event-types';
 import type { PublicTicketType, PublicConcertDetailResponse } from '@ticketbox/api-types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
@@ -117,21 +119,33 @@ export function EventDetailPage() {
       redirectToLogin();
       return;
     }
-    
-    const selectedQuantities = Array.from(quantities.entries()).filter(([_, qty]) => qty > 0);
-    const state = {
-      concertId: data?.id,
-      concertSlug: data?.slug,
-      concertTitle: data?.title,
-      quantities: selectedQuantities,
-      idempotencyKey: generateIdempotencyKey(),
-    };
-    
-    navigate('/checkout', { state });
+
+    const selectedQuantities = Array.from(quantities.entries()).filter(([, quantity]) => quantity > 0);
+    navigate('/checkout', {
+      state: {
+        concertId: data.id,
+        concertSlug: data.slug,
+        concertTitle: data.title,
+        quantities: selectedQuantities,
+        idempotencyKey: generateIdempotencyKey(),
+      },
+    });
   };
+
+  const seoTitle = data.seoTitle || `${data.title} | Ticketbox`;
+  const seoDescription = data.seoDescription || (data.description ? data.description.substring(0, 160) : undefined);
+  const seoImageUrl = data.seoImageUrl || resolveImageUrl(data.posterAsset?.publicUrl);
+  const eventUrl = typeof window !== 'undefined' ? window.location.href : undefined;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <SeoHead
+        title={seoTitle}
+        description={seoDescription}
+        imageUrl={seoImageUrl}
+        url={eventUrl}
+        type="event"
+      />
       <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="lg:sticky lg:top-28 lg:self-start space-y-6">
           {data.posterAsset?.publicUrl && !posterError ? (
@@ -198,9 +212,14 @@ export function EventDetailPage() {
 
         <div className="flex flex-col gap-6">
           <div>
-            <Badge className="mb-4 rounded-full bg-primary/10 px-4 py-1.5 text-primary">
-              {data.artistName}
-            </Badge>
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm font-semibold uppercase tracking-wider">
+                {EVENT_TYPE_LABELS[data.eventType] || data.eventType}
+              </Badge>
+              <Badge className="rounded-full bg-primary/10 px-4 py-1.5 text-primary">
+                {data.artistName}
+              </Badge>
+            </div>
             <h1 className="text-4xl font-black leading-tight tracking-tight text-foreground sm:text-5xl">
               {data.title}
             </h1>

@@ -16,6 +16,7 @@ const baseConcert: PublicConcertSummary = {
   city: 'Ho Chi Minh City',
   startsAt: '2026-07-01T12:00:00.000Z',
   endsAt: '2026-07-01T15:00:00.000Z',
+  eventType: 'CONCERT',
   posterAsset: null,
   availabilitySummary: {
     totalAvailableQuantity: 120,

@@ -2,6 +2,7 @@ import {
   PublicConcertAvailabilityResponseSchema,
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
+  PublicFeaturedConcertListResponseSchema,
 } from '@ticketbox/api-types';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -40,6 +41,7 @@ describe('public concert catalog HTTP contracts', () => {
     city: 'Ho Chi Minh City',
     startsAt,
     endsAt,
+    eventType: 'CONCERT',
     posterAsset,
     availabilitySummary: {
       totalAvailableQuantity: 100,
@@ -54,6 +56,9 @@ describe('public concert catalog HTTP contracts', () => {
     description: 'A great summer concert',
     publishedArtistBio: 'The Suns are a jazz band',
     venueAddress: '123 Main St',
+    seoTitle: 'Summer Beats Concert',
+    seoDescription: 'A great summer concert',
+    seoImageUrl: null,
     seatingMapAsset: null,
     seatingZones: [
       {
@@ -108,16 +113,28 @@ describe('public concert catalog HTTP contracts', () => {
     ],
   };
 
+  const featured = {
+    ...summary,
+    bannerAsset: posterAsset,
+    displayOrder: 1,
+  };
+
   const controller = new PublicConcertCatalogController(
     { execute: vi.fn().mockResolvedValue([summary]) } as any,
     { execute: vi.fn().mockResolvedValue(detail) } as any,
     { execute: vi.fn().mockResolvedValue(availabilitySnapshot) } as any,
     { execute: vi.fn().mockResolvedValue(['Ho Chi Minh City']) } as any,
+    { execute: vi.fn().mockResolvedValue([featured]) } as any,
   );
 
   it('returns a public list response compatible with the shared schema', async () => {
-    const payload = toHttpPayload(await controller.listConcerts({}));
+    const payload = toHttpPayload(await controller.listConcerts({ eventType: 'CONCERT' }));
     expect(PublicConcertListResponseSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('returns a public featured list response compatible with the shared schema', async () => {
+    const payload = toHttpPayload(await controller.listFeatured({ limit: 5 }));
+    expect(PublicFeaturedConcertListResponseSchema.parse(payload)).toEqual(payload);
   });
 
   it('returns a public detail response compatible with the shared schema', async () => {

@@ -1,42 +1,57 @@
 import { z } from 'zod';
 
-export const OrderStatusSchema = z.enum([
+export const ORDER_STATUSES = [
   'PENDING_PAYMENT',
   'PAID',
   'EXPIRED',
   'FAILED',
   'CANCELLED',
   'REFUNDED',
-]);
+] as const;
+
+export const OrderStatusSchema = z.enum(ORDER_STATUSES);
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
-export const OrderItemSchema = z.object({
-  id: z.string().uuid(),
-  ticketTypeId: z.string().uuid(),
-  ticketTypeName: z.string(),
+export const OrderItemSummarySchema = z.object({
+  id: z.string(),
+  ticketTypeId: z.string(),
+  ticketTypeName: z.string().optional(),
   quantity: z.number().int().min(1),
   unitPriceVnd: z.number().int().min(0),
   totalPriceVnd: z.number().int().min(0),
 });
-export type OrderItem = z.infer<typeof OrderItemSchema>;
+export type OrderItemSummary = z.infer<typeof OrderItemSummarySchema>;
 
-export const OrderSchema = z.object({
-  id: z.string().uuid(),
+export const OrderSummaryResponseSchema = z.object({
+  id: z.string(),
   orderNumber: z.string(),
-  userId: z.string().uuid(),
-  concertId: z.string().uuid(),
-  idempotencyKey: z.string().nullable(),
+  userId: z.string(),
+  concertId: z.string(),
+  idempotencyKey: z.string().nullable().optional(),
   status: OrderStatusSchema,
   totalAmountVnd: z.number().int().min(0),
-  reservationExpiresAt: z.string().nullable(),
-  paidAt: z.string().nullable(),
-  expiredAt: z.string().nullable(),
-  cancelledAt: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  items: z.array(OrderItemSchema),
+  reservationExpiresAt: z.union([z.string(), z.date()]).nullable().optional(),
+  createdAt: z.union([z.string(), z.date()]),
+  updatedAt: z.union([z.string(), z.date()]),
+  items: z.array(OrderItemSummarySchema),
 });
-export type Order = z.infer<typeof OrderSchema>;
+export type OrderSummaryResponse = z.infer<typeof OrderSummaryResponseSchema>;
+
+export const OrderDetailResponseSchema = OrderSummaryResponseSchema.extend({
+  paidAt: z.union([z.string(), z.date()]).nullable().optional(),
+  expiredAt: z.union([z.string(), z.date()]).nullable().optional(),
+  cancelledAt: z.union([z.string(), z.date()]).nullable().optional(),
+});
+export type OrderDetailResponse = z.infer<typeof OrderDetailResponseSchema>;
+
+export const OrderListResponseSchema = z.array(OrderSummaryResponseSchema);
+export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+
+export const OrderItemSchema = OrderItemSummarySchema;
+export type OrderItem = OrderItemSummary;
+
+export const OrderSchema = OrderDetailResponseSchema;
+export type Order = OrderDetailResponse;
 
 export const CreateOrderItemRequestSchema = z.object({
   ticketTypeId: z.string().uuid(),
@@ -72,19 +87,19 @@ export const PaymentInitiationResponseSchema = z.object({
 export type PaymentInitiationResponse = z.infer<typeof PaymentInitiationResponseSchema>;
 
 export const IssuedTicketSummarySchema = z.object({
-  id: z.string().uuid(),
-  orderId: z.string().uuid(),
-  ticketTypeId: z.string().uuid(),
+  id: z.string(),
+  orderId: z.string(),
+  ticketTypeId: z.string(),
   ticketTypeName: z.string().optional(),
   status: z.string(),
-  createdAt: z.string(),
+  createdAt: z.union([z.string(), z.date()]),
 });
 export type IssuedTicketSummary = z.infer<typeof IssuedTicketSummarySchema>;
 
 export const IssuedTicketDetailSchema = IssuedTicketSummarySchema.extend({
   qrToken: z.string(),
   concertTitle: z.string().optional(),
-  concertStartsAt: z.string().optional(),
+  concertStartsAt: z.union([z.string(), z.date()]).optional(),
   venueName: z.string().optional(),
 });
 export type IssuedTicketDetail = z.infer<typeof IssuedTicketDetailSchema>;

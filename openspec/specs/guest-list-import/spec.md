@@ -222,3 +222,8 @@ The system SHALL persist each canonical import batch with source asset, checksum
 
 - **WHEN** a non-Admin or an Admin outside the permitted concert scope requests or inspects an import or report
 - **THEN** the system SHALL reject access without revealing report contents
+
+#### Scenario: Report for non-completed batch returns structured error
+
+- **WHEN** an Admin requests the report for a batch with status FAILED, PENDING, or PROCESSING
+- **THEN** the system SHALL return HTTP 422 with a structured response containing the error code, batch status, and a descriptive message instead of an internal server error

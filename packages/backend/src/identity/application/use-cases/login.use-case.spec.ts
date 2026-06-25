@@ -3,27 +3,35 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InvalidCredentialsError } from '../../domain/errors';
 import type { PasswordHasherPort } from '../../domain/ports/password-hasher.port';
 import type { TokenIssuerPort } from '../../domain/ports/token-issuer.port';
-import type { IUserRepository, UserRecord } from '../../domain/ports/user-repository.port';
+import type { IUserRepository, UserRecordWithPassword } from '../../domain/ports/user-repository.port';
+import { UserStatus } from '../../domain/user-status.enum';
 import { LoginUseCase } from './login.use-case';
 
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
-function makeUserRecord(password: string): UserRecord {
+function makeUserRecord(password: string): UserRecordWithPassword {
   return {
     id: 'user-id-1',
     email: 'test@example.com',
+    displayName: 'Test User',
+    status: UserStatus.ACTIVE,
     passwordHash: `hashed:${password}`,
     roles: ['AUDIENCE'],
   };
 }
 
 function buildMocks() {
-  const userRepo: IUserRepository = {
+  const userRepo = {
     createWithAudienceRole: vi.fn(),
+    createWithRoles: vi.fn(),
+    findById: vi.fn(),
     findByEmail: vi.fn(),
-  };
+    listUsers: vi.fn(),
+    updateProfile: vi.fn(),
+    setStatus: vi.fn(),
+  } as unknown as IUserRepository;
 
   const passwordHasher: PasswordHasherPort = {
     hash: vi.fn(),
@@ -105,5 +113,15 @@ describe('LoginUseCase', () => {
     expect((err1 as InvalidCredentialsError).message).toBe(
       (err2 as InvalidCredentialsError).message,
     );
+  });
+
+  it('throws InvalidCredentialsError when user is not ACTIVE', async () => {
+    const user = makeUserRecord('correct-password');
+    user.status = UserStatus.DISABLED;
+    vi.mocked(userRepo.findByEmail).mockResolvedValue(user);
+
+    await expect(
+      useCase.execute({ email: 'test@example.com', password: 'correct-password' }),
+    ).rejects.toThrow(InvalidCredentialsError);
   });
 });

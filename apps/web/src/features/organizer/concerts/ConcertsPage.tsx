@@ -4,7 +4,6 @@ import { useConcerts, usePublishConcertMutation, useCancelConcertMutation } from
 import { ConcertEmptyState } from '../../concerts-shared/components/ConcertEmptyState';
 import { StatusFilterTabs } from '../../concerts-shared/components/StatusFilterTabs';
 import { ConcertTable } from '../../concerts-shared/components/ConcertTable';
-import { ConcertFormModal } from './components/ConcertFormModal';
 import { ConcertDetailPanel } from '../../concerts-shared/components/ConcertDetailPanel';
 import { Button } from '../../../shared/ui/button';
 import { Pagination } from '../../../shared/ui/pagination';
@@ -21,7 +20,6 @@ export function ConcertsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const navigate = useNavigate();
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedConcert, setSelectedConcert] = useState<Concert | null>(null);
 
   const publishMutation = usePublishConcertMutation();
@@ -84,7 +82,7 @@ export function ConcertsPage() {
   }, [filteredConcerts, currentPage]);
 
   const handleOpenCreate = () => {
-    setIsFormOpen(true);
+    navigate('/organizer/concerts/new');
   };
 
   if (isLoading) {
@@ -265,9 +263,6 @@ export function ConcertsPage() {
         </div>
       )}
 
-      {isFormOpen && (
-        <ConcertFormModal concert={null} onClose={() => setIsFormOpen(false)} />
-      )}
     </div>
   );
 }

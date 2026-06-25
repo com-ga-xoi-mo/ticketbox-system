@@ -156,10 +156,10 @@ function Pagination({
   pageSize,
   onPageChange,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
-  const from = (currentPage - 1) * pageSize + 1;
+  const safeTotalPages = Math.max(1, totalPages);
+  const from = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const to = Math.min(currentPage * pageSize, totalItems);
-  const pages = getPageNumbers(currentPage, totalPages);
+  const pages = getPageNumbers(currentPage, safeTotalPages);
 
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-white/5 px-6 py-3">
@@ -169,7 +169,7 @@ function Pagination({
       <PaginationRoot>
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious onClick={() => onPageChange(currentPage - 1)} aria-disabled={currentPage === 1} className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+            <PaginationPrevious onClick={() => currentPage > 1 && onPageChange(currentPage - 1)} aria-disabled={currentPage <= 1} className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
           </PaginationItem>
           {pages.map((page, i) => (
             <PaginationItem key={i}>
@@ -177,7 +177,7 @@ function Pagination({
             </PaginationItem>
           ))}
           <PaginationItem>
-            <PaginationNext onClick={() => onPageChange(currentPage + 1)} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+            <PaginationNext onClick={() => currentPage < safeTotalPages && onPageChange(currentPage + 1)} aria-disabled={currentPage >= safeTotalPages} className={currentPage >= safeTotalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
           </PaginationItem>
         </PaginationContent>
       </PaginationRoot>

@@ -13,8 +13,9 @@ import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
+import { toast } from 'sonner';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+import { getAssetUrl } from '../../../shared/api/client';
 
 function slugify(text: string): string {
   return text
@@ -130,9 +131,9 @@ export function ConcertEditPage() {
   const canEdit = concert.status !== 'ENDED' && concert.status !== 'CANCELLED';
   if (!canEdit) return <Navigate to={`/organizer/concerts/${id}`} replace />;
 
-  const { label, badgeClass, dotClass } = mapStatus(concert.status);
+  const { label, variant, dotClass } = mapStatus(concert.status);
   const posterUrl = concert.posterAssetId
-    ? `${API_BASE_URL}/assets/${concert.posterAssetId}`
+    ? getAssetUrl(concert.posterAssetId)
     : null;
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +185,10 @@ export function ConcertEditPage() {
     updateMutation.mutate(
       { id: concert.id, payload: toUpdatePayload(values) },
       {
-        onSuccess: () => navigate('/organizer/concerts'),
+        onSuccess: () => {
+          toast.success('Lưu thông tin sự kiện thành công');
+          navigate('/organizer/concerts');
+        },
         onError: (err) => setSubmitError(err.message || 'Failed to save changes.'),
       },
     );
@@ -384,7 +388,7 @@ export function ConcertEditPage() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
-                  <Badge className={cn('mb-2 text-[11px] shadow-sm', badgeClass)}>
+                  <Badge variant={variant} className="mb-2 text-[11px] shadow-sm">
                     {dotClass && <span className={cn('size-1.5 rounded-full', dotClass)} />}
                     {label}
                   </Badge>
@@ -517,10 +521,15 @@ export function ConcertEditPage() {
                   type="button"
                   variant="outline"
                   className="w-full justify-center"
-                  onClick={() => navigate(`/organizer/venue-maps/${concert.id}`)}
+                  onClick={() => {
+                    if (concert.status !== 'DRAFT') {
+                      alert('This concert is no longer in DRAFT status. You will only be able to view the venue map.');
+                    }
+                    navigate(`/organizer/venue-maps/${concert.id}`);
+                  }}
                 >
                   <span className="material-symbols-outlined text-[16px]">map</span>
-                  Edit Venue Map
+                  {concert.status === 'DRAFT' ? 'Edit Venue Map' : 'View Venue Map'}
                 </Button>
               </div>
             </div>

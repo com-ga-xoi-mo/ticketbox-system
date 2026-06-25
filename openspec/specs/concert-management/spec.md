@@ -621,3 +621,11 @@ The system SHALL expose read-only protected admin and organizer endpoints for lo
 #### Scenario: Non-existent concert authoring read returns not found
 - **WHEN** an authenticated admin or organizer requests any seating-map authoring read endpoint for a concert id that does not exist
 - **THEN** the system SHALL respond with a not-found error
+## ADDED Requirements
+
+### Requirement: Standardized Status Badge Colors
+The system SHALL use standardized colors for concert status badges across all views: DRAFT (Amber), PUBLISHED (Purple), CANCELLED (Red), ENDED (Gray).
+
+#### Scenario: User views a list of concerts
+- **WHEN** concerts are displayed with their status
+- **THEN** the badge color matches the standardized palette based on the specific status.

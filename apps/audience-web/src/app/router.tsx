@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { PublicLayout } from '../shared/ui/layout/PublicLayout';
 import { HomePage } from '../features/concerts/HomePage';
@@ -6,11 +7,21 @@ import { EventDetailPage } from '../features/concerts/EventDetailPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { AccessDeniedPage } from '../features/auth/AccessDeniedPage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
-import { AccountPage } from '../features/account/AccountPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
 import { PaymentResultPage } from '../features/orders/PaymentResultPage';
-import { OrderDetailPage } from '../features/orders/OrderDetailPage';
-import { MyOrdersPage } from '../features/orders/MyOrdersPage';
+
+// Lazy loaded account pages
+const AccountPage = lazy(() => import('../features/account/AccountPage').then(m => ({ default: m.AccountPage })));
+const MyOrdersPage = lazy(() => import('../features/account/MyOrdersPage').then(m => ({ default: m.MyOrdersPage })));
+const OrderDetailPage = lazy(() => import('../features/account/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));
+const MyTicketsPage = lazy(() => import('../features/account/MyTicketsPage').then(m => ({ default: m.MyTicketsPage })));
+const TicketDetailPage = lazy(() => import('../features/account/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));
+
+const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
+    {children}
+  </Suspense>
+);
 
 export const router = createBrowserRouter([
   {
@@ -27,14 +38,40 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
-      { path: '/account', element: <AccountPage /> },
       { path: '/checkout', element: <CheckoutPage /> },
-      { path: '/orders', element: <MyOrdersPage /> },
-      { path: '/orders/:id', element: <OrderDetailPage /> },
       { path: '/orders/:id/result', element: <PaymentResultPage /> },
+      {
+        path: '/orders',
+        element: <SuspenseWrapper><MyOrdersPage /></SuspenseWrapper>,
+      },
+      {
+        path: '/orders/:id',
+        element: <SuspenseWrapper><OrderDetailPage /></SuspenseWrapper>,
+      },
+      {
+        path: '/account',
+        element: <SuspenseWrapper><AccountPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/orders',
+        element: <SuspenseWrapper><MyOrdersPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/orders/:id',
+        element: <SuspenseWrapper><OrderDetailPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/tickets',
+        element: <SuspenseWrapper><MyTicketsPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/tickets/:id',
+        element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper>
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
+
 ], {
   future: {
     v7_relativeSplatPath: true,

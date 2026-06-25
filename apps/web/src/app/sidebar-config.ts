@@ -17,6 +17,13 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     roles: ['ADMIN'],
   },
   {
+    key: 'admin-reports',
+    label: 'Reports',
+    icon: 'analytics',
+    path: '/admin/reports',
+    roles: ['ADMIN'],
+  },
+  {
     key: 'admin-concerts',
     label: 'Concerts',
     icon: 'music_note',
@@ -29,6 +36,20 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     icon: 'map',
     path: '/admin/venue-maps',
     roles: ['ADMIN'],
+  },
+  {
+    key: 'admin-assignments',
+    label: 'Assignments',
+    icon: 'assignment',
+    path: '/admin/assignments',
+    roles: ['ADMIN'],
+  },
+  {
+    key: 'organizer-dashboard',
+    label: 'Dashboard',
+    icon: 'dashboard',
+    path: '/organizer/dashboard',
+    roles: ['ORGANIZER'],
   },
   {
     key: 'organizer-concerts',
@@ -44,13 +65,12 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     path: '/organizer/venue-maps',
     roles: ['ORGANIZER'],
   },
-  { key: 'staff', label: 'Staff', icon: 'people', path: '/staff', roles: ['ADMIN'] },
   {
-    key: 'settings',
-    label: 'Settings',
-    icon: 'settings',
-    path: '/settings',
-    roles: ['ORGANIZER', 'ADMIN'], // Could be problematic later, but ignoring for now or leaving as is
+    key: 'admin-accounts',
+    label: 'Staff Accounts',
+    icon: 'people',
+    path: '/admin/accounts',
+    roles: ['ADMIN'],
   },
 ];
 

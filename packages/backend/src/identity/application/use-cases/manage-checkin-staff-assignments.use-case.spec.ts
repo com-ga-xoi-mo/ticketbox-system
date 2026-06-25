@@ -23,6 +23,7 @@ describe('ManageCheckinStaffAssignmentsUseCase', () => {
       listActiveAssignments: vi.fn(),
       createActiveAssignment: vi.fn(),
       revokeAssignment: vi.fn(),
+      revokeAllForStaffUser: vi.fn(),
       userHasCheckinStaffRole: vi.fn(),
     };
     ownershipRepo = {

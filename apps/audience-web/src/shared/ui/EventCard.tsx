@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CalendarDays, MapPin, Music2, Ticket } from 'lucide-react';
 import type { PublicConcertSummary } from '@ticketbox/api-types';
 import { cn } from './cn';
+import { EVENT_TYPE_LABELS } from '../utils/event-types';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardFooter } from '../../components/ui/card';
@@ -37,7 +38,7 @@ function formatPrice(vnd: number | null): string {
 
 export function EventCard({ concert, className }: EventCardProps) {
   const [imgError, setImgError] = useState(false);
-  const { slug, title, artistName, venueName, city, startsAt, posterAsset, availabilitySummary } =
+  const { slug, title, artistName, venueName, city, startsAt, posterAsset, availabilitySummary, eventType } =
     concert;
   const isSoldOut = availabilitySummary.totalAvailableQuantity === 0;
 
@@ -79,10 +80,15 @@ export function EventCard({ concert, className }: EventCardProps) {
 
         <CardContent className="flex flex-1 flex-col gap-4 p-5">
           <div>
-            <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              <Music2 className="size-3.5" aria-hidden="true" />
-              {artistName}
-            </p>
+            <div className="mb-2 flex items-center gap-2">
+              <Badge variant="outline" className="text-xs uppercase tracking-wider text-muted-foreground border-primary/20">
+                {EVENT_TYPE_LABELS[eventType] || eventType}
+              </Badge>
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary flex items-center gap-1">
+                <Music2 className="size-3.5" aria-hidden="true" />
+                {artistName}
+              </span>
+            </div>
             <h3 className="line-clamp-2 text-xl font-black leading-tight tracking-tight text-foreground">
               {title}
             </h3>

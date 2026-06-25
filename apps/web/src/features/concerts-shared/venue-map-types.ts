@@ -1,6 +1,6 @@
 export interface SeatingMapMetadata {
-  assetId: string;
-  url: string;
+  assetId: string | null;
+  svgUrl: string | null;
   svgElementIds: string[];
 }
 

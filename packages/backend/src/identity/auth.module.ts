@@ -13,11 +13,19 @@ import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-a
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
 import { ManageCheckinStaffAssignmentsUseCase } from './application/use-cases/manage-checkin-staff-assignments.use-case';
+import {
+  CreateUserAccountUseCase,
+  GetUserUseCase,
+  ListUsersUseCase,
+  SetUserStatusUseCase,
+  UpdateUserAccountUseCase,
+} from './application/use-cases/admin-account-management.use-cases';
 import { GetMyProfileQuery } from './application/queries/get-my-profile.query';
 import { PROFILE_QUERY, type ProfileQueryPort } from './application/ports/profile-query.port';
 
 // Adapters — HTTP controllers
 import { AdminCheckinStaffAssignmentsController } from './adapters/http/admin-checkin-staff-assignments.controller';
+import { AdminUsersController } from './adapters/http/admin-users.controller';
 import { AuthController } from './adapters/http/auth.controller';
 import { RolesGuard } from './adapters/http/guards/roles.guard';
 import { ProfileController } from './adapters/http/profile.controller';
@@ -61,9 +69,39 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
         }) as any,
     }),
   ],
-  controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController],
+  controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController, AdminUsersController],
   providers: [
     // Application layer
+    {
+      provide: CreateUserAccountUseCase,
+      inject: [USER_REPOSITORY, PASSWORD_HASHER, AuthorizeAdminActionUseCase],
+      useFactory: (userRepository: IUserRepository, passwordHasher: PasswordHasherPort, authorizeAdmin: AuthorizeAdminActionUseCase) =>
+        new CreateUserAccountUseCase(userRepository, passwordHasher, authorizeAdmin),
+    },
+    {
+      provide: ListUsersUseCase,
+      inject: [USER_REPOSITORY, AuthorizeAdminActionUseCase],
+      useFactory: (userRepository: IUserRepository, authorizeAdmin: AuthorizeAdminActionUseCase) =>
+        new ListUsersUseCase(userRepository, authorizeAdmin),
+    },
+    {
+      provide: GetUserUseCase,
+      inject: [USER_REPOSITORY, AuthorizeAdminActionUseCase],
+      useFactory: (userRepository: IUserRepository, authorizeAdmin: AuthorizeAdminActionUseCase) =>
+        new GetUserUseCase(userRepository, authorizeAdmin),
+    },
+    {
+      provide: UpdateUserAccountUseCase,
+      inject: [USER_REPOSITORY, CHECKIN_STAFF_ASSIGNMENT_REPOSITORY, AuthorizeAdminActionUseCase],
+      useFactory: (userRepository: IUserRepository, assignmentRepository: CheckinStaffAssignmentRepositoryPort, authorizeAdmin: AuthorizeAdminActionUseCase) =>
+        new UpdateUserAccountUseCase(userRepository, assignmentRepository, authorizeAdmin),
+    },
+    {
+      provide: SetUserStatusUseCase,
+      inject: [USER_REPOSITORY, CHECKIN_STAFF_ASSIGNMENT_REPOSITORY, AuthorizeAdminActionUseCase],
+      useFactory: (userRepository: IUserRepository, assignmentRepository: CheckinStaffAssignmentRepositoryPort, authorizeAdmin: AuthorizeAdminActionUseCase) =>
+        new SetUserStatusUseCase(userRepository, assignmentRepository, authorizeAdmin),
+    },
     {
       provide: RegisterUseCase,
       inject: [USER_REPOSITORY, PASSWORD_HASHER, TOKEN_ISSUER],

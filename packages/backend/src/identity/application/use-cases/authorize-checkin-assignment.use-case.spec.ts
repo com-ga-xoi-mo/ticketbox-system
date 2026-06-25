@@ -20,6 +20,7 @@ describe('AuthorizeCheckinAssignmentUseCase', () => {
       listActiveAssignments: vi.fn(),
       createActiveAssignment: vi.fn(),
       revokeAssignment: vi.fn(),
+      revokeAllForStaffUser: vi.fn(),
       userHasCheckinStaffRole: vi.fn(),
     };
     useCase = new AuthorizeCheckinAssignmentUseCase(assignmentRepo);

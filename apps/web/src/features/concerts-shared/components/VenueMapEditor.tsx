@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { VenueMapSvgViewer } from './VenueMapSvgViewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../shared/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../shared/ui/dialog';
+import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 
@@ -49,7 +50,11 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
   const navigate = useNavigate();
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
-  
+
+  // Pending SVG file — not uploaded until Save is clicked
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [ticketToArchive, setTicketToArchive] = useState<TicketType | null>(null);
+
   // Local state for editing before saving
   const [localZones, setLocalZones] = useState<Partial<SeatingZone>[]>([]);
   
@@ -137,6 +142,15 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
     setIsZoneMappingModalOpen(false);
   };
 
+  const handleSave = () => {
+    if (pendingFile) {
+      props.onUploadMap(pendingFile);
+      setPendingFile(null);
+    } else {
+      props.onSaveZones(buildZonePayload(localZones));
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#0B0F19] text-white overflow-hidden">
       {/* Top Bar */}
@@ -150,14 +164,6 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           {props.isReadOnly && <Badge variant="muted" className="bg-amber-500/10 text-amber-400">Read Only</Badge>}
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="border-slate-700 bg-transparent hover:bg-slate-800" onClick={() => setLocalZones(props.seatingZones)}>
-            Discard Changes
-          </Button>
-          {!props.isReadOnly && (
-            <Button className="btn-primary" onClick={() => props.onSaveZones(buildZonePayload(localZones))}>
-              Save Configuration
-            </Button>
-          )}
           <Button variant="ghost" size="icon" className="text-slate-400">
             <span className="material-symbols-outlined">notifications</span>
           </Button>
@@ -182,7 +188,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           
           {/* Left Side: SVG Viewer */}
           <div className="flex-1 flex flex-col border border-slate-800 rounded-xl bg-slate-900/50 relative overflow-hidden">
-            {!props.seatingMap ? (
+            {!props.seatingMap?.assetId ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8">
                 <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6">
                   <Upload className="w-8 h-8 text-slate-400" />
@@ -191,29 +197,35 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 <p className="text-slate-400 mb-6 max-w-md text-center">
                   Upload an SVG file to start mapping seating zones. Elements with IDs will become selectable zones.
                 </p>
-                <input 
-                  type="file" 
-                  accept=".svg" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  accept=".svg"
+                  className="hidden"
                   id="svg-upload"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) props.onUploadMap(e.target.files[0]);
+                    if (e.target.files?.[0]) setPendingFile(e.target.files[0]);
                   }}
                   disabled={props.isReadOnly}
                 />
-                  <Button 
-                    disabled={props.isReadOnly} 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById('svg-upload')?.click();
-                    }}
-                  >
-                    <span>Select SVG File</span>
-                  </Button>
+                <Button
+                  disabled={props.isReadOnly}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('svg-upload')?.click();
+                  }}
+                >
+                  <span>Select SVG File</span>
+                </Button>
+                {pendingFile && (
+                  <div className="mt-4 text-indigo-300 text-sm flex items-center gap-2 bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
+                    <Upload className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{pendingFile.name} — click <strong>Save</strong> to upload</span>
+                  </div>
+                )}
                 {props.seatingZones.length > 0 && (
                   <div className="mt-4 text-amber-400 text-sm flex items-center gap-2 bg-amber-400/10 p-3 rounded-lg">
                     <AlertCircle className="w-4 h-4" />
-                    Upload map mới sẽ vô hiệu hoá các zone/mapping hiện có
+                    Uploading a new map will invalidate existing zones and mappings
                   </div>
                 )}
               </div>
@@ -231,24 +243,20 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                    />
                  </div>
                  
-                 <div className="absolute top-4 right-4 flex gap-2 z-10">
-                   <input 
-                    type="file" 
-                    accept=".svg" 
-                    className="hidden" 
+                 <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-10">
+                   <input
+                    type="file"
+                    accept=".svg"
+                    className="hidden"
                     id="svg-reupload"
                     onChange={(e) => {
-                      if (e.target.files?.[0]) {
-                        if (window.confirm('Upload map mới sẽ vô hiệu hoá các zone/mapping hiện có')) {
-                          props.onUploadMap(e.target.files[0]);
-                        }
-                      }
+                      if (e.target.files?.[0]) setPendingFile(e.target.files[0]);
                     }}
                     disabled={props.isReadOnly}
                    />
-                   <Button 
-                     variant="outline" 
-                     size="sm" 
+                   <Button
+                     variant="outline"
+                     size="sm"
                      disabled={props.isReadOnly}
                      onClick={(e) => {
                        e.preventDefault();
@@ -258,19 +266,25 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                    >
                      <Upload className="w-4 h-4 mr-2" /> Re-upload Map
                    </Button>
+                   {pendingFile && (
+                     <div className="text-indigo-300 text-xs flex items-center gap-1.5 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-500/20 max-w-[200px]">
+                       <Upload className="w-3 h-3 shrink-0" />
+                       <span className="truncate">{pendingFile.name}</span>
+                     </div>
+                   )}
                  </div>
               </div>
             )}
           </div>
 
           {/* Right Side: Detected Map Zones list */}
-          <div className="w-full lg:w-[450px] flex flex-col border border-slate-800 rounded-xl bg-slate-900/50 shrink-0 h-[600px] lg:h-auto overflow-hidden">
+          <div className="w-full lg:w-[450px] flex flex-col border border-slate-800 rounded-xl bg-slate-900/50 shrink-0 overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
                <h2 className="font-semibold text-slate-200">Detected Map Zones</h2>
                <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-700 bg-slate-950 px-2 py-0.5">{svgElementIds.length} PATHS LINKED</Badge>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+            <div className="p-4 space-y-3">
                {svgElementIds.length === 0 && (
                  <div className="text-center p-6 text-sm text-slate-400 bg-slate-950/50 rounded-lg border border-slate-800">
                    No map elements found.
@@ -365,10 +379,21 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                })}
             </div>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0">
-               <Button variant="outline" className="w-full border-dashed border-slate-600 hover:border-slate-400" disabled={props.isReadOnly}>
-                 Detect More Paths
-               </Button>
+            <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0 flex flex-col gap-2">
+              {!props.isReadOnly && (
+                <Button className="btn-primary w-full" onClick={handleSave}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {pendingFile ? 'Upload & Save' : 'Save Configuration'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="w-full border-slate-700 bg-transparent hover:bg-slate-800"
+                onClick={() => { setLocalZones(props.seatingZones); setPendingFile(null); }}
+                disabled={props.isReadOnly}
+              >
+                Discard Changes
+              </Button>
             </div>
           </div>
         </div>
@@ -448,7 +473,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-200" onClick={() => handleOpenTicketModal(tt)}>
                                      <Edit2 className="w-3.5 h-3.5"/>
                                    </Button>
-                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => props.onArchiveTicketType(tt.id)}>
+                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => setTicketToArchive(tt)}>
                                      <Trash2 className="w-3.5 h-3.5"/>
                                    </Button>
                                  </>
@@ -473,7 +498,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           <form onSubmit={handleSaveTicket} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Code</label>
+                <label className="text-xs text-slate-400">Code *</label>
                 <Input 
                   value={ticketFormData.code} 
                   onChange={e => setTicketFormData(p => ({...p, code: e.target.value}))} 
@@ -482,7 +507,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Name</label>
+                <label className="text-xs text-slate-400">Name *</label>
                 <Input 
                   value={ticketFormData.name} 
                   onChange={e => setTicketFormData(p => ({...p, name: e.target.value}))} 
@@ -501,7 +526,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Price (VND)</label>
+                <label className="text-xs text-slate-400">Price (VND) *</label>
                 <Input 
                   type="number"
                   value={ticketFormData.priceVnd} 
@@ -511,7 +536,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Total Qty</label>
+                <label className="text-xs text-slate-400">Total Qty *</label>
                 <Input 
                   type="number"
                   value={ticketFormData.totalQuantity} 
@@ -523,7 +548,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Sale Starts At</label>
+                <label className="text-xs text-slate-400">Sale Starts At *</label>
                 <Input 
                   type="datetime-local"
                   value={ticketFormData.saleStartsAt} 
@@ -533,7 +558,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Sale Ends At</label>
+                <label className="text-xs text-slate-400">Sale Ends At *</label>
                 <Input 
                   type="datetime-local"
                   value={ticketFormData.saleEndsAt} 
@@ -544,7 +569,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Max Per User</label>
+              <label className="text-xs text-slate-400">Max Per User *</label>
               <Input 
                 type="number"
                 value={ticketFormData.maxPerUser} 
@@ -606,6 +631,19 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!ticketToArchive}
+        onOpenChange={(open) => !open && setTicketToArchive(null)}
+        title="Xác nhận lưu trữ loại vé"
+        description={`Bạn có chắc chắn muốn lưu trữ loại vé "${ticketToArchive?.name}" không? Thao tác này sẽ ẩn loại vé, những vé đã bán vẫn được giữ nguyên.`}
+        confirmText="Lưu trữ"
+        cancelText="Quay lại"
+        confirmVariant="destructive"
+        onConfirm={() => {
+          if (ticketToArchive) props.onArchiveTicketType(ticketToArchive.id);
+        }}
+      />
     </div>
   );
 }

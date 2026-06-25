@@ -8,6 +8,7 @@ import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
+  InvalidOrderTransitionError,
   OrderNotFoundError,
   PerUserTicketLimitExceededError,
   TicketNotFoundError,
@@ -53,6 +54,7 @@ describe('OrderController', () => {
   let listUserOrdersUseCase: { execute: ReturnType<typeof vi.fn> };
   let listUserTicketsUseCase: { execute: ReturnType<typeof vi.fn> };
   let getUserTicketUseCase: { execute: ReturnType<typeof vi.fn> };
+  let transitionOrderStatusUseCase: { execute: ReturnType<typeof vi.fn> };
   const request = { user: { id: 'user-1', roles: [Role.AUDIENCE] } };
 
   beforeEach(() => {
@@ -61,12 +63,14 @@ describe('OrderController', () => {
     listUserOrdersUseCase = { execute: vi.fn() };
     listUserTicketsUseCase = { execute: vi.fn() };
     getUserTicketUseCase = { execute: vi.fn() };
+    transitionOrderStatusUseCase = { execute: vi.fn() };
     controller = new OrderController(
       createOrderUseCase as never,
       getOrderUseCase as never,
       listUserOrdersUseCase as never,
       listUserTicketsUseCase as never,
       getUserTicketUseCase as never,
+      transitionOrderStatusUseCase as never,
     );
   });
 
@@ -250,5 +254,46 @@ describe('OrderController', () => {
     await expect(controller.getMyOrder('order-1', request)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  describe('cancelMyOrder', () => {
+    it('cancels the order and returns updated order with CANCELLED status', async () => {
+      getOrderUseCase.execute.mockResolvedValue(buildOrder());
+      transitionOrderStatusUseCase.execute.mockResolvedValue(
+        buildOrder({ status: OrderStatus.CANCELLED }),
+      );
+
+      const result = await controller.cancelMyOrder('order-1', request);
+
+      expect(getOrderUseCase.execute).toHaveBeenCalledWith({
+        userId: 'user-1',
+        orderId: 'order-1',
+      });
+      expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledWith({
+        userId: 'user-1',
+        orderId: 'order-1',
+        status: OrderStatus.CANCELLED,
+      });
+      expect(result).toMatchObject({ id: 'order-1', status: OrderStatus.CANCELLED });
+    });
+
+    it('maps ownership check failure (not found or access denied) to 404', async () => {
+      getOrderUseCase.execute.mockRejectedValue(new OrderNotFoundError('order-1'));
+
+      await expect(controller.cancelMyOrder('order-1', request)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('maps invalid transition to 409 (e.g. order already PAID)', async () => {
+      getOrderUseCase.execute.mockResolvedValue(buildOrder());
+      transitionOrderStatusUseCase.execute.mockRejectedValue(
+        new InvalidOrderTransitionError(OrderStatus.PAID, OrderStatus.CANCELLED),
+      );
+
+      await expect(controller.cancelMyOrder('order-1', request)).rejects.toThrow(
+        ConflictException,
+      );
+    });
   });
 });

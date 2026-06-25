@@ -29,3 +29,13 @@ export const StaffProfileResponseSchema = z
   })
   .strict();
 export type StaffProfileResponse = z.infer<typeof StaffProfileResponseSchema>;
+
+export const MyProfileResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    email: z.string().email(),
+    displayName: z.string().min(1),
+    roles: z.array(RoleCodeSchema),
+  })
+  .strict();
+export type MyProfileResponse = z.infer<typeof MyProfileResponseSchema>;

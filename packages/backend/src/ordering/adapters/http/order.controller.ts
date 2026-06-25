@@ -23,9 +23,14 @@ import { GetUserTicketUseCase } from '../../application/use-cases/get-user-ticke
 import { GetOrderUseCase } from '../../application/use-cases/get-order.use-case';
 import { ListUserTicketsUseCase } from '../../application/use-cases/list-user-tickets.use-case';
 import { ListUserOrdersUseCase } from '../../application/use-cases/list-user-orders.use-case';
+import { TransitionOrderStatusUseCase } from '../../application/use-cases/transition-order-status.use-case';
+import { OrderStatus } from '../../domain/order-status.enum';
 import {
   InsufficientTicketInventoryError,
   InventoryReservationConflictError,
+  InvalidOrderTransitionError,
+  OrderAccessDeniedError,
+  OrderConflictError,
   OrderNotFoundError,
   PerUserTicketLimitExceededError,
   TicketNotFoundError,
@@ -49,6 +54,7 @@ export class OrderController {
     private readonly listUserOrdersUseCase: ListUserOrdersUseCase,
     private readonly listUserTicketsUseCase: ListUserTicketsUseCase,
     private readonly getUserTicketUseCase: GetUserTicketUseCase,
+    private readonly transitionOrderStatusUseCase: TransitionOrderStatusUseCase,
   ) {}
 
   @Post('checkout/orders')
@@ -142,6 +148,38 @@ export class OrderController {
     } catch (err: unknown) {
       if (err instanceof OrderNotFoundError) {
         throw new NotFoundException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Post('me/orders/:id/cancel')
+  @Roles(Role.AUDIENCE)
+  async cancelMyOrder(
+    @Param('id') orderId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    try {
+      // 1. Verify ownership
+      await this.getOrderUseCase.execute({
+        userId: req.user.id,
+        orderId,
+      });
+
+      // 2. Delegate to transition
+      const order = await this.transitionOrderStatusUseCase.execute({
+        orderId,
+        status: OrderStatus.CANCELLED,
+        userId: req.user.id,
+      });
+
+      return serializeOrder(order);
+    } catch (err: unknown) {
+      if (err instanceof OrderNotFoundError || err instanceof OrderAccessDeniedError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof InvalidOrderTransitionError || err instanceof OrderConflictError) {
+        throw new ConflictException(err.message);
       }
       throw err;
     }

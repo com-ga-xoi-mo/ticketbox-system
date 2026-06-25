@@ -43,6 +43,7 @@ export class SyncService {
   private currentState: SyncServiceState = { status: 'idle', counts: emptyCounts() };
   private readonly listeners = new Set<(state: SyncServiceState) => void>();
   private readonly unsubscribeNetwork: () => void;
+  private lastCacheConcertId: string | undefined;
 
   constructor(
     private readonly queue: OfflineScanQueue,
