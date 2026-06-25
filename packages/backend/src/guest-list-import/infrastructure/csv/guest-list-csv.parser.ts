@@ -7,6 +7,8 @@ import {
 } from '../../domain/normalization';
 import type { ParsedGuestListRow } from '../../domain/guest-list.types';
 
+import { stripBom } from '../../../shared/encoding/utf8.util';
+
 const REQUIRED_HEADERS = ['guest_name', 'email', 'phone', 'external_ref'] as const;
 const ALLOWED_HEADERS = new Set([...REQUIRED_HEADERS, 'action']);
 
@@ -31,7 +33,7 @@ export class GuestListCsvParser {
     if (content.includes(0)) {
       throw new GuestListValidationError('INVALID_ENCODING', 'CSV contains NUL bytes');
     }
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(content).replace(/^\uFEFF/, '');
+    const text = stripBom(new TextDecoder('utf-8', { fatal: true }).decode(content));
     const records = parseCsvRecords(text);
     if (records.length === 0) throw new GuestListValidationError('EMPTY_FILE', 'CSV is empty');
     const headers = records[0].map((header) => header.trim().toLowerCase());

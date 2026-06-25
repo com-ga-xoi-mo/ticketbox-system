@@ -107,4 +107,11 @@ describe('support API', () => {
     );
     expect(parseSupportError(new Error('COOLDOWN'))).toContain('thử lại sau');
   });
+
+  it('preserves Vietnamese error messages without corruption', () => {
+    // This test verifies that Vietnamese characters in simulated API responses
+    // or mapped errors are correctly retained without mojibake.
+    const errorMessage = 'Mã khuyến mãi không hợp lệ';
+    expect(parseSupportError(new Error(errorMessage))).toBe(errorMessage);
+  });
 });

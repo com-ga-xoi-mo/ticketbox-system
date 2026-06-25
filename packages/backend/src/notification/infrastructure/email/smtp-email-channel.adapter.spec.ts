@@ -88,4 +88,31 @@ describe('SmtpEmailChannelAdapter', () => {
     ).rejects.toThrow('Recipient email is required');
     expect(transport.send).not.toHaveBeenCalled();
   });
+
+  it('preserves Vietnamese text in email body with utf-8 header', () => {
+    const message = {
+      from: 'no-reply@ticketbox.test',
+      to: 'audience@ticketbox.test',
+      subject: 'Subject',
+      body: 'Xin chào, đơn hàng của bạn đã được xác nhận. Mật khẩu: ắ ễ ợ ừ',
+    };
+
+    const formatted = formatSmtpMessage(message);
+
+    expect(formatted).toContain('Content-Type: text/plain; charset=utf-8');
+    expect(formatted).toContain('Xin chào, đơn hàng của bạn đã được xác nhận. Mật khẩu: ắ ễ ợ ừ');
+  });
+
+  it('preserves Vietnamese text in email subject', () => {
+    const message = {
+      from: 'no-reply@ticketbox.test',
+      to: 'audience@ticketbox.test',
+      subject: 'Xác nhận đơn hàng của bạn',
+      body: 'Body',
+    };
+
+    const formatted = formatSmtpMessage(message);
+
+    expect(formatted).toContain('Subject: Xác nhận đơn hàng của bạn');
+  });
 });

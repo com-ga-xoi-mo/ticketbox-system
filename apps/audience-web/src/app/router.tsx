@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useParams } from 'react-router-dom';
 import { PublicLayout } from '../shared/ui/layout/PublicLayout';
 import { HomePage } from '../features/concerts/HomePage';
 import { EventListPage } from '../features/concerts/EventListPage';
@@ -8,7 +8,7 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { AccessDeniedPage } from '../features/auth/AccessDeniedPage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
-import { PaymentResultPage } from '../features/orders/PaymentResultPage';
+import { PaymentResultPage } from '../features/account/PaymentResultPage';
 
 // Lazy loaded account pages
 const AccountPage = lazy(() => import('../features/account/AccountPage').then(m => ({ default: m.AccountPage })));
@@ -29,6 +29,11 @@ const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   </Suspense>
 );
 
+const OrderDetailRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/account/orders/${id}`} replace />;
+};
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -48,11 +53,11 @@ export const router = createBrowserRouter([
       { path: '/orders/:id/result', element: <PaymentResultPage /> },
       {
         path: '/orders',
-        element: <SuspenseWrapper><MyOrdersPage /></SuspenseWrapper>,
+        element: <Navigate to="/account/orders" replace />,
       },
       {
         path: '/orders/:id',
-        element: <SuspenseWrapper><OrderDetailPage /></SuspenseWrapper>,
+        element: <OrderDetailRedirect />,
       },
       {
         path: '/account',
