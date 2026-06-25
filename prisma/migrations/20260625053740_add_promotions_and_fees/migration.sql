@@ -8,18 +8,6 @@ ADD COLUMN     "promotion_id" UUID,
 ADD COLUMN     "service_fee_vnd" INTEGER NOT NULL DEFAULT 0,
 ADD COLUMN     "subtotal_vnd" INTEGER NOT NULL DEFAULT 0;
 
--- AlterTable
-ALTER TABLE "refund_request_status_history" ALTER COLUMN "id" DROP DEFAULT;
-
--- AlterTable
-ALTER TABLE "refund_requests" ALTER COLUMN "id" DROP DEFAULT;
-
--- AlterTable
-ALTER TABLE "support_request_status_history" ALTER COLUMN "id" DROP DEFAULT;
-
--- AlterTable
-ALTER TABLE "support_requests" ALTER COLUMN "id" DROP DEFAULT;
-
 -- CreateTable
 CREATE TABLE "promotions" (
     "id" UUID NOT NULL,
@@ -73,6 +61,4 @@ ALTER TABLE "promotion_usages" ADD CONSTRAINT "promotion_usages_user_id_fkey" FO
 -- AddForeignKey
 ALTER TABLE "promotion_usages" ADD CONSTRAINT "promotion_usages_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- RenameIndex
-ALTER INDEX "support_request_status_history_support_request_id_created_at_id" RENAME TO "support_request_status_history_support_request_id_created_a_idx";
 CREATE UNIQUE INDEX "promotions_lower_code_key" ON "promotions"(LOWER("code"));
