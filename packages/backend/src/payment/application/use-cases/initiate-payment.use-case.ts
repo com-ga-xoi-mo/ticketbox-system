@@ -169,6 +169,11 @@ export class InitiatePaymentUseCase {
       return false;
     }
 
+    // Node.js native fetch throws TypeError for network failures like ECONNREFUSED
+    if (err.name === 'TypeError' && err.message.includes('fetch failed')) {
+      return true;
+    }
+
     return err.name === 'AbortError' || err.name === 'TimeoutError' || /timeout/i.test(err.message);
   }
 
