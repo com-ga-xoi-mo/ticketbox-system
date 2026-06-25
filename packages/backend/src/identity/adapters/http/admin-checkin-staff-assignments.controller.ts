@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   ConflictException,
   Controller,
   Delete,
@@ -18,24 +19,31 @@ import {
   CheckinStaffUserNotFoundError,
   ConcertNotFoundError,
   DuplicateCheckinAssignmentError,
+  EmailAlreadyRegisteredError,
   ForbiddenAdminActionError,
   ForbiddenConcertOwnershipError,
+  InvalidBulkCheckinStaffRequestError,
   UserIsNotCheckinStaffError,
 } from '../../domain/errors';
 import { Role } from '../../domain/role.enum';
 import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
 import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
+import { BulkCreateCheckinStaffUseCase } from '../../application/use-cases/bulk-create-checkin-staff.use-case';
 import { ManageCheckinStaffAssignmentsUseCase } from '../../application/use-cases/manage-checkin-staff-assignments.use-case';
 import { JwtAuthGuard } from '../../infrastructure/passport/jwt-auth.guard';
 import { Roles } from './decorators/roles.decorator';
 import { AssignCheckinStaffDto } from './dto/assign-checkin-staff.dto';
+import { BulkCreateCheckinStaffDto } from './dto/bulk-create-checkin-staff.dto';
 import { RolesGuard } from './guards/roles.guard';
 
 @Controller('admin/concerts/:concertId/staff')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ORGANIZER, Role.ADMIN)
 export class AdminCheckinStaffAssignmentsController {
-  constructor(private readonly manageAssignments: ManageCheckinStaffAssignmentsUseCase) {}
+  constructor(
+    private readonly manageAssignments: ManageCheckinStaffAssignmentsUseCase,
+    private readonly bulkCreateStaff: BulkCreateCheckinStaffUseCase,
+  ) {}
 
   @Get()
   async list(@Param('concertId') concertId: string, @Request() req: { user: AuthenticatedUser }) {
@@ -60,6 +68,25 @@ export class AdminCheckinStaffAssignmentsController {
         concertId,
         staffUserId: dto.staffUserId,
         gateName: dto.gateName,
+      }),
+    );
+  }
+
+  @Post('bulk-create')
+  @Roles(Role.ADMIN)
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
+  async bulkCreate(
+    @Param('concertId') concertId: string,
+    @Body() dto: BulkCreateCheckinStaffDto,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return this.handleAuthorizationErrors(() =>
+      this.bulkCreateStaff.execute({
+        actor: { userId: req.user.id, roles: req.user.roles },
+        concertId,
+        baseEmail: dto.baseEmail,
+        quantity: dto.quantity,
+        displayNamePrefix: dto.displayNamePrefix,
       }),
     );
   }
@@ -100,8 +127,12 @@ export class AdminCheckinStaffAssignmentsController {
         throw new NotFoundException(err.message);
       }
 
-      if (err instanceof DuplicateCheckinAssignmentError) {
+      if (err instanceof DuplicateCheckinAssignmentError || err instanceof EmailAlreadyRegisteredError) {
         throw new ConflictException(err.message);
+      }
+
+      if (err instanceof InvalidBulkCheckinStaffRequestError) {
+        throw new BadRequestException(err.message);
       }
 
       throw err;

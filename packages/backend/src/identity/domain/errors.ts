@@ -12,6 +12,13 @@ export class EmailAlreadyRegisteredError extends Error {
   }
 }
 
+export class InvalidBulkCheckinStaffRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidBulkCheckinStaffRequestError';
+  }
+}
+
 export class InvalidCredentialsError extends Error {
   constructor() {
     super('Invalid credentials');

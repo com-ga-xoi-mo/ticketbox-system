@@ -86,6 +86,11 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<UserRecordWithPassword | null>;
 
   /**
+   * Return the subset of emails that already exist.
+   */
+  findExistingEmails(emails: string[]): Promise<string[]>;
+
+  /**
    * List users optionally filtered by role and/or status.
    */
   listUsers(filter?: UserFilter): Promise<UserRecord[]>;

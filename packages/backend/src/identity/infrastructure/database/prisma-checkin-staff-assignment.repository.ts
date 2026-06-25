@@ -107,16 +107,27 @@ export class PrismaCheckinStaffAssignmentRepository implements CheckinStaffAssig
       return this.toAssignmentRecord(updated);
     }
 
-    const assignment = await this.prisma.checkinStaffAssignment.create({
-      data: {
-        staffId: data.staffUserId,
-        concertId: data.concertId,
-        gateName: data.gateName ?? null,
-        status: ACTIVE_ASSIGNMENT_STATUS,
-      },
-    });
+    try {
+      const assignment = await this.prisma.checkinStaffAssignment.create({
+        data: {
+          staffId: data.staffUserId,
+          concertId: data.concertId,
+          gateName: data.gateName ?? null,
+          status: ACTIVE_ASSIGNMENT_STATUS,
+        },
+      });
 
-    return this.toAssignmentRecord(assignment);
+      return this.toAssignmentRecord(assignment);
+    } catch (err: unknown) {
+      if (isPrismaUniqueError(err)) {
+        throw new DuplicateCheckinAssignmentError(
+          data.staffUserId,
+          data.concertId,
+          data.gateName,
+        );
+      }
+      throw err;
+    }
   }
 
   async revokeAssignment(params: {

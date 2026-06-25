@@ -96,6 +96,19 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
     return this.toUserRecordWithPassword(user);
   }
 
+  async findExistingEmails(emails: string[]): Promise<string[]> {
+    if (emails.length === 0) {
+      return [];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { email: { in: emails } },
+      select: { email: true },
+    });
+
+    return users.map((user) => user.email);
+  }
+
   async listUsers(filter?: UserFilter): Promise<UserRecord[]> {
     const where: Prisma.UserWhereInput = {};
 
