@@ -61,27 +61,27 @@
 
 ## 7. Audience Web — Promo Code UI
 
-- [ ] 7.1 Create `PromoCodeInput` component: text input + "Áp dụng" button, loading state, success state (shows applied code + discount description + remove button), error state (inline error messages)
-- [ ] 7.2 Create `usePromoValidation` hook (or similar): calls `POST /checkout/promo/validate`, manages promo state (idle, loading, applied, error), returns discount preview data
-- [ ] 7.3 Add promo code API client function in `apps/audience-web/src/shared/api/orders.ts`: `validatePromoCode({ code, concertId, ticketTypeIds })`
-- [ ] 7.4 Map promo error codes to Vietnamese messages: `PROMO_CODE_NOT_FOUND` → "Mã khuyến mãi không hợp lệ", `PROMO_CODE_EXPIRED` → "Mã khuyến mãi đã hết hạn", `PROMO_USER_LIMIT_EXCEEDED` → "Bạn đã sử dụng mã khuyến mãi này", `PROMO_USAGE_LIMIT_EXCEEDED` → "Mã khuyến mãi đã hết lượt sử dụng", `PROMO_NOT_APPLICABLE` → "Mã khuyến mãi không áp dụng cho sự kiện này", `PROMO_CODE_NOT_YET_VALID` → "Mã khuyến mãi chưa có hiệu lực", `PROMO_CODE_INACTIVE` → "Mã khuyến mãi không hợp lệ"
+- [x] 7.1 Create `PromoCodeInput` component: text input + "Áp dụng" button, loading state, success state (shows applied code + discount description + remove button), error state (inline error messages)
+- [x] 7.2 Create `usePromoValidation` hook (or similar): calls `POST /checkout/promo/validate`, manages promo state (idle, loading, applied, error), returns discount preview data
+- [x] 7.3 Add promo code API client function in `apps/audience-web/src/shared/api/orders.ts`: `validatePromoCode({ code, concertId, ticketTypeIds })`
+- [x] 7.4 Map promo error codes to Vietnamese messages: `PROMO_CODE_NOT_FOUND` → "Mã khuyến mãi không hợp lệ", `PROMO_CODE_EXPIRED` → "Mã khuyến mãi đã hết hạn", `PROMO_USER_LIMIT_EXCEEDED` → "Bạn đã sử dụng mã khuyến mãi này", `PROMO_USAGE_LIMIT_EXCEEDED` → "Mã khuyến mãi đã hết lượt sử dụng", `PROMO_NOT_APPLICABLE` → "Mã khuyến mãi không áp dụng cho sự kiện này", `PROMO_CODE_NOT_YET_VALID` → "Mã khuyến mãi chưa có hiệu lực", `PROMO_CODE_INACTIVE` → "Mã khuyến mãi không hợp lệ"
 
 ## 8. Audience Web — Pricing Breakdown Display
 
-- [ ] 8.1 Create `OrderPricingBreakdown` component: displays subtotal, discount line (conditionally with promo code label), service fee line (conditionally hidden if 0), total payable. Uses VND currency formatting.
-- [ ] 8.2 Integrate `PromoCodeInput` into `CheckoutPage.tsx` — position before payment initiation, after ticket selection summary
-- [ ] 8.3 Integrate `OrderPricingBreakdown` into `CheckoutPage.tsx` — replaces or augments the current single-total display
-- [ ] 8.4 Update `CheckoutPage.tsx` to pass `promoCode` in the `POST /checkout/orders` request when a promo is applied
-- [ ] 8.5 Handle promo rejection at order creation: show Alert with rejection reason, allow removing promo and retrying
-- [ ] 8.6 Integrate `OrderPricingBreakdown` into `OrderDetailPage.tsx` — show breakdown for orders with discount or fee data
-- [ ] 8.7 Update shared API response types/parsing in audience-web to use the extended `OrderSummaryResponse` and `OrderDetailResponse` schemas
+- [x] 8.1 Create `OrderPricingBreakdown` component: displays subtotal, discount line (conditionally with promo code label), service fee line (conditionally hidden if 0), total payable. Uses VND currency formatting.
+- [x] 8.2 Integrate `PromoCodeInput` into `CheckoutPage.tsx` — position before payment initiation, after ticket selection summary
+- [x] 8.3 Integrate `OrderPricingBreakdown` into `CheckoutPage.tsx` — replaces or augments the current single-total display
+- [x] 8.4 Update `CheckoutPage.tsx` to pass `promoCode` in the `POST /checkout/orders` request when a promo is applied
+- [x] 8.5 Handle promo rejection at order creation: show Alert with rejection reason, allow removing promo and retrying
+- [x] 8.6 Integrate `OrderPricingBreakdown` into `OrderDetailPage.tsx` — show breakdown for orders with discount or fee data
+- [x] 8.7 Update shared API response types/parsing in audience-web to use the extended `OrderSummaryResponse` and `OrderDetailResponse` schemas
 
 ## 9. Testing & Verification
 
-- [ ] 9.1 Unit tests for `Promotion.calculateDiscount()`: percentage with cap, percentage without cap, fixed amount, discount exceeding subtotal
-- [ ] 9.2 Unit tests for `ValidatePromotionUseCase`: all eligibility scenarios (valid, not found, inactive, expired, not yet valid, usage limit, per-user limit, not applicable, null scopes)
-- [ ] 9.3 Unit tests for `CreateOrderUseCase` with promo: pricing breakdown computation, promo validation failure before reservation, idempotent order returns without re-validation
-- [ ] 9.4 Integration test: concurrent checkout with promo usage limit prevents double-usage
-- [ ] 9.5 Contract tests: validate promo validation request/response and extended order response against shared Zod schemas
-- [ ] 9.6 Verify `npm run build` passes for `@ticketbox/api-types`, backend, and audience-web
-- [ ] 9.7 Verify existing checkout tests still pass (no regression on orders without promo codes)
+- [x] 9.1 Unit tests for `Promotion.calculateDiscount()`: percentage with cap, percentage without cap, fixed amount, discount exceeding subtotal
+- [x] 9.2 Unit tests for `ValidatePromotionUseCase`: all eligibility scenarios (valid, not found, inactive, expired, not yet valid, usage limit, per-user limit, not applicable, null scopes)
+- [x] 9.3 Unit tests for `CreateOrderUseCase` with promo: pricing breakdown computation, promo validation failure before reservation, idempotent order returns without re-validation
+- [x] 9.4 Integration test: concurrent checkout with promo usage limit prevents double-usage
+- [x] 9.5 Contract tests: validate promo validation request/response and extended order response against shared Zod schemas
+- [x] 9.6 Verify `npm run build` passes for `@ticketbox/api-types`, backend, and audience-web
+- [x] 9.7 Verify existing checkout tests still pass (no regression on orders without promo codes)
