@@ -64,6 +64,15 @@ type TicketTypeRecord = {
   zones?: TicketTypeZoneRecord[];
 };
 
+type ConcertArtistRecord = {
+  artist: {
+    id: string;
+    slug: string;
+    displayName: string;
+    avatarAsset: AssetRecord | null;
+  };
+};
+
 type ConcertSummaryRecord = {
   id: string;
   slug: string;
@@ -76,6 +85,7 @@ type ConcertSummaryRecord = {
   eventType: any;
   posterAsset: AssetRecord | null;
   ticketTypes: TicketTypeRecord[];
+  concertArtists?: ConcertArtistRecord[];
 };
 
 type FeaturedConcertRecord = ConcertSummaryRecord & {
@@ -156,6 +166,15 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       orderBy: orderByClause,
       include: {
         posterAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          where: { artist: { status: 'ACTIVE' } },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         ticketTypes: {
           orderBy: { code: 'asc' },
         },
@@ -192,6 +211,15 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       include: {
         posterAsset: true,
         bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          where: { artist: { status: 'ACTIVE' } },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         ticketTypes: {
           orderBy: { code: 'asc' },
         },
@@ -220,6 +248,15 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       include: {
         posterAsset: true,
         seatingMapAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          where: { artist: { status: 'ACTIVE' } },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         seatingZones: {
           where: {
             status: SeatingZoneStatus.ACTIVE,
@@ -311,6 +348,13 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
   }
 
   private toConcertSummary(concert: ConcertSummaryRecord): ConcertSummary {
+    const artists = concert.concertArtists?.map(ca => ({
+      id: ca.artist.id,
+      slug: ca.artist.slug,
+      displayName: ca.artist.displayName,
+      avatarAsset: this.toAssetMetadata(ca.artist.avatarAsset),
+    })) ?? [];
+
     return {
       id: concert.id,
       slug: concert.slug,
@@ -323,6 +367,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       eventType: concert.eventType,
       posterAsset: this.toAssetMetadata(concert.posterAsset),
       availabilitySummary: this.toAvailabilitySummary(concert.ticketTypes),
+      artists,
     };
   }
 

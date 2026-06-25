@@ -7,6 +7,7 @@ import { CategoryNavBar } from './home/CategoryNavBar';
 import { FeaturedEventRail } from './home/FeaturedEventRail';
 import { PopularCategoriesGrid } from './home/PopularCategoriesGrid';
 import { CityDiscoverySection } from './home/CityDiscoverySection';
+import TopArtistsRail from '../artists/components/TopArtistsRail';
 import { HomeTicketCalendarWidget } from '../account/components/HomeTicketCalendarWidget';
 
 export function HomePage() {
@@ -35,8 +36,9 @@ export function HomePage() {
           {showTicketCalendar && <HomeTicketCalendarWidget />}
         </section>
 
-        <section className="px-4 py-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <section className="px-4 py-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-12">
           <FeaturedEventRail />
+          <TopArtistsRail />
           <PopularCategoriesGrid />
           <CityDiscoverySection />
         </section>

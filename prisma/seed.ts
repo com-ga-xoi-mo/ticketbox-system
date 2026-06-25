@@ -370,7 +370,28 @@ async function upsertAsset(params: {
   return asset.id;
 }
 
-async function seedConcertData(organizerId: string, staffId: string): Promise<void> {
+
+async function seedArtists(): Promise<Map<string, string>> {
+  const artists = [
+    { slug: 'anh-trai-say-hi', displayName: 'Anh Trai Say Hi', bio: 'Popular boy band showcase group.' },
+    { slug: 'anh-trai-vuot-ngan-chong-gai', displayName: 'Anh Trai Vuot Ngan Chong Gai', bio: 'Legendary male artists reunion.' },
+    { slug: 'em-xinh-say-hi', displayName: 'Em Xinh Say Hi', bio: 'Rising stars female artists showcase.' },
+    { slug: 'chi-dep-dap-gio-re-song', displayName: 'Chi Dep Dap Gio Re Song', bio: 'Top female artists performing together.' },
+  ];
+
+  const artistMap = new Map<string, string>();
+  for (const artist of artists) {
+    const record = await prisma.artist.upsert({
+      where: { slug: artist.slug },
+      update: { displayName: artist.displayName, bio: artist.bio, status: 'ACTIVE' },
+      create: { slug: artist.slug, displayName: artist.displayName, bio: artist.bio, status: 'ACTIVE' },
+    });
+    artistMap.set(record.displayName, record.id);
+  }
+  return artistMap;
+}
+
+async function seedConcertData(organizerId: string, staffId: string, artistMap: Map<string, string>): Promise<void> {
   const saleStartsAt = daysFromNow(-1);
   const saleEndsAt = daysFromNow(120);
 
@@ -430,6 +451,16 @@ async function seedConcertData(organizerId: string, staffId: string): Promise<vo
         publishedAt: new Date(),
       },
     });
+
+    
+    const artistId = artistMap.get(concertSeed.artistName);
+    if (artistId) {
+      await prisma.concertArtist.upsert({
+        where: { concertId_artistId: { concertId: concert.id, artistId } },
+        update: { displayOrder: 0 },
+        create: { concertId: concert.id, artistId, displayOrder: 0 },
+      });
+    }
 
     await prisma.checkinStaffAssignment.upsert({
       where: {
@@ -542,7 +573,8 @@ async function seedConcertData(organizerId: string, staffId: string): Promise<vo
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   const { organizerId, staffId } = await seedUsers(roleIds);
-  await seedConcertData(organizerId, staffId);
+  const artistMap = await seedArtists();
+  await seedConcertData(organizerId, staffId, artistMap);
 }
 
 main()

@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ArtistStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("artist_status")
+}
+
 enum UserStatus {
   ACTIVE
   DISABLED
@@ -29,6 +36,8 @@ enum AssetKind {
   PRESS_KIT
   GUEST_LIST_CSV
   QR_IMAGE
+  ARTIST_AVATAR
+  ARTIST_POSTER
   OTHER
 
   @@map("asset_kind")
@@ -267,6 +276,73 @@ enum IdempotencyRecordStatus {
   @@map("idempotency_record_status")
 }
 
+model Artist {
+  id            String       @id @default(uuid()) @db.Uuid
+  slug          String       @unique @db.VarChar(180)
+  displayName   String       @map("display_name") @db.VarChar(220)
+  bio           String?
+  avatarAssetId String?      @map("avatar_asset_id") @db.Uuid
+  posterAssetId String?      @map("poster_asset_id") @db.Uuid
+  status        ArtistStatus @default(ACTIVE)
+  followerCount Int          @default(0) @map("follower_count")
+  favoriteCount Int          @default(0) @map("favorite_count")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  avatarAsset    Asset?           @relation("ArtistAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  posterAsset    Asset?           @relation("ArtistPoster", fields: [posterAssetId], references: [id], onDelete: SetNull)
+  concertArtists ConcertArtist[]
+  followers      ArtistFollow[]
+  favorites      ArtistFavorite[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([status, favoriteCount])
+  @@map("artists")
+}
+
+model ConcertArtist {
+  concertId    String   @map("concert_id") @db.Uuid
+  artistId     String   @map("artist_id") @db.Uuid
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  concert Concert @relation(fields: [concertId], references: [id], onDelete: Cascade)
+  artist  Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([concertId, artistId])
+  @@index([artistId])
+  @@map("concert_artists")
+}
+
+model ArtistFollow {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  artistId  String   @map("artist_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User   @relation("UserArtistFollows", fields: [userId], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artistId])
+  @@index([artistId])
+  @@map("artist_follows")
+}
+
+model ArtistFavorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  artistId  String   @map("artist_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User   @relation("UserArtistFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artistId])
+  @@index([artistId])
+  @@map("artist_favorites")
+}
+
 model User {
   id           String     @id @default(uuid()) @db.Uuid
   email        String     @unique @db.VarChar(320)
@@ -292,6 +368,8 @@ model User {
   reviewedArtistBios  ArtistBio[]              @relation("ArtistBioReviewer")
   requestedArtistBios ArtistBio[]              @relation("ArtistBioRequester")
   promotionUsages     PromotionUsage[]
+  artistFollows       ArtistFollow[]           @relation("UserArtistFollows")
+  artistFavorites     ArtistFavorite[]         @relation("UserArtistFavorites")
 
   @@map("users")
 }
@@ -342,6 +420,8 @@ model Asset {
   bannerConcerts     Concert[]        @relation("ConcertBanner")
   guestListBatches   GuestListBatch[]
   artistBios         ArtistBio[]
+  artistAvatars      Artist[]         @relation("ArtistAvatar")
+  artistPosters      Artist[]         @relation("ArtistPoster")
 
   @@index([kind, status])
   @@index([uploadedById])
@@ -389,6 +469,7 @@ model Concert {
   guestListBatches GuestListBatch[]
   guestListEntries GuestListEntry[]
   artistBios       ArtistBio[]
+  concertArtists   ConcertArtist[]
 
   @@index([status, startsAt])
   @@index([createdById])

@@ -47,3 +47,11 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   });
   return handleResponse<T>(res);
 }
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers: buildHeaders(),
+  });
+  return handleResponse<T>(res);
+}
