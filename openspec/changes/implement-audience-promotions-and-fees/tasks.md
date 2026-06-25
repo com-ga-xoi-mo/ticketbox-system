@@ -5,6 +5,7 @@
 - [x] 1.3 Add pricing breakdown columns to `Order` model: `subtotalVnd` (Int, default 0), `discountAmountVnd` (Int, default 0), `serviceFeeVnd` (Int, default 0), `promoCode` (String?, nullable), `promotionId` (String?, nullable FK to Promotion)
 - [x] 1.4 Generate and run Prisma migration; verify existing orders get default values (`subtotalVnd` = `totalAmountVnd`, `discountAmountVnd` = 0, `serviceFeeVnd` = 0, `promoCode` = null)
 - [x] 1.5 Add case-insensitive unique index on `Promotion.code` (using `LOWER(code)` or `citext`)
+- [x] 1.6 Add `usedCount` (Int, default 0) to `Promotion` model for atomic concurrency control and create migration.
 
 ## 2. Shared API Contracts (`@ticketbox/api-types`)
 
@@ -38,9 +39,11 @@
 - [x] 4.4 Modify `CreateOrderUseCase.execute()` to: accept optional promo code, call `PromotionValidationPort.validate()` if code provided, compute pricing breakdown, pass breakdown to Order entity constructor
 - [x] 4.5 Extend `Order` entity `OrderProps` with `subtotalVnd`, `discountAmountVnd`, `serviceFeeVnd`, `promoCode`, `promotionId` fields
 - [x] 4.6 Extend `OrderItem` entity if needed (no per-item discount in this change)
-- [x] 4.7 Update `PrismaOrderRepository` (or `PrismaInventoryReservationRepository`) to persist new order fields and create `PromotionUsage` record within the reservation transaction
+- [x] 4.7 Update `PrismaOrderRepository` (or `PrismaInventoryReservationRepository`) to persist new order fields and create `PromotionUsage` record within the reservation transaction. Update query to atomically increment `Promotion.usedCount`.
 - [x] 4.8 Update `CreateOrderUseCase` idempotency path to return existing order without re-validating promo
 - [x] 4.9 Ensure payment initiation uses the order's `totalAmountVnd` (post-discount, post-fee) — verify `InitiatePaymentUseCase` already reads from order
+- [x] 4.10 Create `OrderCancelledEvent` (or find existing) and emit it when an order is cancelled or expires.
+- [x] 4.11 Create an event listener in the `promotion` module that listens for `OrderCancelledEvent`. If a promotion was used, delete the `PromotionUsage` record and decrement `Promotion.usedCount`.
 
 ## 5. Backend Promo Validation HTTP Endpoint
 

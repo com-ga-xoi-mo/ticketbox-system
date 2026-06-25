@@ -69,13 +69,20 @@ Key constraints from the user:
 
 **Alternative considered**: Separate `OrderPricing` table. Rejected — adds join complexity for every order query with no clear benefit given the small number of fields.
 
-### D6: Promotion usage tracking with atomic increment
+### D6: Promotion usage tracking with atomic update and event-driven rollback
 
-**Decision**: Track promotion usage in a `promotion_usages` table (promotion_id, user_id, order_id, created_at). Usage count validation and insertion happen inside the same database transaction as order creation via the inventory reservation repository's transaction.
+**Decision**: 
+1. Add a `usedCount` integer field to the `Promotion` table.
+2. When creating an order with a promo, use an atomic database update (`UPDATE promotion SET usedCount = usedCount + 1 WHERE id = ? AND usedCount < maxUsageCount`) to increment the count and lock the row simultaneously. This ensures strict adherence to global limits even under high concurrency.
+3. Track individual usages in a `PromotionUsage` table (promotion_id, user_id, order_id, created_at) to enforce per-user limits.
+4. Implement an event-driven mechanism: when an order fails payment or expires, emit an `OrderCancelledEvent`. A listener in the Promotion module will catch this event, delete the corresponding `PromotionUsage` record, and decrement the `usedCount` on the `Promotion` table, returning the usage quota back to the system.
 
-**Rationale**: Atomic usage tracking prevents race conditions where two concurrent checkouts both pass the usage limit check. By including usage insertion in the reservation transaction, we get the same serialization guarantees as inventory.
+**Rationale**: 
+- **Concurrency**: The "check then act" pattern is vulnerable to race conditions during traffic spikes. Atomic updates leverage database row-level locking to guarantee limits are never exceeded.
+- **Fairness**: Reverting usages on cancelled orders prevents "lost" promotions where users abandon checkouts and permanently consume limited promo codes.
+- **Decoupling**: Using events to trigger the rollback keeps the Ordering module decoupled from the Promotion module's internal accounting.
 
-**Alternative considered**: Redis-based usage counter. Rejected — doesn't survive restarts without reconciliation, and the existing architecture already relies on PostgreSQL transactions for atomicity.
+**Alternative considered**: Redis-based usage counter or `SELECT FOR UPDATE`. Rejected — Redis doesn't guarantee transactional consistency with the main DB. `SELECT FOR UPDATE` is slower and more prone to deadlocks compared to atomic `UPDATE` statements.
 
 ### D7: Discount calculation — percentage or fixed amount, applied to subtotal
 
