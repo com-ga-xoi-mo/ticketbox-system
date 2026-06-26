@@ -11,11 +11,6 @@ function isValidFiveFieldCron(value: string): boolean {
   }
 }
 
-const optionalUrl = z.preprocess(
-  (value) => (value === '' ? undefined : value),
-  z.string().url().optional(),
-);
-
 const optionalNonEmpty = z.preprocess(
   (value) => (value === '' ? undefined : value),
   z.string().min(1).optional(),
@@ -117,35 +112,12 @@ export const envSchema = z
     GUEST_LIST_RETRY_BACKOFF_MS: z.coerce.number().int().min(100).default(5000),
     GUEST_LIST_PROCESSING_LEASE_MS: z.coerce.number().int().min(1000).default(120000),
     TICKET_ACCESS_BASE_URL: z.string().url().default('http://localhost:5173'),
-    STORAGE_DRIVER: z.enum(['s3', 'local']).default('local'),
-    LOCAL_STORAGE_ROOT_DIR: z.string().min(1).default('data/uploads'),
-    LOCAL_STORAGE_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000/storage'),
-    S3_ENDPOINT: optionalUrl,
-    S3_REGION: optionalNonEmpty,
-    S3_BUCKET: optionalNonEmpty,
-    S3_ACCESS_KEY_ID: optionalNonEmpty,
-    S3_SECRET_ACCESS_KEY: optionalNonEmpty,
-    S3_PUBLIC_BASE_URL: optionalUrl,
-  })
-  .superRefine((config, ctx) => {
-    if (config.STORAGE_DRIVER !== 's3') return;
-
-    for (const key of [
-      'S3_ENDPOINT',
-      'S3_REGION',
-      'S3_BUCKET',
-      'S3_ACCESS_KEY_ID',
-      'S3_SECRET_ACCESS_KEY',
-      'S3_PUBLIC_BASE_URL',
-    ] as const) {
-      if (!config[key]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [key],
-          message: `${key} is required when STORAGE_DRIVER=s3`,
-        });
-      }
-    }
+    S3_ENDPOINT: z.string().url(),
+    S3_REGION: z.string().min(1),
+    S3_BUCKET: z.string().min(1),
+    S3_ACCESS_KEY_ID: z.string().min(1),
+    S3_SECRET_ACCESS_KEY: z.string().min(1),
+    S3_PUBLIC_BASE_URL: z.string().url(),
   });
 
 export type PlatformEnv = z.infer<typeof envSchema>;

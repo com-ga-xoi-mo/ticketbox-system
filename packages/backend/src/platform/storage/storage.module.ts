@@ -2,7 +2,6 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 
 import { PlatformConfigModule } from '../config/platform-config.module';
 import { PlatformConfigService } from '../config/platform-config.service';
-import { LocalObjectStorageAdapter } from './adapters/local-object-storage.adapter';
 import { S3CompatibleObjectStorageAdapter } from './adapters/s3-compatible-object-storage.adapter';
 import { OBJECT_STORAGE } from './object-storage.port';
 
@@ -17,12 +16,8 @@ export class StorageModule {
         {
           provide: OBJECT_STORAGE,
           inject: [PlatformConfigService],
-          useFactory: (config: PlatformConfigService) => {
-            if (config.storageDriver === 's3') {
-              return new S3CompatibleObjectStorageAdapter(config);
-            }
-            return new LocalObjectStorageAdapter(config);
-          },
+          useFactory: (config: PlatformConfigService) =>
+            new S3CompatibleObjectStorageAdapter(config),
         },
       ],
       exports: [OBJECT_STORAGE],
