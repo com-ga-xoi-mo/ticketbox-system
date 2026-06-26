@@ -21,6 +21,15 @@ enum UserStatus {
   @@map("user_status")
 }
 
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+
+  @@map("gender")
+}
+
 enum RoleCode {
   AUDIENCE
   ORGANIZER
@@ -39,6 +48,7 @@ enum AssetKind {
   ARTIST_AVATAR
   ARTIST_POSTER
   OTHER
+  USER_AVATAR
 
   @@map("asset_kind")
 }
@@ -349,10 +359,18 @@ model User {
   passwordHash String     @map("password_hash")
   displayName  String     @map("display_name") @db.VarChar(160)
   status       UserStatus @default(ACTIVE)
+  phone         String?      @db.VarChar(40)
+  dateOfBirth   DateTime?    @map("date_of_birth") @db.Timestamptz(6)
+  gender        Gender?
+  addressLine   String?      @map("address_line") @db.VarChar(255)
+  city          String?      @db.VarChar(120)
+  district      String?      @db.VarChar(120)
+  avatarAssetId String?      @map("avatar_asset_id") @db.Uuid
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   roles               UserRole[]
+  avatarAsset         Asset?                   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   assets              Asset[]                  @relation("AssetUploader")
   createdConcerts     Concert[]                @relation("ConcertCreator")
   orders              Order[]                  @relation("CustomerOrders")
@@ -423,6 +441,7 @@ model Asset {
   artistBios         ArtistBio[]
   artistAvatars      Artist[]         @relation("ArtistAvatar")
   artistPosters      Artist[]         @relation("ArtistPoster")
+  userAvatars        User[]           @relation("UserAvatar")
 
   @@index([kind, status])
   @@index([uploadedById])
