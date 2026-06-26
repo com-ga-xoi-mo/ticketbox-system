@@ -1,4 +1,4 @@
-import type { LoginResponse, RoleCode, StaffProfileResponse } from '@ticketbox/api-types';
+import type { LoginResponse, RoleCode, StaffProfileResponse, MyProfileResponse, Gender } from '@ticketbox/api-types';
 
 import type { ProfileProjection } from '../../application/ports/profile-query.port';
 import type { AuthenticatedUser } from '../../domain/authenticated-user.interface';
@@ -18,7 +18,22 @@ export function toStaffProfileResponse(
     email: profile.email,
     displayName: profile.displayName,
     roles: principal.roles.map(toRoleCode),
+    phone: profile.phone,
+    dateOfBirth: profile.dateOfBirth?.toISOString() ?? null,
+    gender: profile.gender as Gender | null,
+    addressLine: profile.addressLine,
+    city: profile.city,
+    district: profile.district,
+    avatarAssetId: profile.avatarAssetId,
+    avatarUrl: profile.avatarUrl,
   };
+}
+
+export function toMyProfileResponse(
+  principal: AuthenticatedUser,
+  profile: ProfileProjection,
+): MyProfileResponse {
+  return toStaffProfileResponse(principal, profile);
 }
 
 function toRoleCode(role: Role): RoleCode {

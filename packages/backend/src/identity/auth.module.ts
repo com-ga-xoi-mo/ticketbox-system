@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { DatabaseModule } from '../platform/database/database.module';
+import { StorageModule } from '../platform/storage/storage.module';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 
@@ -22,6 +23,12 @@ import {
   UpdateUserAccountUseCase,
 } from './application/use-cases/admin-account-management.use-cases';
 import { GetMyProfileQuery } from './application/queries/get-my-profile.query';
+import { UpdateMyProfileUseCase } from './application/use-cases/update-my-profile.use-case';
+import { UpdateMyPasswordUseCase } from './application/use-cases/update-my-password.use-case';
+import { UploadMyAvatarUseCase } from './application/use-cases/upload-my-avatar.use-case';
+import { RemoveMyAvatarUseCase } from './application/use-cases/remove-my-avatar.use-case';
+import { AvatarImageValidator } from './application/services/avatar-image-validator';
+import { OBJECT_STORAGE, ObjectStoragePort } from '../platform/storage/object-storage.port';
 import { PROFILE_QUERY, type ProfileQueryPort } from './application/ports/profile-query.port';
 
 // Adapters — HTTP controllers
@@ -63,6 +70,7 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
   imports: [
     PlatformConfigModule,
     DatabaseModule,
+    StorageModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
@@ -77,7 +85,26 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
   ],
   controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController, AdminUsersController],
   providers: [
+    {
+      provide: AvatarImageValidator,
+      useClass: AvatarImageValidator,
+    },
+    {
+      provide: UploadMyAvatarUseCase,
+      inject: [USER_REPOSITORY, OBJECT_STORAGE, AvatarImageValidator],
+      useFactory: (userRepo: IUserRepository, storage: ObjectStoragePort, validator: AvatarImageValidator) => new UploadMyAvatarUseCase(userRepo, storage, validator),
+    },
+    {
+      provide: RemoveMyAvatarUseCase,
+      inject: [USER_REPOSITORY, OBJECT_STORAGE],
+      useFactory: (userRepo: IUserRepository, storage: ObjectStoragePort) => new RemoveMyAvatarUseCase(userRepo, storage),
+    },
     // Application layer
+{
+      provide: UpdateMyPasswordUseCase,
+      inject: [USER_REPOSITORY, PASSWORD_HASHER],
+      useFactory: (userRepository: IUserRepository, passwordHasher: PasswordHasherPort) => new UpdateMyPasswordUseCase(userRepository, passwordHasher),
+    },
     {
       provide: CreateUserAccountUseCase,
       inject: [USER_REPOSITORY, PASSWORD_HASHER, AuthorizeAdminActionUseCase],
@@ -125,6 +152,11 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
         passwordHasher: PasswordHasherPort,
         tokenIssuer: TokenIssuerPort,
       ) => new LoginUseCase(userRepository, passwordHasher, tokenIssuer),
+    },
+    {
+      provide: UpdateMyProfileUseCase,
+      inject: [USER_REPOSITORY],
+      useFactory: (userRepository: IUserRepository) => new UpdateMyProfileUseCase(userRepository),
     },
     {
       provide: GetMyProfileQuery,
