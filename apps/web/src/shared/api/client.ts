@@ -81,3 +81,26 @@ export async function postFormData<T>(path: string, formData: FormData): Promise
 export function getAssetUrl(assetId: string): string {
   return `${BASE_URL}/assets/${assetId}`;
 }
+
+export async function del<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers: buildHeaders(),
+  });
+  return handleResponse<T>(res);
+}
+
+export function resolveImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  return `${BASE_URL}${url}`;
+}
+
+export function resolveAvatarImageUrl(
+  avatarAssetId: string | null | undefined,
+  avatarUrl: string | null | undefined,
+): string | undefined {
+  if (avatarUrl) return resolveImageUrl(avatarUrl);
+  if (avatarAssetId) return getAssetUrl(avatarAssetId);
+  return undefined;
+}
