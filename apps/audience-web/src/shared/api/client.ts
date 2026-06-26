@@ -55,3 +55,43 @@ export async function apiDelete<T>(path: string): Promise<T> {
   });
   return handleResponse<T>(res);
 }
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(res);
+}
+
+export async function apiPostFormData<T>(path: string, formData: FormData): Promise<T> {
+  const headers = buildHeaders();
+  // Remove explicit Content-Type to allow the browser to set it with the correct boundary
+  delete headers['Content-Type'];
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return handleResponse<T>(res);
+}
+
+export function getAssetUrl(assetId: string): string {
+  return `${BASE_URL}/assets/${assetId}`;
+}
+
+export function resolveImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http')) return url;
+  return `${BASE_URL}${url}`;
+}
+
+export function resolveAvatarImageUrl(
+  avatarAssetId: string | null | undefined,
+  avatarUrl: string | null | undefined,
+): string | undefined {
+  if (avatarUrl) return resolveImageUrl(avatarUrl);
+  if (avatarAssetId) return getAssetUrl(avatarAssetId);
+  return undefined;
+}
