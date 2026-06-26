@@ -126,23 +126,21 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
               )}
             </div>
           </div>
-          <DialogFooter className="border-t border-white/10 pt-4">
+          <div className="mt-6 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 hover:bg-white/5 text-white"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={updateAccount.isPending || roles.length === 0}
-              className="bg-gradient-to-br from-[#d0bcff] to-[#e14ef6] text-slate-900 font-semibold shadow-[0_0_15px_rgba(225,78,246,0.3)] hover:shadow-[0_0_25px_rgba(225,78,246,0.5)] border-0"
             >
               {updateAccount.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
