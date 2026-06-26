@@ -23,6 +23,7 @@ const TicketDownloadPage = lazy(() => import('../features/account/TicketDownload
 const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
 const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
 const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
+const FavoritesPage = lazy(() => import('../features/favorites').then(m => ({ default: m.FavoritesPage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -105,6 +106,10 @@ export const router = createBrowserRouter([
       {
         path: '/account/notifications',
         element: <SuspenseWrapper><NotificationCenterPage /></SuspenseWrapper>
+      },
+      {
+        path: '/me/favorites',
+        element: <SuspenseWrapper><FavoritesPage /></SuspenseWrapper>
       },
       { path: '*', element: <NotFoundPage /> },
     ],

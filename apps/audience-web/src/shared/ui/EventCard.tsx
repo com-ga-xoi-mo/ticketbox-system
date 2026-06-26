@@ -5,8 +5,9 @@ import type { PublicConcertSummary } from '@ticketbox/api-types';
 import { cn } from './cn';
 import { EVENT_TYPE_LABELS } from '../utils/event-types';
 import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardFooter } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { FavoriteButton } from './FavoriteButton';
 
 interface EventCardProps {
   concert: PublicConcertSummary;
@@ -75,6 +76,9 @@ export function EventCard({ concert, className }: EventCardProps) {
                 Từ {formatPrice(availabilitySummary.minPriceVnd)}
               </Badge>
             )}
+          </div>
+          <div className="absolute right-4 top-4">
+            <FavoriteButton concertId={concert.id} iconOnly className="rounded-full" />
           </div>
         </div>
 

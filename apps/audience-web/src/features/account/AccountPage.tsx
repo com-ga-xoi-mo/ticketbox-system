@@ -3,7 +3,7 @@ import { useMyProfile } from '../../shared/api/profile';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
-import { AlertCircle, Bell, LifeBuoy, Mail, ReceiptText, ShieldAlert, Ticket, User } from 'lucide-react';
+import { AlertCircle, Bell, Heart, LifeBuoy, Mail, ReceiptText, ShieldAlert, Ticket, User } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -138,6 +138,19 @@ export function AccountPage() {
             <CardContent>
               <Button variant="ghost" asChild>
                 <Link to="/account/tickets">Mở ví vé</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-rose-500" />
+                Sự kiện yêu thích
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/me/favorites">Xem danh sách</Link>
               </Button>
             </CardContent>
           </Card>

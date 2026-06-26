@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
+import { FavoriteButton } from '../../shared/ui/FavoriteButton';
 import { VenueMapModal } from './components/VenueMapModal';
 import { getVenueCoordinates } from './utils/venue-coordinates';
 import { SeoHead } from '../../shared/ui/seo/SeoHead';
@@ -137,7 +138,7 @@ export function EventDetailPage() {
 
   const seoTitle = data.seoTitle || `${data.title} | Ticketbox`;
   const seoDescription = data.seoDescription || (data.description ? data.description.substring(0, 160) : undefined);
-  const seoImageUrl = data.seoImageUrl || resolveImageUrl(data.posterAsset?.publicUrl);
+  const seoImageUrl = data.seoImageUrl || resolveImageUrl(data.posterAsset?.publicUrl || undefined);
   const eventUrl = typeof window !== 'undefined' ? window.location.href : undefined;
 
   return (
@@ -226,6 +227,9 @@ export function EventDetailPage() {
             <h1 className="text-4xl font-black leading-tight tracking-tight text-foreground sm:text-5xl">
               {data.title}
             </h1>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <FavoriteButton concertId={data.id} className="rounded-full px-6 shadow-sm" />
+            </div>
           </div>
 
           <Card className="border-white/70 bg-card/80 shadow-sm backdrop-blur">
@@ -370,7 +374,7 @@ export function EventDetailPage() {
             latitude={coords.latitude}
             longitude={coords.longitude}
             venueName={data.venueName}
-            address={data.venueAddress}
+            address={data.venueAddress ?? undefined}
             open={showMap}
             onClose={() => setShowMap(false)}
           />

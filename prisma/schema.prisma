@@ -370,6 +370,7 @@ model User {
   promotionUsages     PromotionUsage[]
   artistFollows       ArtistFollow[]           @relation("UserArtistFollows")
   artistFavorites     ArtistFavorite[]         @relation("UserArtistFavorites")
+  concertFavorites    FavoriteConcert[]        @relation("UserConcertFavorites")
 
   @@map("users")
 }
@@ -470,6 +471,7 @@ model Concert {
   guestListEntries GuestListEntry[]
   artistBios       ArtistBio[]
   concertArtists   ConcertArtist[]
+  favoritedBy      FavoriteConcert[]        @relation("ConcertFavoritedBy")
 
   @@index([status, startsAt])
   @@index([createdById])
@@ -1018,4 +1020,17 @@ model PromotionUsage {
   @@unique([promotionId, orderId])
   @@index([promotionId, userId])
   @@map("promotion_usages")
+}
+
+model FavoriteConcert {
+  userId    String   @map("user_id") @db.Uuid
+  concertId String   @map("concert_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User    @relation("UserConcertFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  concert Concert @relation("ConcertFavoritedBy", fields: [concertId], references: [id], onDelete: Cascade)
+
+  @@id([userId, concertId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("favorite_concerts")
 }
