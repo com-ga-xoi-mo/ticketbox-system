@@ -23,6 +23,7 @@ import {
 } from '../../../components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { useMyProfile } from '../../api/profile';
+import { resolveAvatarImageUrl } from '../../api/client';
 import { useAudienceNotificationUnreadCount } from '../../api/notifications';
 
 function Logo() {
@@ -62,6 +63,8 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const avatarImageUrl = resolveAvatarImageUrl(profile?.avatarAssetId, profile?.avatarUrl);
+
   return (
     <nav className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-2">
       <Link
@@ -95,7 +98,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full focus-visible:ring-0 px-0">
                 <Avatar className="h-9 w-9 border border-border/50 hover:opacity-80 transition-opacity">
-                  <AvatarImage src="" alt={profile?.displayName || 'User'} />
+                  <AvatarImage src={avatarImageUrl || ''} alt={profile?.displayName || 'User'} />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(profile?.displayName)}
                   </AvatarFallback>

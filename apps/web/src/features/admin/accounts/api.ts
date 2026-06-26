@@ -10,6 +10,16 @@ export interface AdminAccount {
   roles: UserRole[];
   status: UserStatus;
   createdAt: string;
+
+  phone?: string | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
+
+  avatarAssetId?: string | null;
+  avatarUrl?: string | null;
 }
 
 export type AdminAccountListResponse = AdminAccount[];
@@ -19,12 +29,26 @@ export interface CreateAccountPayload {
   passwordRaw: string;
   displayName: string;
   roles: UserRole[];
+
+  phone?: string | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
 }
 
 export interface UpdateAccountPayload {
   displayName: string;
   email?: string;
   roles: UserRole[];
+
+  phone?: string | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
 }
 
 export interface UpdateAccountStatusPayload {

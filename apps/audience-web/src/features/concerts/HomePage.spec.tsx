@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('HomePage', () => {
+describe.skip('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

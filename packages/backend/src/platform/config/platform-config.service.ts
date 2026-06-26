@@ -263,43 +263,31 @@ export class PlatformConfigService {
     return this.configService.get('GUEST_LIST_PROCESSING_LEASE_MS');
   }
 
-  get storageDriver(): PlatformEnv['STORAGE_DRIVER'] {
-    return this.configService.get('STORAGE_DRIVER');
-  }
-
-  get localStorageRootDir(): string {
-    return this.configService.get('LOCAL_STORAGE_ROOT_DIR');
-  }
-
-  get localStoragePublicBaseUrl(): string {
-    return this.configService.get('LOCAL_STORAGE_PUBLIC_BASE_URL');
-  }
-
   get ticketAccessBaseUrl(): string {
     return this.configService.get('TICKET_ACCESS_BASE_URL');
   }
 
-  get s3Endpoint(): string | undefined {
-    return this.configService.get('S3_ENDPOINT', { infer: true });
+  get s3Endpoint(): string {
+    return this.configService.get('S3_ENDPOINT');
   }
 
-  get s3Region(): string | undefined {
-    return this.configService.get('S3_REGION', { infer: true });
+  get s3Region(): string {
+    return this.configService.get('S3_REGION');
   }
 
-  get s3Bucket(): string | undefined {
-    return this.configService.get('S3_BUCKET', { infer: true });
+  get s3Bucket(): string {
+    return this.configService.get('S3_BUCKET');
   }
 
-  get s3AccessKeyId(): string | undefined {
-    return this.configService.get('S3_ACCESS_KEY_ID', { infer: true });
+  get s3AccessKeyId(): string {
+    return this.configService.get('S3_ACCESS_KEY_ID');
   }
 
-  get s3SecretAccessKey(): string | undefined {
-    return this.configService.get('S3_SECRET_ACCESS_KEY', { infer: true });
+  get s3SecretAccessKey(): string {
+    return this.configService.get('S3_SECRET_ACCESS_KEY');
   }
 
-  get s3PublicBaseUrl(): string | undefined {
-    return this.configService.get('S3_PUBLIC_BASE_URL', { infer: true });
+  get s3PublicBaseUrl(): string {
+    return this.configService.get('S3_PUBLIC_BASE_URL');
   }
 }

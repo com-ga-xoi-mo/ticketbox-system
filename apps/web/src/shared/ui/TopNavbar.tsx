@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useMyProfile } from '../api/profile';
+import { resolveAvatarImageUrl } from '../api/client';
 
 interface Crumb {
   label: string;
@@ -8,7 +10,8 @@ interface Crumb {
 }
 
 export function TopNavbar({ breadcrumbs = [] }: { breadcrumbs?: Crumb[] }) {
-  const { session, logout } = useAuth();
+const { session, logout } = useAuth();
+  const { data: profile } = useMyProfile(!!session);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +26,7 @@ export function TopNavbar({ breadcrumbs = [] }: { breadcrumbs?: Crumb[] }) {
   }, []);
 
   const role = session?.roles?.includes('ADMIN') ? 'Admin' : 'Organizer';
+  const avatarImageUrl = resolveAvatarImageUrl(profile?.avatarAssetId, profile?.avatarUrl);
 
   return (
     <header className="fixed right-0 top-0 z-40 flex h-16 w-[calc(100%-16rem)] items-center justify-between border-b border-white/10 bg-surface/70 px-8 backdrop-blur-md">
@@ -86,13 +90,21 @@ export function TopNavbar({ breadcrumbs = [] }: { breadcrumbs?: Crumb[] }) {
             aria-haspopup="true"
             className="group flex items-center gap-2.5 rounded-full px-2 py-1 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <img
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${role}&backgroundColor=171f33`}
-              alt="Profile avatar"
-              className="size-8 rounded-full border border-white/20 bg-surface-container-high object-cover transition-colors group-hover:border-primary"
-            />
+            {avatarImageUrl ? (
+              <img
+                src={avatarImageUrl}
+                alt="Profile avatar"
+                className="size-8 rounded-full border border-white/20 object-cover transition-colors group-hover:border-primary"
+              />
+            ) : (
+              <div className="size-8 rounded-full border border-white/20 bg-surface-container-high flex items-center justify-center transition-colors group-hover:border-primary">
+                <span className="text-xs font-medium text-white">
+                  {profile?.displayName ? profile.displayName.substring(0, 2).toUpperCase() : role.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+            )}
             <span className="text-sm font-medium text-on-surface transition-colors group-hover:text-primary">
-              {role}
+              {profile?.displayName || role}
             </span>
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
               expand_more
@@ -100,13 +112,26 @@ export function TopNavbar({ breadcrumbs = [] }: { breadcrumbs?: Crumb[] }) {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-surface-container-high shadow-xl">
+            <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl">
+              <div className="px-4 py-3 border-b border-white/10">
+                <p className="text-sm font-medium text-white">{profile?.displayName || role}</p>
+                <p className="text-xs text-slate-400 truncate">{profile?.email || 'Loading...'}</p>
+              </div>
               <div className="py-1">
+                <Link
+                  to={session?.roles?.includes('ADMIN') ? '/admin/account' : '/organizer/account'}
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <span className="material-symbols-outlined text-[18px]">settings</span>
+                  Settings
+                </Link>
+                <div className="h-px bg-white/10 my-1" />
                 <button
                   onClick={logout}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
                   Sign out
                 </button>
               </div>

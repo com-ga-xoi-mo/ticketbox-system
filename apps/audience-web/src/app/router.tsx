@@ -5,6 +5,7 @@ import { HomePage } from '../features/concerts/HomePage';
 import { EventListPage } from '../features/concerts/EventListPage';
 import { EventDetailPage } from '../features/concerts/EventDetailPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { AccessDeniedPage } from '../features/auth/AccessDeniedPage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+{
+    path: '/register',
+    element: <RegisterPage />,
   },
   {
     path: '/access-denied',

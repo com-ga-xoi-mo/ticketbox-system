@@ -4,6 +4,7 @@ import { useAccounts } from '../../accounts/hooks';
 import { Button } from '../../../../shared/ui/button';
 import { Badge } from '../../../../shared/ui/badge';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog';
+import { resolveAvatarImageUrl } from '../../../../shared/api/client';
 import { toast } from 'sonner';
 import { UserMinus, ShieldAlert, DoorOpen } from 'lucide-react';
 
@@ -78,8 +79,8 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-white/10">
-                        {user?.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                        {resolveAvatarImageUrl(user?.avatarAssetId, user?.avatarUrl) ? (
+                          <img src={resolveAvatarImageUrl(user?.avatarAssetId, user?.avatarUrl)} alt={user.displayName} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-sm font-bold text-slate-400">
                             {user?.displayName?.charAt(0)?.toUpperCase() || '?'}

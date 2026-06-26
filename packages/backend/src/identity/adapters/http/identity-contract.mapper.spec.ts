@@ -17,7 +17,18 @@ describe('identity HTTP contract mappers', () => {
         id: '11111111-1111-4111-8111-111111111111',
         roles: [Role.CHECKIN_STAFF],
       },
-      { email: 'staff@ticketbox.test', displayName: 'Gate Staff' },
+      {
+        email: 'staff@ticketbox.test',
+        displayName: 'Gate Staff',
+        phone: null,
+        dateOfBirth: null,
+        gender: null,
+        addressLine: null,
+        city: null,
+        district: null,
+        avatarAssetId: null,
+        avatarUrl: null,
+      },
     );
 
     expect(StaffProfileResponseSchema.parse(response)).toEqual(response);

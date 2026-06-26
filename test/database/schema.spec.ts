@@ -22,6 +22,7 @@ describe('Prisma schema validation', () => {
     // User & RBAC
     expect(client.UserStatus).toBeDefined();
     expect(client.RoleCode).toBeDefined();
+    expect(client.Gender).toBeDefined();
 
     // Concert catalog
     expect(client.ConcertStatus).toBeDefined();
@@ -62,6 +63,34 @@ describe('Prisma schema validation', () => {
     );
     expect(guest?.fields.map((field) => field.name)).toEqual(
       expect.arrayContaining(['concertId', 'latestBatchId', 'normalizedPhone', 'cancelledAt']),
+    );
+  });
+
+    it('exports all required Gender values', async () => {
+    const { Gender } = await import('@prisma/client');
+    expect(Gender.MALE).toBe('MALE');
+    expect(Gender.FEMALE).toBe('FEMALE');
+    expect(Gender.OTHER).toBe('OTHER');
+  });
+
+  it('exports AssetKind.USER_AVATAR', async () => {
+    const { AssetKind } = await import('@prisma/client');
+    expect(AssetKind.USER_AVATAR).toBe('USER_AVATAR');
+  });
+
+  it('generates user profile and avatar fields', async () => {
+    const { Prisma } = await import('@prisma/client');
+    const user = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
+    expect(user?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining([
+        'phone',
+        'dateOfBirth',
+        'gender',
+        'addressLine',
+        'city',
+        'district',
+        'avatarAssetId',
+      ]),
     );
   });
 

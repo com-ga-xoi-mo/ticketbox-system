@@ -7,6 +7,11 @@ import { AlertCircle, Bell, Heart, LifeBuoy, Mail, ReceiptText, ShieldAlert, Tic
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
+import { ProfileEditForm } from './ProfileEditForm';
+import { PasswordChangeForm } from './PasswordChangeForm';
+import { AvatarUploader } from './AvatarUploader';
+import { KeyRound } from 'lucide-react';
+
 
 export function AccountPage() {
   const { data: profile, isLoading, isError, refetch } = useMyProfile();
@@ -46,24 +51,18 @@ export function AccountPage() {
                   </Button>
                 </AlertDescription>
               </Alert>
-            ) : profile ? (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Họ và tên
-                  </span>
-                  <span className="text-lg font-semibold">{profile.displayName}</span>
-                </div>
 
-                <div className="flex flex-col gap-1">
+            ) : profile ? (
+              <div className="space-y-8">
+                <AvatarUploader profile={profile} />
+                <div className="flex flex-col gap-1 mt-4">
                   <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     Email
                   </span>
                   <span className="text-lg">{profile.email}</span>
                 </div>
-
+                
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4" />
@@ -77,8 +76,23 @@ export function AccountPage() {
                     ))}
                   </div>
                 </div>
+
+                <ProfileEditForm profile={profile} />
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+
+
+        <Card className="shadow-sm mt-6">
+          <CardHeader className="border-b bg-muted/20 pb-6">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <KeyRound className="h-6 w-6 text-primary" />
+              Đổi mật khẩu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <PasswordChangeForm />
           </CardContent>
         </Card>
 

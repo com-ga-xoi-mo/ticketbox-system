@@ -5,26 +5,36 @@ import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { useCreateAccount } from './hooks';
 import { toast } from 'sonner';
+import type { UserRole } from './api';
 
 interface CreateAccountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface CreateAccountFormValues {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  displayName: string;
+  role: UserRole;
+}
+
 export const CreateAccountDialog = ({ open, onOpenChange }: CreateAccountDialogProps) => {
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CreateAccountFormValues>({
     defaultValues: {
       email: '',
       password: '',
+      confirmPassword: '',
       displayName: '',
-      role: 'CHECKIN_STAFF'
+      role: 'CHECKIN_STAFF',
     }
   });
   const role = watch('role');
 
   const { mutate, isPending } = useCreateAccount();
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CreateAccountFormValues) => {
     const payload = {
       email: data.email,
       passwordRaw: data.password,
@@ -32,6 +42,7 @@ export const CreateAccountDialog = ({ open, onOpenChange }: CreateAccountDialogP
       roles: [data.role],
     };
     mutate(payload, {
+
       onSuccess: () => {
         toast.success('Account created successfully');
         reset();
@@ -90,11 +101,26 @@ export const CreateAccountDialog = ({ open, onOpenChange }: CreateAccountDialogP
           </div>
 
           <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-400">Confirm Password</label>
+            <Input
+              type="password"
+              {...register('confirmPassword', { 
+                required: 'Please confirm your password',
+                validate: (value) => value === watch('password') || 'Passwords do not match'
+              })}
+              className="bg-slate-800/50 border-white/10 text-white placeholder:placeholder:text-slate-500"
+              placeholder="Re-enter password..."
+            />
+            {errors.confirmPassword && <span className="text-red-400 text-xs">{errors.confirmPassword.message}</span>}
+          </div>
+
+          
+          <div className="space-y-2">
             <label className="text-sm font-medium text-slate-400">Role</label>
             <div className="relative">
               <select
                 value={role}
-                onChange={(e) => setValue('role', e.target.value)}
+                onChange={(e) => setValue('role', e.target.value as UserRole)}
                 className="appearance-none cursor-pointer w-full bg-slate-800/50 border border-white/10 rounded-md py-2 pl-3 pr-8 text-sm text-white transition-all focus:border-[#4cd7f6] focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50"
               >
                 <option value="" disabled>Select role</option>
@@ -109,23 +135,21 @@ export const CreateAccountDialog = ({ open, onOpenChange }: CreateAccountDialogP
             </div>
           </div>
 
-          <DialogFooter className="mt-6 border-t border-white/10 pt-4">
+          <div className="mt-6 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 hover:bg-white/5 text-white"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className="bg-gradient-to-br from-[#d0bcff] to-[#e14ef6] text-slate-900 font-semibold shadow-[0_0_15px_rgba(225,78,246,0.3)] hover:shadow-[0_0_25px_rgba(225,78,246,0.5)] border-0"
             >
               {isPending ? 'Creating...' : 'Create Account'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

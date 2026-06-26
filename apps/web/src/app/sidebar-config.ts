@@ -66,8 +66,15 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     roles: ['ORGANIZER'],
   },
   {
+    key: 'organizer-account',
+    label: 'Account',
+    icon: 'manage_accounts',
+    path: '/organizer/account',
+    roles: ['ORGANIZER'],
+  },
+  {
     key: 'admin-accounts',
-    label: 'Staff Accounts',
+    label: 'Accounts',
     icon: 'people',
     path: '/admin/accounts',
     roles: ['ADMIN'],

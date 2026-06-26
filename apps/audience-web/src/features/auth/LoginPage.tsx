@@ -78,6 +78,10 @@ export function LoginPage() {
             <Button type="submit" className="h-11 w-full rounded-full shadow-xl shadow-primary/20" disabled={loading}>
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
+            
+            <div className="text-center text-sm text-muted-foreground mt-4">
+              Chưa có tài khoản? <Link to="/register" className="text-primary hover:underline">Đăng ký ngay</Link>
+            </div>
           </form>
         </CardContent>
       </Card>

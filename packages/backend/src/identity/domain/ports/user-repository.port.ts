@@ -17,11 +17,23 @@ export interface CreateUserData {
   email: string;
   passwordHash: string;
   displayName: string;
+  phone?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
 }
 
 export interface UpdateUserProfileData {
   displayName?: string;
   email?: string;
+  phone?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
 }
 
 export interface UserFilter {
@@ -41,6 +53,14 @@ export interface UserRecord {
   status: UserStatus;
   /** Array of role code strings, e.g. ['AUDIENCE'] */
   roles: string[];
+  phone?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  district?: string | null;
+  avatarAssetId?: string | null;
+  avatarUrl?: string | null;
 }
 
 /**
@@ -84,6 +104,23 @@ export interface IUserRepository {
    * Find a user by email address, returning null when not found.
    */
   findByEmail(email: string): Promise<UserRecordWithPassword | null>;
+
+  findByIdWithPassword(id: string): Promise<UserRecordWithPassword | null>;
+
+  updatePassword(id: string, passwordHash: string): Promise<void>;
+
+  /**
+   * Replaces the user's avatar asset in a transaction.
+   * Returns the storage key of the PREVIOUS avatar asset, if any, so it can be cleaned up.
+   */
+  replaceAvatar(userId: string, newAsset: { id: string; storageKey: string; publicUrl: string; originalName: string; contentType: string; sizeBytes: number }): Promise<string | null>;
+
+  /**
+   * Clears the user's avatar asset in a transaction.
+   * Returns the storage key of the PREVIOUS avatar asset, if any, so it can be cleaned up.
+   */
+  clearAvatar(userId: string): Promise<string | null>;
+
 
   /**
    * Return the subset of emails that already exist.

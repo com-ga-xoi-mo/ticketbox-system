@@ -12,6 +12,7 @@ import {
 const prisma = new PrismaClient();
 
 const demoPasswordHash = '$2b$10$8c.VgqzGzMFgwfEpq2K5XOct3iK5I.THdHvnyrIX.MIlCBJ7PTPNe'; // hashes to 'demoPassword'
+const assetPublicBaseUrl = (process.env.S3_PUBLIC_BASE_URL ?? 'https://assets.example.com').replace(/\/+$/, '');
 
 type SeedZone = {
   svgElementId: string;
@@ -359,7 +360,7 @@ async function upsertAsset(params: {
       kind: params.kind,
       status: AssetStatus.ACTIVE,
       storageKey,
-      publicUrl: `/storage/${storageKey}`,
+      publicUrl: `${assetPublicBaseUrl}/${storageKey}`,
       originalName: params.originalName,
       contentType: params.contentType,
       uploadedById: params.uploadedById,

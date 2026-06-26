@@ -24,15 +24,27 @@ export type {
 export {
   LoginRequestSchema,
   LoginResponseSchema,
+  RegisterRequestSchema,
   ROLE_CODES,
   RoleCodeSchema,
+  GenderSchema,
+  UpdateMyProfileRequestSchema,
+  UpdateMyPasswordRequestSchema,
+  UpdateMyPasswordResponseSchema,
+  AvatarResponseSchema,
   StaffProfileResponseSchema,
   MyProfileResponseSchema,
 } from './auth/auth.contract';
 export type {
   LoginRequest,
   LoginResponse,
+  RegisterRequest,
   RoleCode,
+  Gender,
+  UpdateMyProfileRequest,
+  UpdateMyPasswordRequest,
+  UpdateMyPasswordResponse,
+  AvatarResponse,
   StaffProfileResponse,
   MyProfileResponse,
 } from './auth/auth.contract';

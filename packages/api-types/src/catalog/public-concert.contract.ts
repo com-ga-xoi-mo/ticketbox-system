@@ -19,6 +19,7 @@ export const AssetKindCodeSchema = z.enum([
   'ARTIST_AVATAR',
   'ARTIST_POSTER',
   'OTHER',
+  'USER_AVATAR',
 ]);
 export type AssetKindCode = z.infer<typeof AssetKindCodeSchema>;
 

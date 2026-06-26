@@ -22,7 +22,7 @@ export class CreateUserAccountUseCase {
 
   async execute(
     ctx: AdminCommandContext,
-    params: { email: string; passwordRaw: string; displayName: string; roles: string[] },
+    params: { email: string; passwordRaw: string; displayName: string; roles: string[]; phone?: string | null; dateOfBirth?: string | null; gender?: string | null; addressLine?: string | null; city?: string | null; district?: string | null },
   ): Promise<UserRecord> {
     this.authorizeAdmin.execute(ctx.actor);
     const passwordHash = await this.passwordHasher.hash(params.passwordRaw);
@@ -31,6 +31,12 @@ export class CreateUserAccountUseCase {
         email: params.email,
         passwordHash,
         displayName: params.displayName,
+        phone: params.phone,
+        dateOfBirth: params.dateOfBirth ? new Date(params.dateOfBirth) : null,
+        gender: params.gender,
+        addressLine: params.addressLine,
+        city: params.city,
+        district: params.district,
       },
       params.roles,
     );
@@ -73,17 +79,23 @@ export class UpdateUserAccountUseCase {
   async execute(
     ctx: AdminCommandContext,
     id: string,
-    params: { displayName?: string; email?: string; roles?: string[] },
+    params: { displayName?: string; email?: string; roles?: string[]; phone?: string | null; dateOfBirth?: string | null; gender?: string | null; addressLine?: string | null; city?: string | null; district?: string | null },
   ): Promise<UserRecord> {
     this.authorizeAdmin.execute(ctx.actor);
     
     let user = await this.userRepository.findById(id);
     if (!user) throw new UserNotFoundError(id);
 
-    if (params.displayName !== undefined || params.email !== undefined) {
+    if (params.displayName !== undefined || params.email !== undefined || params.phone !== undefined || params.dateOfBirth !== undefined || params.gender !== undefined || params.addressLine !== undefined || params.city !== undefined || params.district !== undefined) {
       user = await this.userRepository.updateProfile(id, { 
         displayName: params.displayName,
-        email: params.email
+        email: params.email,
+        phone: params.phone,
+        dateOfBirth: params.dateOfBirth ? new Date(params.dateOfBirth) : (params.dateOfBirth === null ? null : undefined),
+        gender: params.gender,
+        addressLine: params.addressLine,
+        city: params.city,
+        district: params.district,
       });
     }
 
