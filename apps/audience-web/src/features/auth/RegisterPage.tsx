@@ -2,18 +2,14 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Ticket } from 'lucide-react';
 import { useAuth } from '../../shared/auth/AuthContext';
-import { loginRequest } from '../../shared/api/auth';
+import { registerRequest } from '../../shared/api/auth';
+import type { RegisterRequest } from '@ticketbox/api-types';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 
-interface LoginFormValues {
-  email: string;
-  password: string;
-}
-
-export function LoginPage() {
+export function RegisterPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,18 +24,35 @@ export function LoginPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const values: LoginFormValues = {
-      email: String(formData.get('email') ?? ''),
-      password: String(formData.get('password') ?? ''),
+    
+    const email = String(formData.get('email') ?? '');
+    const password = String(formData.get('password') ?? '');
+    const confirmPassword = String(formData.get('confirmPassword') ?? '');
+    const displayName = String(formData.get('displayName') ?? '');
+    const phoneRaw = String(formData.get('phone') ?? '').trim();
+    
+    if (password !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+
+    const values: RegisterRequest = {
+      email,
+      password,
+      displayName,
     };
+    if (phoneRaw) {
+      values.phone = phoneRaw;
+    }
+
     setError(null);
     setLoading(true);
     try {
-      const token = await loginRequest(values);
+      const token = await registerRequest(values);
       signIn(token);
       navigate(from, { replace: true });
-    } catch {
-      setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
+    } catch (err: any) {
+      setError(err.message || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.');
     } finally {
       setLoading(false);
     }
@@ -53,8 +66,8 @@ export function LoginPage() {
           <Link to="/" className="grid size-14 place-items-center rounded-3xl bg-primary text-primary-foreground shadow-lg shadow-primary/20" aria-label="Về trang chủ TicketBox">
             <Ticket className="size-7" aria-hidden="true" />
           </Link>
-          <CardTitle className="text-2xl font-black">Đăng nhập TicketBox</CardTitle>
-          <p className="text-sm text-muted-foreground">Tiếp tục để quản lý vé và trải nghiệm của bạn.</p>
+          <CardTitle className="text-2xl font-black">Đăng ký TicketBox</CardTitle>
+          <p className="text-sm text-muted-foreground">Tạo tài khoản để tham gia các sự kiện tuyệt vời.</p>
         </CardHeader>
         <CardContent>
 
@@ -64,23 +77,38 @@ export function LoginPage() {
           </Alert>
         )}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground" htmlFor="email">Email</label>
               <Input id="email" name="email" type="email" placeholder="email@example.com" autoComplete="email" required />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
-              <Input id="password" name="password" type="password" placeholder="••••••••" autoComplete="current-password" required />
+              <label className="text-sm font-semibold text-foreground" htmlFor="displayName">Họ và tên</label>
+              <Input id="displayName" name="displayName" type="text" placeholder="Nguyễn Văn A" autoComplete="name" required />
             </div>
 
-            <Button type="submit" className="h-11 w-full rounded-full shadow-xl shadow-primary/20" disabled={loading}>
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground" htmlFor="phone">Số điện thoại (Tuỳ chọn)</label>
+              <Input id="phone" name="phone" type="tel" placeholder="+84901234567" autoComplete="tel" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
+              <Input id="password" name="password" type="password" placeholder="••••••••" autoComplete="new-password" minLength={8} required />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground" htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <Input id="confirmPassword" name="confirmPassword" type="password" placeholder="••••••••" autoComplete="new-password" minLength={8} required />
+            </div>
+
+            <Button type="submit" className="h-11 w-full rounded-full shadow-xl shadow-primary/20 mt-2" disabled={loading}>
+              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </Button>
             
             <div className="text-center text-sm text-muted-foreground mt-4">
-              Chưa có tài khoản? <Link to="/register" className="text-primary hover:underline">Đăng ký ngay</Link>
+              Đã có tài khoản? <Link to="/login" className="text-primary hover:underline">Đăng nhập ngay</Link>
             </div>
           </form>
         </CardContent>
