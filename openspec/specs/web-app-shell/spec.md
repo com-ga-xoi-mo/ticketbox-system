@@ -1,7 +1,7 @@
 # Web App Shell
 
 ## Purpose
-TBD
+Define protected app-shell routing, role-filtered navigation, sidebar behavior, and top-navbar account actions for console web users.
 
 ## Requirements
 
@@ -32,23 +32,24 @@ The app shell SHALL protect authenticated routes so that an unauthenticated visi
 
 ### Requirement: Sidebar configuration filtered by role
 
-The shell SHALL derive sidebar items from a single declarative `sidebar-config`, where each item lists the roles allowed to see it, and render only the items whose allowed roles include the current user's role. The account-management item and the assignment item SHALL both be ADMIN-only and MUST be hidden from organizers. Sidebar item paths SHALL point to role-prefixed routes for admin and organizer destinations.
+The shell SHALL derive sidebar items from a single declarative `sidebar-config`, where each item lists the roles allowed to see it, and render only the items whose allowed roles include the current user's role. The admin account-management item SHALL be ADMIN-only, the organizer self-account item SHALL be ORGANIZER-only, and the assignment item SHALL be ADMIN-only. Sidebar item paths SHALL point to role-prefixed routes for admin and organizer destinations.
 
 #### Scenario: Organizer sees only permitted items
 
 - **WHEN** the current user's role is `ORGANIZER`
-- **THEN** the sidebar shows Concerts and Settings
+- **THEN** the sidebar shows organizer Dashboard, Concerts, Venue Maps, and Account
+- **AND** the Account item links to `/organizer/account`
 - **AND** the Concerts item links to `/organizer/concerts`
-- **AND** the sidebar does NOT show Dashboard, Quản lí tài khoản, or Phân việc
+- **AND** the sidebar does NOT show admin Accounts or Assignments
 
 #### Scenario: Admin sees admin-only items
 
 - **WHEN** the current user's role is `ADMIN`
-- **THEN** the sidebar shows Dashboard, Concerts, Quản lí tài khoản, Phân việc, and Settings
+- **THEN** the sidebar shows Dashboard, Reports, Concerts, Venue Maps, Assignments, and Accounts
 - **AND** the Dashboard item links to `/admin/dashboard`
 - **AND** the Concerts item links to `/admin/concerts`
-- **AND** the Quản lí tài khoản item links to `/admin/accounts`
-- **AND** the Phân việc item links to `/admin/assignments`
+- **AND** the Accounts item links to `/admin/accounts`
+- **AND** the Assignments item links to `/admin/assignments`
 
 #### Scenario: Filter is data-driven
 
@@ -87,3 +88,27 @@ The shell SHALL render a collapsible sidebar (expandable label mode and collapse
 
 - **WHEN** a feature page is active
 - **THEN** its corresponding sidebar item is visually marked as active
+
+### Requirement: Console top navbar uses profile identity
+The console top navbar SHALL render the authenticated user's display name, email, and avatar from current profile data fetched through `GET /me/profile`.
+
+#### Scenario: Console profile has avatar URL
+- **WHEN** the authenticated console user's profile includes `avatarUrl`
+- **THEN** the top navbar displays that avatar image
+
+#### Scenario: Console profile has no avatar URL
+- **WHEN** the authenticated console user's profile has no avatar URL
+- **THEN** the top navbar displays fallback initials derived from the user's display name or email
+
+### Requirement: Console avatar dropdown exposes account actions
+The console avatar dropdown SHALL expose account actions for the current user's role: Account, Change Password, and Logout.
+
+#### Scenario: Admin uses account dropdown
+- **WHEN** an authenticated ADMIN user opens the avatar dropdown
+- **THEN** the Account action links to `/admin/account`
+- **AND** the Change Password action links to `/admin/account?section=password`
+
+#### Scenario: Organizer uses account dropdown
+- **WHEN** an authenticated ORGANIZER user opens the avatar dropdown
+- **THEN** the Account action links to `/organizer/account`
+- **AND** the Change Password action links to `/organizer/account?section=password`
