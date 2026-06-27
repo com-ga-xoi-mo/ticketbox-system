@@ -1,7 +1,7 @@
 # Staff Management Specification
 
 ## Purpose
-TBD
+Define staff-management behavior for admin-operated check-in staff account lists, bulk staff provisioning, generated credential handling, and assignment-related workflows.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ The system SHALL provide quick actions (Edit, Change Status) on hover for each s
 - **THEN** quick action buttons appear, replacing the previous 3-dot menu.
 
 ### Requirement: Bulk check-in staff provisioning
-The system SHALL allow an ADMIN to create multiple `CHECKIN_STAFF` accounts for a selected concert in one operation by providing a base email, account quantity, and display name prefix.
+The system SHALL allow an ADMIN to create multiple `CHECKIN_STAFF` accounts for a selected concert in one operation by providing a base email, account quantity, and display name prefix. Bulk-created staff accounts SHALL NOT require phone, date of birth, gender, address, city, district, or avatar data.
 
 #### Scenario: Admin bulk creates check-in staff accounts
 - **WHEN** an ADMIN submits a valid bulk check-in staff creation request for a concert
@@ -30,6 +30,10 @@ The system SHALL allow an ADMIN to create multiple `CHECKIN_STAFF` accounts for 
 #### Scenario: Non-admin attempts bulk creation
 - **WHEN** an authenticated user without the `ADMIN` role submits a bulk check-in staff creation request
 - **THEN** the system SHALL reject the request with a forbidden error
+
+#### Scenario: Bulk-created staff profile fields default to null
+- **WHEN** bulk check-in staff creation succeeds after the user profile schema is expanded
+- **THEN** each created staff account SHALL have nullable profile fields and no avatar by default
 
 ### Requirement: Bulk staff email generation and validation
 The system SHALL generate bulk staff account emails from the submitted base email using numeric suffixing and SHALL validate the complete generated batch before creating any account.
@@ -79,3 +83,37 @@ The admin web SHALL allow the ADMIN to download a password-protected PDF contain
 #### Scenario: PDF protection is unavailable
 - **WHEN** the configured PDF generation library cannot produce a password-protected PDF
 - **THEN** the admin web SHALL NOT produce an unprotected credential PDF
+
+### Requirement: Admin accounts table displays expanded profile fields
+The admin web accounts page SHALL display avatar, display name, email, phone, roles, and status for user accounts returned by `/admin/users`.
+
+#### Scenario: Admin views account rows
+- **WHEN** an ADMIN opens the accounts page
+- **THEN** each account row displays the user's avatar or initials, display name, email, phone, roles, and status
+
+#### Scenario: Admin searches accounts by phone
+- **WHEN** an ADMIN searches with a phone number fragment
+- **THEN** the accounts list filters users whose phone matches the search query
+
+### Requirement: Admin creates account with profile fields
+The admin create-account dialog SHALL allow entering supported profile fields for manually created user accounts.
+
+#### Scenario: Admin creates account with profile details
+- **WHEN** an ADMIN submits the create-account form with optional phone, date of birth, gender, address line, city, and district
+- **THEN** the system sends those profile fields to `POST /admin/users`
+- **AND** the accounts list refreshes after success
+
+### Requirement: Admin edits account profile fields
+The admin edit-account dialog SHALL allow editing supported profile fields while preserving role editing controls.
+
+#### Scenario: Admin edits profile details
+- **WHEN** an ADMIN submits changes for display name, email, roles, phone, date of birth, gender, address line, city, and district
+- **THEN** the system sends the edited fields to `PATCH /admin/users/:id`
+- **AND** the accounts list and detail cache refresh after success
+
+### Requirement: Admin account management does not upload user avatars
+The admin account management UI SHALL display account avatars but SHALL NOT provide upload or removal controls for other users' avatars.
+
+#### Scenario: Admin opens create or edit account dialog
+- **WHEN** an ADMIN creates or edits another user account
+- **THEN** the dialog does not include avatar upload or avatar removal controls
