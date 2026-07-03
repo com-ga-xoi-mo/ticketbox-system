@@ -24,6 +24,21 @@ export const LoginRequestSchema = z
   .strict();
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
+export const GoogleLoginRequestSchema = z
+  .object({
+    credential: z.string().min(1),
+  })
+  .strict();
+export type GoogleLoginRequest = z.infer<typeof GoogleLoginRequestSchema>;
+
+export const AccountLinkRequiredErrorSchema = z
+  .object({
+    code: z.literal('ACCOUNT_LINK_REQUIRED'),
+    message: z.string().min(1),
+  })
+  .strict();
+export type AccountLinkRequiredError = z.infer<typeof AccountLinkRequiredErrorSchema>;
+
 export const LoginResponseSchema = z
   .object({
     accessToken: z.string().min(1),
@@ -33,6 +48,9 @@ export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 export const GenderSchema = z.enum(['MALE', 'FEMALE', 'OTHER']);
 export type Gender = z.infer<typeof GenderSchema>;
+
+export const AuthProviderSchema = z.enum(['GOOGLE']);
+export type AuthProvider = z.infer<typeof AuthProviderSchema>;
 
 export const UpdateMyProfileRequestSchema = z.object({
   displayName: z.string().min(1).optional(),
@@ -94,6 +112,9 @@ export const MyProfileResponseSchema = z
     district: z.string().nullable().optional(),
     avatarAssetId: z.string().uuid().nullable().optional(),
     avatarUrl: z.string().min(1).nullable().optional(),
+    hasPassword: z.boolean(),
+    authProviders: z.array(AuthProviderSchema),
+    externalAvatarUrl: z.string().url().nullable(),
   })
   .strict();
 export type MyProfileResponse = z.infer<typeof MyProfileResponseSchema>;

@@ -35,7 +35,9 @@ export class LoginUseCase {
 
     // Always compare to prevent timing-based email enumeration
     const isValidPassword =
-      user !== null && (await this.passwordHasher.compare(cmd.password, user.passwordHash));
+      user !== null &&
+      user.passwordHash !== null &&
+      (await this.passwordHasher.compare(cmd.password, user.passwordHash));
 
     const isActive = user !== null && user.status === 'ACTIVE';
 

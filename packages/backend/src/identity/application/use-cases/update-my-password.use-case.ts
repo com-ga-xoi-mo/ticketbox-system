@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IUserRepository, USER_REPOSITORY } from '../../domain/ports/user-repository.port';
 import { PASSWORD_HASHER, PasswordHasherPort } from '../../domain/ports/password-hasher.port';
-import { InvalidCredentialsError } from '../../domain/errors';
+import { InvalidCredentialsError, LocalPasswordRequiredError } from '../../domain/errors';
 import { UpdateMyPasswordDto } from '../../adapters/http/dto/password.dto';
 
 @Injectable()
@@ -17,6 +17,9 @@ export class UpdateMyPasswordUseCase {
     const userRecord = await this.userRepo.findByIdWithPassword(userId);
     if (!userRecord) {
       throw new Error('User not found');
+    }
+    if (userRecord.passwordHash === null) {
+      throw new LocalPasswordRequiredError();
     }
 
     const isValid = await this.passwordHasher.compare(cmd.currentPassword, userRecord.passwordHash);

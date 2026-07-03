@@ -88,11 +88,17 @@ export function AccountPage() {
           <CardHeader className="border-b bg-muted/20 pb-6">
             <CardTitle className="flex items-center gap-2 text-xl">
               <KeyRound className="h-6 w-6 text-primary" />
-              Đổi mật khẩu
+              {profile?.hasPassword ? 'Đổi mật khẩu' : 'Phương thức đăng nhập'}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <PasswordChangeForm />
+            {profile?.hasPassword ? (
+              <PasswordChangeForm />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Tài khoản này đang đăng nhập bằng Google và chưa có mật khẩu TicketBox.
+              </p>
+            )}
           </CardContent>
         </Card>
 

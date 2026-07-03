@@ -11,6 +11,8 @@ import {
   CreateRefundRequestSchema,
   CreateSupportRequestSchema,
   LoginRequestSchema,
+  GoogleLoginRequestSchema,
+  AccountLinkRequiredErrorSchema,
   LoginResponseSchema,
   OnlineScanRequestSchema,
   OnlineScanResponseSchema,
@@ -22,6 +24,7 @@ import {
   RefundRequestResponseSchema,
   StaffAssignmentsResponseSchema,
   StaffProfileResponseSchema,
+  MyProfileResponseSchema,
   SupportRequestResponseSchema,
   TicketCacheDeltaResponseSchema,
   TicketCacheFullResponseSchema,
@@ -645,6 +648,15 @@ describe('auth contracts', () => {
       },
     );
     expect(LoginResponseSchema.parse({ accessToken: 'jwt' })).toEqual({ accessToken: 'jwt' });
+    expect(GoogleLoginRequestSchema.parse({ credential: 'google-id-token' })).toEqual({
+      credential: 'google-id-token',
+    });
+    expect(
+      AccountLinkRequiredErrorSchema.parse({
+        code: 'ACCOUNT_LINK_REQUIRED',
+        message: 'Use password login',
+      }),
+    ).toMatchObject({ code: 'ACCOUNT_LINK_REQUIRED' });
     expect(
       StaffProfileResponseSchema.parse({
         id: assignmentId,
@@ -653,11 +665,23 @@ describe('auth contracts', () => {
         roles: ['CHECKIN_STAFF'],
       }),
     ).toMatchObject({ roles: ['CHECKIN_STAFF'] });
+    expect(
+      MyProfileResponseSchema.parse({
+        id: assignmentId,
+        email: 'audience@ticketbox.test',
+        displayName: 'Audience',
+        roles: ['AUDIENCE'],
+        hasPassword: false,
+        authProviders: ['GOOGLE'],
+        externalAvatarUrl: 'https://lh3.googleusercontent.com/avatar',
+      }),
+    ).toMatchObject({ hasPassword: false, authProviders: ['GOOGLE'] });
   });
 
   it('rejects invalid and unknown auth fields', () => {
     expect(LoginRequestSchema.safeParse({ email: 'bad', password: '' }).success).toBe(false);
     expect(LoginResponseSchema.safeParse({ accessToken: 'jwt', profile: {} }).success).toBe(false);
+    expect(GoogleLoginRequestSchema.safeParse({ credential: '', email: 'bad' }).success).toBe(false);
     expect(
       StaffProfileResponseSchema.safeParse({
         id: assignmentId,

@@ -80,6 +80,7 @@ beforeAll(async () => {
   const user = await prisma.user.create({
     data: {
       email: `${nonce}@ticketbox.test`,
+      normalizedEmail: `${nonce}@ticketbox.test`,
       passwordHash: 'integration-test',
       displayName: 'Paid Recovery Integration',
     },

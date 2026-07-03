@@ -24,6 +24,11 @@ export class PrismaProfileQueryAdapter implements ProfileQueryPort {
         district: true,
         avatarAssetId: true,
         avatarAsset: { select: { publicUrl: true } },
+        passwordHash: true,
+        authIdentities: {
+          select: { provider: true, providerPictureUrl: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     }).then((user) => user ? {
       email: user.email,
@@ -36,6 +41,12 @@ export class PrismaProfileQueryAdapter implements ProfileQueryPort {
       district: user.district,
       avatarAssetId: user.avatarAssetId,
       avatarUrl: user.avatarAsset?.publicUrl ?? null,
+      hasPassword: user.passwordHash !== null,
+      authProviders: user.authIdentities.map((identity) => identity.provider),
+      externalAvatarUrl:
+        user.authIdentities.find(
+          (identity) => identity.provider === 'GOOGLE' && identity.providerPictureUrl,
+        )?.providerPictureUrl ?? null,
     } : null);
   }
 }

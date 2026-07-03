@@ -68,7 +68,7 @@ export interface UserRecord {
  * Only used for authentication scenarios to prevent accidental leakage.
  */
 export interface UserRecordWithPassword extends UserRecord {
-  passwordHash: string;
+  passwordHash: string | null;
 }
 
 // ---------------------------------------------------------------------------

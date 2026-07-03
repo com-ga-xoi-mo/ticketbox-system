@@ -64,7 +64,11 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  const avatarImageUrl = resolveAvatarImageUrl(profile?.avatarAssetId, profile?.avatarUrl);
+  const avatarImageUrl = resolveAvatarImageUrl(
+    profile?.avatarAssetId,
+    profile?.avatarUrl,
+    profile?.externalAvatarUrl,
+  );
 
   return (
     <nav className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-2">

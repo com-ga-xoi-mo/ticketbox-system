@@ -39,6 +39,12 @@ enum RoleCode {
   @@map("role_code")
 }
 
+enum AuthProvider {
+  GOOGLE
+
+  @@map("auth_provider")
+}
+
 enum AssetKind {
   POSTER
   SEATING_MAP
@@ -356,7 +362,8 @@ model ArtistFavorite {
 model User {
   id           String     @id @default(uuid()) @db.Uuid
   email        String     @unique @db.VarChar(320)
-  passwordHash String     @map("password_hash")
+  normalizedEmail String  @unique @map("normalized_email") @db.VarChar(320)
+  passwordHash String?    @map("password_hash")
   displayName  String     @map("display_name") @db.VarChar(160)
   status       UserStatus @default(ACTIVE)
   phone         String?      @db.VarChar(40)
@@ -370,6 +377,7 @@ model User {
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   roles               UserRole[]
+  authIdentities      AuthIdentity[]
   avatarAsset         Asset?                   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   assets              Asset[]                  @relation("AssetUploader")
   createdConcerts     Concert[]                @relation("ConcertCreator")
@@ -391,6 +399,25 @@ model User {
   concertFavorites    FavoriteConcert[]        @relation("UserConcertFavorites")
 
   @@map("users")
+}
+
+model AuthIdentity {
+  id                  String       @id @default(uuid()) @db.Uuid
+  userId              String       @map("user_id") @db.Uuid
+  provider            AuthProvider
+  providerSubject     String       @map("provider_subject") @db.VarChar(255)
+  providerEmail       String       @map("provider_email") @db.VarChar(320)
+  providerDisplayName String?      @map("provider_display_name") @db.VarChar(160)
+  providerPictureUrl  String?      @map("provider_picture_url")
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("auth_identities")
 }
 
 model Role {

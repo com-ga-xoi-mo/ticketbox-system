@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { EmailAlreadyRegisteredError } from '../../domain/errors';
 import { UserStatus } from '../../domain/user-status.enum';
+import { normalizeEmail } from '../../domain/email-normalization';
 import type {
   CreateUserData,
   IUserRepository,
@@ -55,6 +56,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
       const user = await this.prisma.user.create({
         data: {
           email: data.email,
+          normalizedEmail: normalizeEmail(data.email),
           passwordHash: data.passwordHash,
           displayName: data.displayName,
           phone: data.phone ?? null,
@@ -173,7 +175,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
 
   async findByEmail(email: string): Promise<UserRecordWithPassword | null> {
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { normalizedEmail: normalizeEmail(email) },
       include: {
         roles: { include: { role: true } },
       },
@@ -189,7 +191,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
     }
 
     const users = await this.prisma.user.findMany({
-      where: { email: { in: emails } },
+      where: { normalizedEmail: { in: emails.map(normalizeEmail) } },
       select: { email: true },
     });
 
@@ -240,7 +242,9 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
         where: { id },
         data: {
           ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
-          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.email !== undefined
+            ? { email: data.email.trim(), normalizedEmail: normalizeEmail(data.email) }
+            : {}),
           ...(data.phone !== undefined ? { phone: data.phone } : {}),
           ...(data.dateOfBirth !== undefined ? { dateOfBirth: data.dateOfBirth } : {}),
           ...(data.gender !== undefined ? { gender: data.gender as any } : {}),

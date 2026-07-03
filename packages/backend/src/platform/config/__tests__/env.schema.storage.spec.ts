@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { validateEnv } from '../env.schema';
 
 const baseEnv = {
+  NODE_ENV: 'test',
   DATABASE_URL: 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox?schema=public',
   JWT_SECRET: 'test-secret',
   MOMO_PARTNER_CODE: 'momo-partner',

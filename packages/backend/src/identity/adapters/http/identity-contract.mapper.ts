@@ -33,7 +33,12 @@ export function toMyProfileResponse(
   principal: AuthenticatedUser,
   profile: ProfileProjection,
 ): MyProfileResponse {
-  return toStaffProfileResponse(principal, profile);
+  return {
+    ...toStaffProfileResponse(principal, profile),
+    hasPassword: profile.hasPassword,
+    authProviders: profile.authProviders as MyProfileResponse['authProviders'],
+    externalAvatarUrl: profile.externalAvatarUrl,
+  };
 }
 
 function toRoleCode(role: Role): RoleCode {

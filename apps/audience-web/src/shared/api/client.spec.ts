@@ -6,7 +6,7 @@ vi.mock('../auth/token-storage', () => ({
 }));
 
 import { getToken, clearToken } from '../auth/token-storage';
-import { apiGet, apiPost, registerUnauthorizedHandler } from './client';
+import { apiGet, apiPost, registerUnauthorizedHandler, resolveAvatarImageUrl } from './client';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -74,5 +74,16 @@ describe('apiPost', () => {
     const [, options] = mockFetch.mock.calls[0];
     expect(options.method).toBe('POST');
     expect(options.body).toBe(JSON.stringify({ name: 'test' }));
+  });
+});
+
+describe('avatar URL precedence', () => {
+  it('prefers managed URL, then asset route, then HTTPS external URL', () => {
+    expect(resolveAvatarImageUrl('asset-id', 'https://assets.example.com/managed.jpg', 'https://google/avatar')).toBe(
+      'https://assets.example.com/managed.jpg',
+    );
+    expect(resolveAvatarImageUrl('asset-id', null, 'https://google/avatar')).toContain('/assets/asset-id');
+    expect(resolveAvatarImageUrl(null, null, 'https://google/avatar')).toBe('https://google/avatar');
+    expect(resolveAvatarImageUrl(null, null, 'http://insecure.example/avatar')).toBeUndefined();
   });
 });

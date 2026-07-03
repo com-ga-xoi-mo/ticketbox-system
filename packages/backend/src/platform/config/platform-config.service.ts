@@ -54,6 +54,10 @@ export class PlatformConfigService {
     return this.configService.get('JWT_EXPIRY');
   }
 
+  get googleClientId(): string | undefined {
+    return this.configService.get('GOOGLE_CLIENT_ID', { infer: true });
+  }
+
   get qrTokenSecret(): string {
     return this.configService.get('QR_TOKEN_SECRET');
   }

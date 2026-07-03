@@ -23,11 +23,14 @@ export type {
 
 export {
   LoginRequestSchema,
+  GoogleLoginRequestSchema,
+  AccountLinkRequiredErrorSchema,
   LoginResponseSchema,
   RegisterRequestSchema,
   ROLE_CODES,
   RoleCodeSchema,
   GenderSchema,
+  AuthProviderSchema,
   UpdateMyProfileRequestSchema,
   UpdateMyPasswordRequestSchema,
   UpdateMyPasswordResponseSchema,
@@ -37,10 +40,13 @@ export {
 } from './auth/auth.contract';
 export type {
   LoginRequest,
+  GoogleLoginRequest,
+  AccountLinkRequiredError,
   LoginResponse,
   RegisterRequest,
   RoleCode,
   Gender,
+  AuthProvider,
   UpdateMyProfileRequest,
   UpdateMyPasswordRequest,
   UpdateMyPasswordResponse,
