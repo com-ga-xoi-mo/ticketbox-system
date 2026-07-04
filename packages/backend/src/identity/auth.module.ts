@@ -10,6 +10,7 @@ import { PlatformConfigService } from '../platform/config/platform-config.servic
 // Application — use-cases
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
+import { GoogleSignInUseCase } from './application/use-cases/google-sign-in.use-case';
 import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-admin-action.use-case';
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
@@ -43,6 +44,14 @@ import { PASSWORD_HASHER, type PasswordHasherPort } from './domain/ports/passwor
 import { TOKEN_ISSUER, type TokenIssuerPort } from './domain/ports/token-issuer.port';
 import { USER_REPOSITORY, type IUserRepository } from './domain/ports/user-repository.port';
 import {
+  GOOGLE_IDENTITY_VERIFIER,
+  type GoogleIdentityVerifierPort,
+} from './domain/ports/google-identity-verifier.port';
+import {
+  GOOGLE_IDENTITY_REPOSITORY,
+  type GoogleIdentityRepositoryPort,
+} from './domain/ports/google-identity-repository.port';
+import {
   BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
   type BulkCheckinStaffProvisioningRepositoryPort,
 } from './domain/ports/bulk-checkin-staff-provisioning.port';
@@ -61,6 +70,8 @@ import { PrismaBulkCheckinStaffProvisioningRepository } from './infrastructure/d
 import { PrismaCheckinStaffAssignmentRepository } from './infrastructure/database/prisma-checkin-staff-assignment.repository';
 import { PrismaConcertOwnershipRepository } from './infrastructure/database/prisma-concert-ownership.repository';
 import { PrismaUserRepository } from './infrastructure/database/prisma-user.repository';
+import { PrismaGoogleIdentityRepository } from './infrastructure/database/prisma-google-identity.repository';
+import { GoogleIdentityVerifierAdapter } from './infrastructure/google/google-identity-verifier.adapter';
 import { PrismaProfileQueryAdapter } from './infrastructure/database/prisma-profile-query.adapter';
 import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
@@ -154,6 +165,15 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       ) => new LoginUseCase(userRepository, passwordHasher, tokenIssuer),
     },
     {
+      provide: GoogleSignInUseCase,
+      inject: [GOOGLE_IDENTITY_VERIFIER, GOOGLE_IDENTITY_REPOSITORY, TOKEN_ISSUER],
+      useFactory: (
+        verifier: GoogleIdentityVerifierPort,
+        identities: GoogleIdentityRepositoryPort,
+        tokenIssuer: TokenIssuerPort,
+      ) => new GoogleSignInUseCase(verifier, identities, tokenIssuer),
+    },
+    {
       provide: UpdateMyProfileUseCase,
       inject: [USER_REPOSITORY],
       useFactory: (userRepository: IUserRepository) => new UpdateMyProfileUseCase(userRepository),
@@ -214,6 +234,14 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     {
       provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: GOOGLE_IDENTITY_VERIFIER,
+      useClass: GoogleIdentityVerifierAdapter,
+    },
+    {
+      provide: GOOGLE_IDENTITY_REPOSITORY,
+      useClass: PrismaGoogleIdentityRepository,
     },
     {
       provide: BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,

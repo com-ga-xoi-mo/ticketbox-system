@@ -26,6 +26,34 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+export class InvalidGoogleCredentialError extends Error {
+  constructor() {
+    super('Google authentication failed');
+    this.name = 'InvalidGoogleCredentialError';
+  }
+}
+
+export class GoogleAccountNotEligibleError extends Error {
+  constructor() {
+    super('Google authentication failed');
+    this.name = 'GoogleAccountNotEligibleError';
+  }
+}
+
+export class AccountLinkRequiredError extends Error {
+  constructor() {
+    super('Account linking is required');
+    this.name = 'AccountLinkRequiredError';
+  }
+}
+
+export class LocalPasswordRequiredError extends Error {
+  constructor() {
+    super('This account does not have a local password');
+    this.name = 'LocalPasswordRequiredError';
+  }
+}
+
 export class ForbiddenAdminActionError extends Error {
   constructor() {
     super('Admin role is required for this action');

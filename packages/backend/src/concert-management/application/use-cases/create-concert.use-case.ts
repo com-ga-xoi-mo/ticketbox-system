@@ -37,10 +37,18 @@ export class CreateConcertUseCase {
         artistName: cmd.artistName,
         venueName: cmd.venueName,
         venueAddress: cmd.venueAddress,
+        latitude: cmd.latitude,
+        longitude: cmd.longitude,
         city: cmd.city,
         startsAt: cmd.startsAt,
         endsAt: cmd.endsAt,
         description: cmd.description,
+        eventType: cmd.eventType,
+        isFeatured: cmd.isFeatured,
+        displayOrder: cmd.displayOrder,
+        seoTitle: cmd.seoTitle,
+        seoDescription: cmd.seoDescription,
+        seoImageUrl: cmd.seoImageUrl,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

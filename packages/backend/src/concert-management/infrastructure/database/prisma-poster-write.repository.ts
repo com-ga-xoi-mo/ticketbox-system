@@ -70,6 +70,65 @@ export class PrismaPosterWriteRepository implements PosterWriteRepositoryPort {
     });
   }
 
+  async createAssetAndAssociateConcertBanner(
+    assetData: CreatePosterAssetData,
+    concertId: string,
+    oldAssetId?: string,
+  ): Promise<{
+    asset: PosterAsset;
+    concert: { id: string; bannerAssetId: string };
+    replacedStorageKey: string | null;
+  }> {
+    return this.prisma.$transaction(async (tx) => {
+      const concert = await tx.concert.findUnique({
+        where: { id: concertId },
+        select: { id: true, bannerAssetId: true },
+      });
+      const currentAssetId = oldAssetId ?? concert?.bannerAssetId ?? undefined;
+
+      const asset = await tx.asset.create({
+        data: {
+          id: assetData.id,
+          // Banner uses POSTER asset kind for validation and type shape
+          kind: AssetKind.POSTER,
+          status: AssetStatus.ACTIVE,
+          storageKey: assetData.storageKey,
+          publicUrl: assetData.publicUrl,
+          originalName: assetData.originalName,
+          contentType: assetData.contentType,
+          sizeBytes: assetData.sizeBytes,
+          checksum: assetData.checksum,
+          uploadedById: assetData.uploadedById,
+        },
+      });
+
+      const updatedConcert = await tx.concert.update({
+        where: { id: concertId },
+        data: { bannerAssetId: asset.id },
+        select: { id: true, bannerAssetId: true },
+      });
+
+      let replacedStorageKey: string | null = null;
+      if (currentAssetId && currentAssetId !== asset.id) {
+        const previousAsset = await tx.asset.findUnique({
+          where: { id: currentAssetId },
+          select: { storageKey: true },
+        });
+        replacedStorageKey = previousAsset?.storageKey ?? null;
+        await tx.asset.delete({ where: { id: currentAssetId } });
+      }
+
+      return {
+        asset: this.toDomain(asset),
+        concert: {
+          id: updatedConcert.id,
+          bannerAssetId: updatedConcert.bannerAssetId ?? asset.id,
+        },
+        replacedStorageKey,
+      };
+    });
+  }
+
   async findAssetById(id: string): Promise<PosterAsset | null> {
     const asset = await this.prisma.asset.findUnique({ where: { id } });
     return asset ? this.toDomain(asset) : null;

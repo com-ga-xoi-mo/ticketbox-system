@@ -139,6 +139,8 @@ export const PublicConcertDetailResponseSchema = PublicConcertSummarySchema.exte
   description: z.string().min(1).nullable(),
   publishedArtistBio: z.string().min(1).nullable(),
   venueAddress: z.string().min(1).nullable(),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
   seatingMapAsset: PublicAssetSchema.nullable(),
   seoTitle: z.string().min(1).nullable(),
   seoDescription: z.string().min(1).nullable(),

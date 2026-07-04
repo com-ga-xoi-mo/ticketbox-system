@@ -47,7 +47,7 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
 
   const handleSubmit = () => {
     if (!canSubmit) {
-      toast.error('Please enter a valid base email, quantity, and display name prefix.');
+      toast.error('Vui lòng nhập email cơ sở, số lượng và tiền tố tên hiển thị hợp lệ.');
       return;
     }
 
@@ -67,7 +67,7 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
         onSuccess: (result) => {
           setBulkResult(result);
           setCreatedAt(new Date());
-          toast.success(`Created ${result.credentials.length} check-in staff accounts`);
+          toast.success(`Đã tạo ${result.credentials.length} tài khoản nhân viên check-in`);
         },
         onError: (err) => {
           toast.error(formatApiError(err));
@@ -78,11 +78,11 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
 
   const handleDownloadPdf = () => {
     if (!bulkResult || !createdAt) {
-      toast.error('No generated credentials are available for PDF export.');
+      toast.error('Không có thông tin đăng nhập nào được tạo để xuất PDF.');
       return;
     }
     if (!pdfPassword.trim()) {
-      toast.error('Please enter a password to protect the PDF.');
+      toast.error('Vui lòng nhập mật khẩu để bảo vệ PDF.');
       return;
     }
 
@@ -93,9 +93,9 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
         pdfPassword,
         credentials: bulkResult.credentials,
       });
-      toast.success('Protected PDF downloaded');
+      toast.success('Đã tải xuống PDF được bảo vệ');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not generate protected PDF');
+      toast.error(err instanceof Error ? err.message : 'Không thể tạo PDF được bảo vệ');
     }
   };
 
@@ -104,23 +104,23 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
       <div>
         <h3 className="text-xl font-semibold text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-[#4cd7f6]" />
-          Bulk Create Check-in Staff
+          Tạo nhân viên check-in hàng loạt
         </h3>
         <p className="mt-1 text-sm text-slate-400">
-          Create temporary check-in staff accounts and assign them to the selected event.
+          Tạo các tài khoản nhân viên check-in tạm thời và phân công họ vào sự kiện đã chọn.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_160px_1fr_auto] gap-4 items-end">
         <Input
-          label="Base email"
+          label="Email cơ sở"
           value={baseEmail}
           onChange={(event) => setBaseEmail(event.target.value)}
           placeholder="abc@gmail.com"
           className="h-12 bg-slate-900/50 border-white/10 text-white"
         />
         <Input
-          label="Quantity"
+          label="Số lượng"
           type="number"
           min={1}
           max={MAX_QUANTITY}
@@ -129,10 +129,10 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
           className="h-12 bg-slate-900/50 border-white/10 text-white"
         />
         <Input
-          label="Display name prefix"
+          label="Tiền tố tên hiển thị"
           value={displayNamePrefix}
           onChange={(event) => setDisplayNamePrefix(event.target.value)}
-          placeholder="Check-in Staff"
+          placeholder="Nhân viên check-in"
           className="h-12 bg-slate-900/50 border-white/10 text-white"
         />
         <Button
@@ -141,13 +141,13 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
           loading={isPending}
           className="h-12 px-5"
         >
-          Create
+          Tạo
         </Button>
       </div>
 
       {previewEmails.length > 0 && (
         <div className="rounded-lg border border-white/10 bg-slate-900/40 p-4">
-          <div className="mb-3 text-sm font-medium text-slate-300">Email preview</div>
+          <div className="mb-3 text-sm font-medium text-slate-300">Xem trước email</div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
             {previewEmails.slice(0, 9).map((email) => (
               <div key={email} className="rounded-md bg-slate-950/50 px-3 py-2 font-mono text-xs text-slate-300">
@@ -156,7 +156,7 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
             ))}
           </div>
           {previewEmails.length > 9 && (
-            <div className="mt-2 text-xs text-slate-500">+{previewEmails.length - 9} more accounts</div>
+            <div className="mt-2 text-xs text-slate-500">+ thêm {previewEmails.length - 9} tài khoản</div>
           )}
         </div>
       )}
@@ -167,19 +167,19 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-[#4cd7f6]">
                 <ShieldCheck className="h-4 w-4" />
-                One-time credentials ready
+                Thông tin đăng nhập một lần đã sẵn sàng
               </div>
               <p className="mt-1 text-sm text-slate-400">
-                Download the protected PDF now. Passwords will not be available after refresh.
+                Tải xuống PDF được bảo vệ ngay bây giờ. Mật khẩu sẽ không khả dụng sau khi làm mới trang.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <Input
-                label="PDF open password"
+                label="Mật khẩu mở PDF"
                 type="password"
                 value={pdfPassword}
                 onChange={(event) => setPdfPassword(event.target.value)}
-                placeholder="Enter PDF password"
+                placeholder="Nhập mật khẩu PDF"
                 className="h-10 min-w-[240px] bg-slate-950/60 border-white/10 text-white"
               />
               <Button
@@ -189,7 +189,7 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
                 className="h-10"
               >
                 <FileDown className="h-4 w-4" />
-                Download PDF
+                Tải xuống PDF
               </Button>
             </div>
           </div>
@@ -198,10 +198,10 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-white/10 text-slate-400">
                 <tr>
-                  <th className="px-3 py-2 font-medium">No.</th>
-                  <th className="px-3 py-2 font-medium">Display name</th>
+                  <th className="px-3 py-2 font-medium">STT</th>
+                  <th className="px-3 py-2 font-medium">Tên hiển thị</th>
                   <th className="px-3 py-2 font-medium">Email</th>
-                  <th className="px-3 py-2 font-medium">Account password</th>
+                  <th className="px-3 py-2 font-medium">Mật khẩu tài khoản</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,7 +224,7 @@ export function BulkCreateStaffPanel({ concertId }: BulkCreateStaffPanelProps) {
 
 function formatApiError(err: unknown): string {
   if (!(err instanceof Error)) {
-    return 'Could not create check-in staff accounts';
+    return 'Không thể tạo tài khoản nhân viên check-in';
   }
 
   try {
@@ -239,5 +239,5 @@ function formatApiError(err: unknown): string {
     // Use the raw Error message below.
   }
 
-  return err.message || 'Could not create check-in staff accounts';
+  return err.message || 'Không thể tạo tài khoản nhân viên check-in';
 }

@@ -67,6 +67,7 @@ describe('UploadPosterUseCase', () => {
 
     posterWriteRepo = {
       createAssetAndAssociateConcertPoster: vi.fn(),
+      createAssetAndAssociateConcertBanner: vi.fn(),
       findAssetById: vi.fn(),
     };
 

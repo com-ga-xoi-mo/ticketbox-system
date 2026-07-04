@@ -575,12 +575,14 @@ async function seedUsers(
     const record = await prisma.user.upsert({
       where: { email: user.email },
       update: {
+        normalizedEmail: user.email.trim().toLowerCase(),
         displayName: user.displayName,
         passwordHash: demoPasswordHash,
         status: UserStatus.ACTIVE,
       },
       create: {
         email: user.email,
+        normalizedEmail: user.email.trim().toLowerCase(),
         displayName: user.displayName,
         passwordHash: demoPasswordHash,
         status: UserStatus.ACTIVE,
@@ -966,8 +968,8 @@ async function seedAudienceUsers(roleIds: Map<RoleCode, string>): Promise<string
     const displayName = `${AUDIENCE_FIRST[i % AUDIENCE_FIRST.length]} ${AUDIENCE_LAST[i % AUDIENCE_LAST.length]}`;
     await prisma.user.upsert({
       where: { id },
-      update: { displayName, passwordHash: demoPasswordHash, status: UserStatus.ACTIVE },
-      create: { id, email, displayName, passwordHash: demoPasswordHash, status: UserStatus.ACTIVE },
+      update: { normalizedEmail: email, displayName, passwordHash: demoPasswordHash, status: UserStatus.ACTIVE },
+      create: { id, email, normalizedEmail: email, displayName, passwordHash: demoPasswordHash, status: UserStatus.ACTIVE },
     });
     await prisma.userRole.upsert({
       where: { userId_roleId: { userId: id, roleId: audienceRoleId } },
@@ -987,6 +989,7 @@ async function seedExtraStaff(roleIds: Map<RoleCode, string>): Promise<string[]>
     await prisma.user.upsert({
       where: { id },
       update: {
+        normalizedEmail: `seed.staff${pad(i)}@ticketbox.test`,
         displayName: `Check-in Staff ${i + 2}`,
         passwordHash: demoPasswordHash,
         status: UserStatus.ACTIVE,
@@ -994,6 +997,7 @@ async function seedExtraStaff(roleIds: Map<RoleCode, string>): Promise<string[]>
       create: {
         id,
         email: `seed.staff${pad(i)}@ticketbox.test`,
+        normalizedEmail: `seed.staff${pad(i)}@ticketbox.test`,
         displayName: `Check-in Staff ${i + 2}`,
         passwordHash: demoPasswordHash,
         status: UserStatus.ACTIVE,

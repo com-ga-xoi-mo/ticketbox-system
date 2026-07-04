@@ -22,10 +22,18 @@ export interface SetConcertArtistsParams {
   artists: { artistId: string; displayOrder: number }[];
 }
 
+export interface FindAdminArtistsParams {
+  query?: string;
+  status?: ArtistStatus;
+  limit: number;
+  offset: number;
+}
+
 export interface ArtistRepositoryPort {
   findBySlug(slug: string): Promise<ArtistRecord | null>;
   findById(id: string): Promise<ArtistRecord | null>;
   findActive(params: FindActiveArtistsParams): Promise<PaginatedArtists>;
+  findAdminArtists(params: FindAdminArtistsParams): Promise<PaginatedArtists>;
   findTopByFavorites(limit: number): Promise<ArtistRecord[]>;
   create(data: Omit<ArtistRecord, 'id' | 'createdAt' | 'updatedAt' | 'followerCount' | 'favoriteCount'>): Promise<ArtistRecord>;
   update(id: string, data: Partial<Omit<ArtistRecord, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ArtistRecord>;
@@ -43,6 +51,8 @@ export interface ArtistRepositoryPort {
   decrementFavoriteCount(artistId: string): Promise<void>;
   findUpcomingEventsByArtist(artistId: string): Promise<any[]>; // Will refine with proper Concert entity later
   countPastEventsByArtist(artistId: string): Promise<number>;
+  createAssetAndLinkAvatar(artistId: string, assetData: any): Promise<{ replacedStorageKey?: string }>;
+  createAssetAndLinkPoster(artistId: string, assetData: any): Promise<{ replacedStorageKey?: string }>;
 }
 
 export const ARTIST_REPOSITORY = Symbol('ARTIST_REPOSITORY');

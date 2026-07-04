@@ -23,7 +23,7 @@ import { UpdateMyProfileUseCase } from '../../application/use-cases/update-my-pr
 
 import { GetMyProfileQuery } from '../../application/queries/get-my-profile.query';
 import type { AuthenticatedUser } from '../../domain/authenticated-user.interface';
-import { InvalidCredentialsError } from '../../domain/errors';
+import { InvalidCredentialsError, LocalPasswordRequiredError } from '../../domain/errors';
 import { Role } from '../../domain/role.enum';
 import { Roles } from './decorators/roles.decorator';
 import { RolesGuard } from './guards/roles.guard';
@@ -78,6 +78,9 @@ export class ProfileController {
     } catch (err) {
       if (err instanceof InvalidCredentialsError) {
         throw new UnauthorizedException('Invalid current password');
+      }
+      if (err instanceof LocalPasswordRequiredError) {
+        throw new BadRequestException('This account does not have a local password');
       }
       throw err;
     }

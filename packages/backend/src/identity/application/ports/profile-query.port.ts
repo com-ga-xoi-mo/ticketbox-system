@@ -11,6 +11,9 @@ export interface ProfileProjection {
   district: string | null;
   avatarAssetId: string | null;
   avatarUrl: string | null;
+  hasPassword: boolean;
+  authProviders: string[];
+  externalAvatarUrl: string | null;
 }
 
 export interface ProfileQueryPort {

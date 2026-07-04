@@ -9,11 +9,11 @@ interface StatusFilterTabsProps {
 }
 
 const TABS: { value: ConcertStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  { value: 'PUBLISHED', label: 'Published' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'ENDED', label: 'Ended' },
+  { value: 'ALL', label: 'Tất cả' },
+  { value: 'PUBLISHED', label: 'Đã xuất bản' },
+  { value: 'DRAFT', label: 'Bản nháp' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'ENDED', label: 'Đã kết thúc' },
 ];
 
 export function StatusFilterTabs({ selectedStatus, onStatusChange, counts }: StatusFilterTabsProps) {

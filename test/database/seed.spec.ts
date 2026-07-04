@@ -109,8 +109,15 @@ describe('Database seed verification', () => {
       );
       for (const tt of concert.ticketTypes) {
         expect(tt.totalQuantity, `${tt.code} total quantity must be positive`).toBeGreaterThan(0);
-        expect(tt.reservedQuantity, `${tt.code} reserved must start at 0`).toBe(0);
-        expect(tt.soldQuantity, `${tt.code} sold must start at 0`).toBe(0);
+        expect(
+          tt.reservedQuantity,
+          `${tt.code} reserved must not be negative`,
+        ).toBeGreaterThanOrEqual(0);
+        expect(tt.soldQuantity, `${tt.code} sold must not be negative`).toBeGreaterThanOrEqual(0);
+        expect(
+          tt.soldQuantity + tt.reservedQuantity,
+          `${tt.code} sold + reserved must not exceed total quantity`,
+        ).toBeLessThanOrEqual(tt.totalQuantity);
         expect(tt.maxPerUser, `${tt.code} max per user must be positive`).toBeGreaterThan(0);
         expect(
           new Date(tt.saleStartsAt).getTime(),

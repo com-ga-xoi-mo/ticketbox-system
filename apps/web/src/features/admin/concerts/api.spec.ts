@@ -7,6 +7,9 @@ import {
   updateConcert,
   publishConcert,
   cancelConcert,
+  uploadPoster,
+  uploadBanner,
+  replaceArtists,
   ADMIN_CONCERTS_PATH,
 } from './api';
 
@@ -14,6 +17,8 @@ vi.mock('../../../shared/api/client', () => ({
   get: vi.fn(),
   post: vi.fn(),
   patch: vi.fn(),
+  put: vi.fn(),
+  postFormData: vi.fn(),
 }));
 
 describe('admin concerts api functions', () => {
@@ -57,5 +62,32 @@ describe('admin concerts api functions', () => {
     vi.mocked(client.post).mockResolvedValue({});
     await cancelConcert('123');
     expect(client.post).toHaveBeenCalledWith(`${ADMIN_CONCERTS_PATH}/123/cancel`, {});
+  });
+
+  it('uploadPoster posts multipart form data to the poster endpoint', async () => {
+    vi.mocked(client.postFormData).mockResolvedValue({ asset: { id: 'a1', publicUrl: 'https://cdn/x.png' } });
+    const file = new File(['x'], 'poster.png', { type: 'image/png' });
+    await uploadPoster('123', file);
+    expect(client.postFormData).toHaveBeenCalledTimes(1);
+    const [path, formData] = vi.mocked(client.postFormData).mock.calls[0];
+    expect(path).toBe(`${ADMIN_CONCERTS_PATH}/123/poster`);
+    expect(formData).toBeInstanceOf(FormData);
+    expect((formData as FormData).get('file')).toBe(file);
+  });
+
+  it('uploadBanner posts multipart form data to the banner endpoint', async () => {
+    vi.mocked(client.postFormData).mockResolvedValue({ asset: { id: 'a2', publicUrl: 'https://cdn/b.png' } });
+    const file = new File(['x'], 'banner.png', { type: 'image/png' });
+    await uploadBanner('123', file);
+    const [path, formData] = vi.mocked(client.postFormData).mock.calls[0];
+    expect(path).toBe(`${ADMIN_CONCERTS_PATH}/123/banner`);
+    expect((formData as FormData).get('file')).toBe(file);
+  });
+
+  it('replaceArtists puts the exact replacement payload to the artists endpoint', async () => {
+    vi.mocked(client.put).mockResolvedValue({ success: true });
+    const payload = { artists: [{ artistId: 'ar1', displayOrder: 0 }, { artistId: 'ar2', displayOrder: 1 }] };
+    await replaceArtists('123', payload);
+    expect(client.put).toHaveBeenCalledWith(`${ADMIN_CONCERTS_PATH}/123/artists`, payload);
   });
 });

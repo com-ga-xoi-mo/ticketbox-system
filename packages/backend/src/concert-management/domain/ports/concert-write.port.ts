@@ -10,10 +10,18 @@ export interface ConcertWriteRepositoryPort {
     artistName: string;
     venueName: string;
     venueAddress?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     city: string;
     startsAt: Date;
     endsAt: Date;
     description?: string;
+    eventType?: string;
+    isFeatured?: boolean;
+    displayOrder?: number;
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    seoImageUrl?: string | null;
   }): Promise<Concert>;
 
   updateConcert(
@@ -23,6 +31,8 @@ export interface ConcertWriteRepositoryPort {
       artistName?: string;
       venueName?: string;
       venueAddress?: string;
+      latitude?: number | null;
+      longitude?: number | null;
       city?: string;
       startsAt?: Date;
       endsAt?: Date;
@@ -31,6 +41,12 @@ export interface ConcertWriteRepositoryPort {
       publishedAt?: Date | null;
       cancelledAt?: Date | null;
       slug?: string;
+      eventType?: string;
+      isFeatured?: boolean;
+      displayOrder?: number;
+      seoTitle?: string | null;
+      seoDescription?: string | null;
+      seoImageUrl?: string | null;
     },
   ): Promise<Concert>;
 

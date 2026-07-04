@@ -7,10 +7,18 @@ export interface CreateConcertCommand {
   artistName: string;
   venueName: string;
   venueAddress?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   city: string;
   startsAt: Date;
   endsAt: Date;
   description?: string;
+  eventType?: string;
+  isFeatured?: boolean;
+  displayOrder?: number;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoImageUrl?: string | null;
 }
 
 export interface UpdateConcertCommand {
@@ -22,11 +30,19 @@ export interface UpdateConcertCommand {
   artistName?: string;
   venueName?: string;
   venueAddress?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   city?: string;
   startsAt?: Date;
   endsAt?: Date;
-  description?: string;
+  description?: string | null;
   slug?: string;
+  eventType?: string;
+  isFeatured?: boolean;
+  displayOrder?: number;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoImageUrl?: string | null;
 }
 
 export interface PublishConcertCommand {

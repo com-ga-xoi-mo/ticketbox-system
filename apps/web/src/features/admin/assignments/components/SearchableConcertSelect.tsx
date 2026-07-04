@@ -47,7 +47,7 @@ export function SearchableConcertSelect({ concerts, selectedId, onSelect }: Prop
               {selectedConcert.title} <span className="text-slate-400 text-xs font-normal">({selectedConcert.artistName})</span>
             </div>
           ) : (
-            <div className="text-slate-400">Select an event...</div>
+            <div className="text-slate-400">Chọn một sự kiện...</div>
           )}
         </div>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -60,7 +60,7 @@ export function SearchableConcertSelect({ concerts, selectedId, onSelect }: Prop
             <input
               type="text"
               className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-full"
-              placeholder="Search by event name, artist, ID..."
+              placeholder="Tìm kiếm theo tên sự kiện, nghệ sĩ, ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
@@ -80,7 +80,7 @@ export function SearchableConcertSelect({ concerts, selectedId, onSelect }: Prop
                 <div className="text-xs text-slate-400 mt-0.5">{concert.artistName} • <span className="font-mono">{concert.id.slice(0, 8)}...</span></div>
               </div>
             )) : (
-              <div className="p-4 text-center text-slate-400 text-sm">No events found</div>
+              <div className="p-4 text-center text-slate-400 text-sm">Không tìm thấy sự kiện nào</div>
             )}
           </div>
         </div>

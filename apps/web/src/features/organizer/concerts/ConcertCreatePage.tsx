@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCreateConcertMutation, useUploadPosterMutation } from './hooks';
+import { useCreateConcertMutation, useUploadPosterMutation, useUploadBannerMutation, useReplaceArtistsMutation } from './hooks';
 import { Badge } from '../../../shared/ui/badge';
 import {
   validateConcertForm,
@@ -12,6 +12,7 @@ import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
+import { ArtistSelector } from '../../concerts-shared/ui/ArtistSelector';
 
 function slugify(text: string): string {
   return text
@@ -48,14 +49,21 @@ function FormSection({
   );
 }
 
+import { VenueLocationPicker } from '../../concerts-shared/components/VenueLocationPicker';
+
 export function ConcertCreatePage() {
   const navigate = useNavigate();
   const createMutation = useCreateConcertMutation();
   const uploadPosterMutation = useUploadPosterMutation();
+  const uploadBannerMutation = useUploadBannerMutation();
+  const replaceArtistsMutation = useReplaceArtistsMutation();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   const [values, setValues] = useState<ConcertFormValues>({
     slug: '',
@@ -63,11 +71,20 @@ export function ConcertCreatePage() {
     artistName: '',
     venueName: '',
     venueAddress: '',
+    latitude: null,
+    longitude: null,
     city: '',
     startsAt: '',
     endsAt: '',
     description: '',
+    eventType: 'CONCERT',
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: '',
   });
+  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
+  // Draft already created but artist linking failed: submit retries only the link step.
+  const [createdConcertId, setCreatedConcertId] = useState<string | null>(null);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [errors, setErrors] = useState<ConcertFormErrors>({});
   const [submitError, setSubmitError] = useState('');
@@ -98,33 +115,88 @@ export function ConcertCreatePage() {
     setPosterPreview(URL.createObjectURL(file));
   };
 
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const finishCreate = async (concertId: string) => {
+    try {
+      if (posterFile) {
+        await uploadPosterMutation.mutateAsync({ id: concertId, file: posterFile });
+      }
+      if (bannerFile) {
+        await uploadBannerMutation.mutateAsync({ id: concertId, file: bannerFile });
+      }
+    } finally {
+      // The draft exists either way; failed uploads can be retried from the edit page.
+      navigate(`/organizer/concerts/${concertId}/edit`);
+    }
+  };
+
+  const linkArtists = (concertId: string) => {
+    replaceArtistsMutation.mutate(
+      {
+        id: concertId,
+        payload: {
+          artists: selectedArtists.map((a, i) => ({ artistId: a.artistId, displayOrder: i })),
+        },
+      },
+      {
+        onSuccess: () => finishCreate(concertId),
+        onError: (err) => {
+          setCreatedConcertId(concertId);
+          setSubmitError(
+            (err.message || 'Failed to link artists.') +
+              ' The concert draft was created — press Create Concert again to retry linking.',
+          );
+        },
+      },
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
-    const validationErrors = validateConcertForm(values);
+    // The draft exists but artist linking failed earlier: only retry the link step.
+    if (createdConcertId) {
+      linkArtists(createdConcertId);
+      return;
+    }
+
+    const validationErrors = validateConcertForm({ ...values, linkedArtistIds: selectedArtists.map(a => a.artistId) });
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
     setErrors({});
 
-    createMutation.mutate(toCreatePayload(values), {
+    const primaryArtist = selectedArtists[0];
+    const payload = toCreatePayload({
+      ...values,
+      artistName: primaryArtist ? primaryArtist.displayName : values.artistName,
+    });
+
+    createMutation.mutate(payload, {
       onSuccess: (concert) => {
-        if (posterFile) {
-          uploadPosterMutation.mutate(
-            { id: concert.id, file: posterFile },
-            { onSettled: () => navigate(`/organizer/concerts/${concert.id}/edit`) },
-          );
+        if (selectedArtists.length > 0) {
+          linkArtists(concert.id);
         } else {
-          navigate(`/organizer/concerts/${concert.id}/edit`);
+          finishCreate(concert.id);
         }
       },
-      onError: (err) => setSubmitError(err.message || 'Failed to create concert.'),
+      onError: (err) => setSubmitError(err.message || 'Tạo sự kiện thất bại.'),
     });
   };
 
-  const isPending = createMutation.isPending || uploadPosterMutation.isPending;
+  const isPending =
+    createMutation.isPending ||
+    uploadPosterMutation.isPending ||
+    uploadBannerMutation.isPending ||
+    replaceArtistsMutation.isPending;
 
   const previewDate = values.startsAt
     ? new Date(values.startsAt).toLocaleDateString('en-US', {
@@ -149,9 +221,9 @@ export function ConcertCreatePage() {
     const diffMins = Math.floor(diffMs / 60000);
     const h = Math.floor(diffMins / 60);
     const m = diffMins % 60;
-    if (h > 0 && m > 0) return `${h}h ${m}m`;
-    if (h > 0) return `${h}h`;
-    return `${m}m`;
+    if (h > 0 && m > 0) return `${h} giờ ${m} phút`;
+    if (h > 0) return `${h} giờ`;
+    return `${m} phút`;
   })();
 
   return (
@@ -163,16 +235,16 @@ export function ConcertCreatePage() {
             <Link
               to="/organizer/concerts"
               className="flex size-9 items-center justify-center rounded-lg border border-white/10 bg-surface-container-low text-on-surface-variant transition-colors hover:border-white/20 hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Back to concerts"
+              aria-label="Quay lại danh sách"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             </Link>
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">
-                Organizer — New Concert
+                Ban tổ chức — Sự kiện mới
               </p>
               <h2 className="font-display text-xl font-bold text-on-surface">
-                {values.title || 'Untitled Concert'}
+                {values.title || 'Sự kiện chưa đặt tên'}
               </h2>
             </div>
           </div>
@@ -182,36 +254,66 @@ export function ConcertCreatePage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* ── LEFT: Form sections ── */}
           <div className="flex flex-col gap-6">
-            <FormSection icon="music_note" title="Event Details">
+            <FormSection icon="music_note" title="Chi tiết sự kiện">
               <Input
                 id="create-title"
                 name="title"
-                label="Concert Title *"
+                label="Tên sự kiện *"
                 value={values.title}
                 onChange={handleTitleChange}
                 error={errors.title}
-                placeholder="e.g. Midnight Echo Live"
+                placeholder="Ví dụ: Đêm Nhạc Mùa Thu"
                 required
               />
 
-              <Input
-                id="create-artist"
-                name="artistName"
-                label="Artist / Band *"
-                value={values.artistName}
-                onChange={handleChange}
-                error={errors.artistName}
-                placeholder="e.g. The Midnight Trio"
-                icon="person"
-                required
-              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
+                    Loại sự kiện
+                  </label>
+                  <select
+                    name="eventType"
+                    value={values.eventType}
+                    onChange={(e) => setValues(prev => ({ ...prev, eventType: e.target.value }))}
+                    className="w-full h-10 rounded-lg border border-white/10 bg-surface-container px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="CONCERT">Hoà nhạc</option>
+                    <option value="WORKSHOP">Hội thảo</option>
+                    <option value="SPORT">Thể thao</option>
+                    <option value="MOVIE">Điện ảnh</option>
+                    <option value="THEATRE">Kịch</option>
+                    <option value="VOUCHER">Khuyến mãi</option>
+                  </select>
+                </div>
+              </div>
+
+              {selectedArtists.length === 0 && (
+                <Input
+                  id="create-artist"
+                  name="artistName"
+                  label="Nghệ sĩ / Ban nhạc *"
+                  value={values.artistName}
+                  onChange={handleChange}
+                  error={errors.artistName}
+                  placeholder="Ví dụ: Nhóm nhạc The Midnight"
+                  icon="person"
+                  required
+                />
+              )}
+
+              <div>
+                <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
+                  Nghệ sĩ tham gia
+                </label>
+                <ArtistSelector selectedArtists={selectedArtists} onChange={setSelectedArtists} />
+              </div>
 
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="create-slug"
                   className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant"
                 >
-                  URL Slug *
+                  Đường dẫn tĩnh (Slug) *
                 </label>
                 <div
                   className={cn(
@@ -240,24 +342,24 @@ export function ConcertCreatePage() {
               <Textarea
                 id="create-description"
                 name="description"
-                label="Description"
+                label="Mô tả"
                 value={values.description}
                 onChange={handleChange}
                 error={errors.description}
                 rows={4}
-                placeholder="Describe the concert experience, setlist highlights, special guests…"
+                placeholder="Mô tả trải nghiệm sự kiện, danh sách bài hát, khách mời đặc biệt…"
               />
             </FormSection>
 
-            <FormSection icon="location_on" title="Venue & Location">
+            <FormSection icon="location_on" title="Địa điểm & Vị trí">
               <Input
                 id="create-venue"
                 name="venueName"
-                label="Venue Name *"
+                label="Tên địa điểm *"
                 value={values.venueName}
                 onChange={handleChange}
                 error={errors.venueName}
-                placeholder="e.g. Grand Arena"
+                placeholder="Ví dụ: Sân vận động Quân khu 7"
                 icon="apartment"
                 required
               />
@@ -265,34 +367,51 @@ export function ConcertCreatePage() {
               <Input
                 id="create-address"
                 name="venueAddress"
-                label="Address"
+                label="Địa chỉ"
                 value={values.venueAddress}
                 onChange={handleChange}
                 error={errors.venueAddress}
-                placeholder="e.g. 123 Music Ave, Ward 1"
+                placeholder="Ví dụ: 123 Nguyễn Huệ, Phường 1"
                 icon="map"
               />
+
+              <div>
+                <p className="mb-1 text-sm font-medium">Vị trí trên bản đồ</p>
+                <VenueLocationPicker
+                  latitude={values.latitude}
+                  longitude={values.longitude}
+                  venueAddress={values.venueAddress}
+                  onChange={({ latitude, longitude, venueAddress }) =>
+                    setValues((v) => ({
+                      ...v,
+                      latitude,
+                      longitude,
+                      venueAddress: venueAddress ?? v.venueAddress,
+                    }))
+                  }
+                />
+              </div>
 
               <Input
                 id="create-city"
                 name="city"
-                label="City *"
+                label="Thành phố *"
                 value={values.city}
                 onChange={handleChange}
                 error={errors.city}
-                placeholder="e.g. Ho Chi Minh City"
+                placeholder="Ví dụ: TP. Hồ Chí Minh"
                 icon="location_city"
                 required
               />
             </FormSection>
 
-            <FormSection icon="calendar_today" title="Schedule">
+            <FormSection icon="calendar_today" title="Lịch trình">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   id="create-starts-at"
                   type="datetime-local"
                   name="startsAt"
-                  label="Event Start *"
+                  label="Bắt đầu *"
                   value={values.startsAt}
                   onChange={handleChange}
                   error={errors.startsAt}
@@ -304,7 +423,7 @@ export function ConcertCreatePage() {
                   id="create-ends-at"
                   type="datetime-local"
                   name="endsAt"
-                  label="Event End *"
+                  label="Kết thúc *"
                   value={values.endsAt}
                   onChange={handleChange}
                   error={errors.endsAt}
@@ -313,6 +432,40 @@ export function ConcertCreatePage() {
                   required
                 />
               </div>
+            </FormSection>
+
+            {/* SEO Metadata */}
+            <FormSection icon="search" title="SEO Metadata">
+              <p className="-mt-1 text-xs text-on-surface-variant">
+                Có thể để trống — hệ thống sẽ tự dùng tiêu đề, mô tả và poster của sự kiện khi chia
+                sẻ lên mạng xã hội / công cụ tìm kiếm.
+              </p>
+              <Input
+                id="create-seo-title"
+                name="seoTitle"
+                label="Tiêu đề SEO"
+                value={values.seoTitle}
+                onChange={handleChange}
+                placeholder={values.title ? `Mặc định: "${values.title} | Ticketbox"` : 'Mặc định: "<Tiêu đề sự kiện> | Ticketbox"'}
+              />
+              <Textarea
+                id="create-seo-desc"
+                name="seoDescription"
+                label="Mô tả SEO"
+                value={values.seoDescription}
+                onChange={handleChange}
+                rows={2}
+                placeholder={values.description ? `Mặc định: "${values.description.substring(0, 80)}…"` : 'Mặc định dùng mô tả của sự kiện'}
+              />
+              <Input
+                id="create-seo-image"
+                name="seoImageUrl"
+                label="URL Ảnh SEO"
+                value={values.seoImageUrl}
+                onChange={handleChange}
+                error={errors.seoImageUrl}
+                placeholder="Mặc định dùng ảnh poster của sự kiện (https://...)"
+              />
             </FormSection>
 
             {submitError && (
@@ -330,25 +483,25 @@ export function ConcertCreatePage() {
                 {posterPreview ? (
                   <img
                     src={posterPreview}
-                    alt="Poster preview"
+                    alt="Xem trước poster"
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-on-surface-variant/30">
                     <span className="material-symbols-outlined text-5xl">image</span>
-                    <span className="font-mono text-[11px] uppercase tracking-wider">No poster</span>
+                    <span className="font-mono text-[11px] uppercase tracking-wider">Không có poster</span>
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/40 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
                   <Badge className="mb-2 text-[11px] shadow-sm bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                    Draft
+                    Bản nháp
                   </Badge>
                   <p className="break-words font-display text-base font-bold leading-normal text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
-                    {values.title || <span className="text-white/30">Concert Title</span>}
+                    {values.title || <span className="text-white/30">Tên sự kiện</span>}
                   </p>
                   <p className="mt-0.5 text-xs text-white/60">
-                    {values.artistName || <span className="text-white/20">Artist Name</span>}
+                    {values.artistName || <span className="text-white/20">Tên nghệ sĩ</span>}
                   </p>
                 </div>
               </div>
@@ -360,10 +513,10 @@ export function ConcertCreatePage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-medium text-on-surface">
-                      {values.venueName || <span className="text-on-surface-variant/40">Venue Name</span>}
+                      {values.venueName || <span className="text-on-surface-variant/40">Tên địa điểm</span>}
                     </p>
                     <p className="truncate text-xs text-on-surface-variant">
-                      {values.city || <span className="text-on-surface-variant/40">City</span>}
+                      {values.city || <span className="text-on-surface-variant/40">Thành phố</span>}
                     </p>
                   </div>
                 </div>
@@ -384,7 +537,7 @@ export function ConcertCreatePage() {
                       schedule
                     </span>
                     <div className="min-w-0">
-                      <p className="font-mono text-xs font-semibold text-on-surface">Duration</p>
+                      <p className="font-mono text-xs font-semibold text-on-surface">Thời lượng</p>
                       <p className="text-[11px] text-on-surface-variant">{duration ?? '—'}</p>
                     </div>
                   </div>
@@ -411,46 +564,79 @@ export function ConcertCreatePage() {
                     onClick={() => fileInputRef.current?.click()}
                     className="text-xs font-medium text-primary transition-colors hover:text-primary-container"
                   >
-                    Replace
+                    Thay đổi
                   </button>
                 )}
               </div>
 
-              <div
-                className="group relative h-[160px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFileChange}
-                />
+              <div className="flex flex-col gap-3">
+                <h4 className="text-sm font-semibold">Poster (Dọc)</h4>
+                <div
+                  className="group relative h-[160px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileChange}
+                  />
 
-                {posterPreview ? (
-                  <>
+                  {posterPreview ? (
+                    <>
+                      <img
+                        src={posterPreview}
+                        alt="Xem trước poster"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      <div className="absolute bottom-2 left-2">
+                        <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">
+                          Poster
+                        </Badge>
+                      </div>
+                      <div className="absolute bottom-2.5 right-2.5 font-mono text-[9px] text-white/70">
+                        1920×1080
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
+                      <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider">Tải lên Poster</span>
+                    </div>
+                  )}
+                </div>
+
+                <h4 className="text-sm font-semibold mt-2">Banner (Ảnh nổi bật)</h4>
+                <div
+                  className="group relative h-[100px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
+                  onClick={() => bannerFileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={bannerFileInputRef}
+                    className="hidden"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleBannerFileChange}
+                  />
+
+                  {bannerPreview ? (
                     <img
-                      src={posterPreview}
-                      alt="Poster preview"
+                      src={bannerPreview}
+                      alt="Xem trước banner"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute bottom-2 left-2">
-                      <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">
-                        Primary Header
-                      </Badge>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
+                      <span className="material-symbols-outlined text-xl">add_photo_alternate</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider">Tải lên Banner</span>
                     </div>
-                    <div className="absolute bottom-2.5 right-2.5 font-mono text-[9px] text-white/70">
-                      1920×1080
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
-                    <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
-                    <span className="font-mono text-[10px] uppercase tracking-wider">Upload Header</span>
-                  </div>
-                )}
+                  )}
+                </div>
+                <p className="text-[11px] text-on-surface-variant">
+                  Ảnh được tải lên ngay sau khi sự kiện được tạo.
+                </p>
               </div>
             </div>
 
@@ -458,7 +644,7 @@ export function ConcertCreatePage() {
             <div className="flex flex-col gap-2">
               <Button type="submit" loading={isPending} className="w-full justify-center">
                 <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                Create Concert
+                Tạo sự kiện
               </Button>
               <Button
                 type="button"
@@ -468,7 +654,7 @@ export function ConcertCreatePage() {
                 className="w-full justify-center"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
-                Cancel
+                Hủy
               </Button>
             </div>
           </div>

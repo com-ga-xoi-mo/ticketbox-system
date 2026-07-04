@@ -22,12 +22,34 @@ export type {
 } from './artist/artist.contract';
 
 export {
+  ArtistStatusCodeSchema,
+  ManagementArtistResponseSchema,
+  AdminArtistSearchParamsSchema,
+  AdminArtistListResponseSchema,
+  AdminCreateArtistSchema,
+  AdminUpdateArtistSchema,
+  UploadArtistAssetResponseSchema,
+} from './artist/management-artist.contract';
+export type {
+  ArtistStatusCode,
+  ManagementArtistResponse,
+  AdminArtistSearchParams,
+  AdminArtistListResponse,
+  AdminCreateArtist,
+  AdminUpdateArtist,
+  UploadArtistAssetResponse,
+} from './artist/management-artist.contract';
+
+export {
   LoginRequestSchema,
+  GoogleLoginRequestSchema,
+  AccountLinkRequiredErrorSchema,
   LoginResponseSchema,
   RegisterRequestSchema,
   ROLE_CODES,
   RoleCodeSchema,
   GenderSchema,
+  AuthProviderSchema,
   UpdateMyProfileRequestSchema,
   UpdateMyPasswordRequestSchema,
   UpdateMyPasswordResponseSchema,
@@ -37,10 +59,13 @@ export {
 } from './auth/auth.contract';
 export type {
   LoginRequest,
+  GoogleLoginRequest,
+  AccountLinkRequiredError,
   LoginResponse,
   RegisterRequest,
   RoleCode,
   Gender,
+  AuthProvider,
   UpdateMyProfileRequest,
   UpdateMyPasswordRequest,
   UpdateMyPasswordResponse,
@@ -99,6 +124,32 @@ export type {
   SeatingZoneStatusCode,
   TicketTypeStatusCode,
 } from './catalog/public-concert.contract';
+
+export {
+  ConcertStatusCodeSchema,
+  ManagementLinkedArtistSchema,
+  ManagementConcertResponseSchema,
+  OrganizerCreateConcertSchema,
+  OrganizerUpdateConcertSchema,
+  AdminUpdateConcertSchema,
+} from './concert-management/management-concert.contract';
+export type {
+  ConcertStatusCode,
+  ManagementLinkedArtist,
+  ManagementConcertResponse,
+  OrganizerCreateConcert,
+  OrganizerUpdateConcert,
+  AdminUpdateConcert,
+} from './concert-management/management-concert.contract';
+
+export {
+  ReplaceConcertArtistsItemSchema,
+  ReplaceConcertArtistsRequestSchema,
+} from './concert-management/replace-artists.contract';
+export type {
+  ReplaceConcertArtistsItem,
+  ReplaceConcertArtistsRequest,
+} from './concert-management/replace-artists.contract';
 
 export {
   StaffAssignmentSchema,
@@ -284,3 +335,14 @@ export type {
   ValidatePromoRequest,
   ValidatePromoResponse,
 } from './promotion/promotion.contract';
+
+export {
+  LocationSearchQuerySchema,
+  LocationSearchResultSchema,
+  LocationSearchResponseSchema,
+} from './location/location-search.contract';
+export type {
+  LocationSearchQuery,
+  LocationSearchResult,
+  LocationSearchResponse,
+} from './location/location-search.contract';
