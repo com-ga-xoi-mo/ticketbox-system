@@ -19,29 +19,46 @@ The event detail page SHALL display the published artist bio when available in t
 - **THEN** the artist bio section is not rendered
 - **AND** the page layout does not leave an empty gap
 
-### Requirement: Seating zone display with availability
-The event detail page SHALL display seating zones with their labels, colors, and per-zone availability derived from ticket type mappings.
+### Requirement: Interactive seating-zone map with ticket-type-centric availability
+The event detail page SHALL render the venue seating-map SVG as an interactive, zone-level map. Because ticket inventory is tracked per ticket type and not per zone, availability SHALL always be expressed per ticket type, never as a single number attributed to a zone.
 
-#### Scenario: Concert has seating zones
-- **WHEN** the concert detail includes `seatingZones` with at least one zone
-- **THEN** the detail page renders a zone legend showing each zone's label and color indicator
-- **AND** each zone shows the total available tickets for ticket types mapped to that zone
+#### Scenario: Concert has a loadable seating map and seating zones
+- **WHEN** the concert detail includes a non-null `seatingMapAsset` (resolvable via `publicUrl` or `GET /assets/:id`) and `seatingZones` with at least one zone
+- **THEN** the detail page renders the seating-map SVG inline with each mapped zone clickable and keyboard-focusable
+- **AND** clicking or activating (Enter/Space) a zone reveals the ticket types that apply to it, each showing its name, price, sale status, and remaining quantity
+- **AND** a zone with no ticket type mapped to it is still rendered and labeled "Chưa có loại vé áp dụng"
 
-#### Scenario: Concert has no seating zones
-- **WHEN** the concert detail includes an empty `seatingZones` array
-- **THEN** the seating zones section is not rendered
+#### Scenario: Viewing a ticket type's zones from the ticket type list
+- **WHEN** a user clicks "Xem vị trí" on a ticket type card
+- **THEN** every seating zone mapped to that ticket type is highlighted on the map
+- **AND** on viewports narrower than 1024px the map scrolls into view
+- **AND** this remains available even when the ticket type is sold out; only its quantity selector stays disabled
 
-### Requirement: Seating map image display
-The event detail page SHALL display the seating map asset as a reference image when available.
+#### Scenario: Seating map SVG fails to load or parse
+- **WHEN** the seating map asset is present but its SVG content cannot be fetched or is not valid SVG markup
+- **THEN** the detail page falls back to rendering the seating map as a static image
+- **AND** falls back to a plain zone list showing each zone's label, color, and the names of ticket types that apply to it, never a summed per-zone ticket count
 
-#### Scenario: Seating map asset is present
-- **WHEN** the concert detail includes a non-null `seatingMapAsset` with a `publicUrl`
-- **THEN** the detail page renders the seating map image in a viewable format near the zone legend
+#### Scenario: Concert has no seating map or no seating zones
+- **WHEN** `seatingMapAsset` is null, or `seatingZones` is an empty array
+- **THEN** no interactive map or zone list is rendered, matching the concert's existing non-seating-map presentation
+
+#### Scenario: Zone-level display never shows a summed per-zone ticket count
+- **WHEN** one or more ticket types are mapped to a zone
+- **THEN** the zone's availability is always expressed per ticket type (e.g. "Vé VIP còn 20 vé — áp dụng cho VIP Left và VIP Right")
+- **AND** never as a single summed number attributed to the zone (e.g. never "Khu vực VIP còn 20 ghế")
+
+### Requirement: Seating map static-image fallback
+The event detail page SHALL be able to display the seating map asset as a plain reference image whenever the interactive zone map (see "Interactive seating-zone map with ticket-type-centric availability") is not usable — i.e. no seating zones exist, or the SVG failed to load.
+
+#### Scenario: Seating map asset is present but not usable as an interactive map
+- **WHEN** the concert detail includes a non-null `seatingMapAsset` with a `publicUrl`, and either `seatingZones` is empty or the SVG failed to load
+- **THEN** the detail page renders the seating map as a static `<img>`
 - **AND** the image resolves via `publicUrl` first, falling back to `GET /assets/:id` if `publicUrl` is null
 
 #### Scenario: Seating map asset is absent
 - **WHEN** the concert detail has `seatingMapAsset` as null
-- **THEN** no seating map image section is rendered
+- **THEN** no seating map section is rendered
 
 ### Requirement: Sale window state indicators
 The event detail page SHALL display the sale state of each ticket type based on the current time relative to `saleStartsAt` and `saleEndsAt`.

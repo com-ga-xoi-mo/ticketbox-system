@@ -41,7 +41,7 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
 
   const handleAssign = () => {
     if (!userId || !gateName) {
-      toast.error('Please select a staff member and enter a gate name');
+      toast.error('Vui lòng chọn một nhân viên và nhập tên cổng');
       return;
     }
 
@@ -65,18 +65,18 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
     <div className="bg-slate-800/60 backdrop-blur-xl border border-white/10 rounded-xl p-6">
       <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
         <UserPlus className="w-5 h-5 text-[#d0bcff]" />
-        New Assignment
+        Phân công mới
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] gap-6 items-end">
         <div className="space-y-3">
-          <label className="text-sm font-medium text-slate-400 ml-1">Check-in Staff</label>
+          <label className="text-sm font-medium text-slate-400 ml-1">Nhân viên check-in</label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <Input
               value={staffSearch}
               onChange={(e) => setStaffSearch(e.target.value)}
-              placeholder="Search by staff name, email, or ID..."
+              placeholder="Tìm kiếm theo tên, email, hoặc ID nhân viên..."
               className="w-full h-11 bg-slate-900/50 border-white/10 pl-10 text-white placeholder:placeholder:text-slate-500"
             />
           </div>
@@ -87,7 +87,7 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
               className="appearance-none cursor-pointer w-full h-12 bg-slate-900/50 border border-white/10 rounded-md py-1.5 pl-3 pr-8 text-sm text-white transition-all focus:border-[#4cd7f6] focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50"
             >
               <option value="" disabled>
-                {isStaffLoading ? "Loading..." : "Select staff..."}
+                {isStaffLoading ? "Đang tải..." : "Chọn nhân viên..."}
               </option>
               {filteredStaffList?.map((staff: any) => (
                 <option key={staff.id} value={staff.id}>
@@ -96,7 +96,7 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
               ))}
               {filteredStaffList?.length === 0 && !isStaffLoading && (
                 <option value="empty" disabled>
-                  {staffSearch.trim() ? 'No matching staff' : 'No staff available'}
+                  {staffSearch.trim() ? 'Không tìm thấy nhân viên phù hợp' : 'Không có nhân viên nào trống'}
                 </option>
               )}
             </select>
@@ -105,16 +105,16 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            {isStaffLoading ? 'Loading staff...' : `${filteredStaffList.length} staff available`}
+            {isStaffLoading ? 'Đang tải nhân viên...' : `${filteredStaffList.length} nhân viên trống`}
           </p>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-400 ml-1">Gate</label>
+          <label className="text-sm font-medium text-slate-400 ml-1">Cổng</label>
           <Input
             value={gateName}
             onChange={(e) => setGateName(e.target.value)}
-            placeholder="e.g. Gate A, Gate B..."
+            placeholder="VD: Cổng A, Cổng B..."
             className="w-full h-12 bg-slate-900/50 border-white/10 text-white placeholder:placeholder:text-slate-500"
           />
         </div>
@@ -124,7 +124,7 @@ export const AssignmentPicker = ({ concertId }: AssignmentPickerProps) => {
           disabled={isPending || !userId || !gateName}
           className="w-full h-12 bg-gradient-to-br from-[#d0bcff] to-[#e14ef6] text-slate-900 font-semibold shadow-[0_0_15px_rgba(225,78,246,0.3)] hover:shadow-[0_0_25px_rgba(225,78,246,0.5)] border-0"
         >
-          {isPending ? 'Processing...' : 'Assign'}
+          {isPending ? 'Đang xử lý...' : 'Phân công'}
         </Button>
       </div>
     </div>

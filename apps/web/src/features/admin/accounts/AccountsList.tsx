@@ -26,7 +26,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
   }, [role, status, search]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-400">Loading...</div>;
+    return <div className="p-8 text-center text-slate-400">Đang tải...</div>;
   }
 
   const filteredAccounts = accounts?.filter((acc: any) => {
@@ -52,19 +52,19 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-slate-900/40 uppercase tracking-[0.05em] text-xs font-mono">
-              <th className="p-4 font-medium text-slate-400">Display Name</th>
+              <th className="p-4 font-medium text-slate-400">Tên hiển thị</th>
               <th className="p-4 font-medium text-slate-400">Email</th>
-              <th className="p-4 font-medium text-slate-400">Phone</th>
-              <th className="p-4 font-medium text-slate-400">Role</th>
-              <th className="p-4 font-medium text-slate-400">Status</th>
-              <th className="p-4 font-medium text-slate-400 text-right">Actions</th>
+              <th className="p-4 font-medium text-slate-400">Số điện thoại</th>
+              <th className="p-4 font-medium text-slate-400">Vai trò</th>
+              <th className="p-4 font-medium text-slate-400">Trạng thái</th>
+              <th className="p-4 font-medium text-slate-400 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {paginatedAccounts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="p-8 text-center text-sm text-slate-400">
-                  No accounts found.
+                  Không tìm thấy tài khoản nào.
                 </td>
               </tr>
             ) : (
@@ -106,7 +106,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                         className="h-7 text-xs bg-transparent border-white/10 hover:bg-white/5 hover:text-white"
                         onClick={() => setEditingAccount(account)}
                       >
-                        Edit
+                        Chỉnh sửa
                       </Button>
                       <Button
                         variant="outline"
@@ -114,7 +114,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                         className="h-7 text-xs bg-transparent border-white/10 hover:bg-white/5 hover:text-white"
                         onClick={() => setStatusChangeAccount(account)}
                       >
-                        Change Status
+                        Đổi trạng thái
                       </Button>
                     </div>
                   </td>

@@ -294,4 +294,20 @@ export class PlatformConfigService {
   get s3PublicBaseUrl(): string {
     return this.configService.get('S3_PUBLIC_BASE_URL');
   }
+
+  get nominatimBaseUrl(): string {
+    return this.configService.get('NOMINATIM_BASE_URL');
+  }
+
+  get nominatimUserAgent(): string | undefined {
+    return this.configService.get('NOMINATIM_USER_AGENT', { infer: true });
+  }
+
+  get nominatimContactEmail(): string | undefined {
+    return this.configService.get('NOMINATIM_CONTACT_EMAIL', { infer: true });
+  }
+
+  get nominatimTimeoutMs(): number {
+    return this.configService.get('NOMINATIM_TIMEOUT_MS');
+  }
 }

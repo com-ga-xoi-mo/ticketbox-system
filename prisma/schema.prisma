@@ -483,6 +483,8 @@ model Concert {
   description       String?
   venueName         String        @map("venue_name") @db.VarChar(220)
   venueAddress      String?       @map("venue_address")
+  latitude          Decimal?      @db.Decimal(9, 6)
+  longitude         Decimal?      @db.Decimal(9, 6)
   city              String        @db.VarChar(120)
   startsAt          DateTime      @map("starts_at") @db.Timestamptz(6)
   endsAt            DateTime      @map("ends_at") @db.Timestamptz(6)

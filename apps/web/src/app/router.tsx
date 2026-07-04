@@ -6,6 +6,8 @@ import { AdminReportsPage } from '../features/admin/reports/AdminReportsPage';
 import { OrganizerDashboard } from '../features/organizer/dashboard/OrganizerDashboard';
 import { ConcertsPage as AdminConcertsPage } from '../features/admin/concerts/ConcertsPage';
 import { ConcertEditPage as AdminConcertEditPage } from '../features/admin/concerts/ConcertEditPage';
+import { ArtistsPage as AdminArtistsPage } from '../features/admin/artists/ArtistsPage';
+import { ArtistEditPage as AdminArtistEditPage } from '../features/admin/artists/ArtistEditPage';
 import { AdminVenueMapsList, AdminVenueMapEditor } from '../features/admin/venue-maps/pages';
 import { AdminAccountsPage } from '../features/admin/accounts/AdminAccountsPage';
 import { SelfAccountPage } from '../features/account/SelfAccountPage';
@@ -86,6 +88,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminConcertsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/artists',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminArtistsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/artists/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminArtistEditPage />
           </ProtectedRoute>
         ),
       },

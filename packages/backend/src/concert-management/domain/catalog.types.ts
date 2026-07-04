@@ -94,6 +94,8 @@ export type ConcertDetail = {
   publishedArtistBio: string | null;
   venueName: string;
   venueAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
   city: string;
   startsAt: Date;
   endsAt: Date;

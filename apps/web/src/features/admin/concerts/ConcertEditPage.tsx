@@ -14,6 +14,7 @@ import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
 import { toast } from 'sonner';
+import { VenueLocationPicker } from '../../concerts-shared/components/VenueLocationPicker';
 
 import { getAssetUrl } from '../../../shared/api/client';
 
@@ -74,6 +75,8 @@ export function ConcertEditPage() {
     artistName: '',
     venueName: '',
     venueAddress: '',
+    latitude: null,
+    longitude: null,
     city: '',
     startsAt: '',
     endsAt: '',
@@ -93,6 +96,8 @@ export function ConcertEditPage() {
         artistName: concert.artistName,
         venueName: concert.venueName,
         venueAddress: concert.venueAddress || '',
+        latitude: concert.latitude ?? null,
+        longitude: concert.longitude ?? null,
         city: concert.city,
         startsAt: formatDateForInput(concert.startsAt),
         endsAt: formatDateForInput(concert.endsAt),
@@ -315,6 +320,23 @@ export function ConcertEditPage() {
                 placeholder="e.g. 123 Music Ave, Ward 1"
                 icon="map"
               />
+
+              <div>
+                <p className="mb-1 text-sm font-medium">Vị trí trên bản đồ</p>
+                <VenueLocationPicker
+                  latitude={values.latitude}
+                  longitude={values.longitude}
+                  venueAddress={values.venueAddress}
+                  onChange={({ latitude, longitude, venueAddress }) =>
+                    setValues((v) => ({
+                      ...v,
+                      latitude,
+                      longitude,
+                      venueAddress: venueAddress ?? v.venueAddress,
+                    }))
+                  }
+                />
+              </div>
 
               <Input
                 id="edit-city"

@@ -18,6 +18,23 @@ function buildHeaders(): HeadersInit {
   return headers;
 }
 
+function extractErrorMessage(body: string, status: number): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed && typeof parsed === 'object' && 'message' in parsed) {
+      const message = (parsed as { message: unknown }).message;
+      if (Array.isArray(message)) return message.join('; ');
+      if (typeof message === 'string' && message) return message;
+    }
+  } catch {
+    // Non-JSON body: never surface it raw, fall through to a generic message.
+  }
+  if (status === 403) return 'You do not have permission to perform this action.';
+  if (status === 404) return 'The requested resource was not found.';
+  if (status === 409) return 'This conflicts with existing data. Please adjust and retry.';
+  return `Request failed: ${status}`;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === 401) {
     clearToken();
@@ -26,7 +43,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(body || `Request failed: ${res.status}`);
+    throw new Error(extractErrorMessage(body, res.status));
   }
   return res.json() as Promise<T>;
 }

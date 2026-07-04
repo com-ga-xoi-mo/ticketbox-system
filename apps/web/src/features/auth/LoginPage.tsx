@@ -48,8 +48,8 @@ export function LoginPage() {
           const msg = err.message.toLowerCase();
           setApiError(
             msg.includes('unauthorized') || msg.includes('401')
-              ? 'Invalid credentials. Please try again.'
-              : 'Something went wrong. Please try again.',
+              ? 'Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.'
+              : 'Đã có lỗi xảy ra. Vui lòng thử lại.',
           );
         },
       },
@@ -80,7 +80,7 @@ export function LoginPage() {
             >
               Ticket<span className="gradient-text">Box</span>
             </h1>
-            <p className="text-base text-on-surface-variant">Manage concerts from stage to gate.</p>
+            <p className="text-base text-on-surface-variant">Quản lý buổi hòa nhạc từ sân khấu đến cổng ra vào.</p>
           </div>
 
           {/* ── Form ── */}
@@ -91,7 +91,7 @@ export function LoginPage() {
                 htmlFor="email"
                 className="font-label text-[10px] text-on-surface-variant uppercase tracking-wider"
               >
-                Email Address
+                Địa chỉ Email
               </label>
               <div className="relative">
                 <span
@@ -122,13 +122,13 @@ export function LoginPage() {
                   htmlFor="password"
                   className="font-label text-[10px] text-on-surface-variant uppercase tracking-wider"
                 >
-                  Password
+                  Mật khẩu
                 </label>
                 <a
                   href="#"
                   className="font-label text-[10px] text-primary hover:text-primary-fixed transition-colors"
                 >
-                  Forgot?
+                  Quên?
                 </a>
               </div>
               <div className="relative">
@@ -191,7 +191,7 @@ export function LoginPage() {
                 </svg>
               ) : (
                 <>
-                  Sign In
+                  Đăng nhập
                   <span
                     className="material-symbols-outlined transition-transform group-hover:translate-x-1"
                     aria-hidden="true"
@@ -206,12 +206,12 @@ export function LoginPage() {
           {/* ── Footer ── */}
           <div className="mt-10 w-full pt-6 border-t border-white/5 text-center">
             <p className="text-sm text-on-surface-variant">
-              Don't have an account?{' '}
+              Bạn chưa có tài khoản?{' '}
               <a
                 href="#"
                 className="text-primary hover:text-primary-fixed hover:underline font-semibold transition-colors ml-1"
               >
-                Request Access
+                Yêu cầu cấp quyền
               </a>
             </p>
           </div>

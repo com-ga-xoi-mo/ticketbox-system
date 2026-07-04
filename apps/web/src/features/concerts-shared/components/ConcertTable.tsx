@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Concert } from '../types';
 import { mapStatus } from '../status';
+import { eventTypeLabel } from '../event-type';
+import { resolveConcertPosterUrl } from '../concert-image';
 import { Badge } from '../../../shared/ui/badge';
 import { cn } from '../../../shared/ui/cn';
 import {
@@ -12,15 +14,13 @@ import {
   TableRow,
 } from '../../../shared/ui/table';
 
-import { getAssetUrl } from '../../../shared/api/client';
-
 interface ConcertTableProps {
   concerts: Concert[];
   onSelect?: (concert: Concert) => void;
   selectedId?: string;
 }
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
+const dateFormatter = new Intl.DateTimeFormat('vi-VN', {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
@@ -28,15 +28,17 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
 });
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
+const relativeTimeFormatter = new Intl.RelativeTimeFormat('vi-VN', { numeric: 'auto' });
 
 export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTableProps) {
   const formatDateTime = (dateStr: string) => {
     return dateFormatter.format(new Date(dateStr));
   };
 
-  const formatRelativeTime = (dateStr: string) => {
+  const formatRelativeTime = (dateStr: string | undefined | null) => {
+    if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Ngày không hợp lệ';
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffMins = Math.round(diffMs / 60000);
@@ -53,11 +55,11 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
         <TableHeader>
           <TableRow className="border-b border-white/5 bg-surface-container-high/20">
             {[
-              { label: 'Concert & Artist', cls: 'pl-6 w-[35%]' },
-              { label: 'Venue & City', cls: 'w-[25%]' },
-              { label: 'Schedule', cls: 'w-[20%]' },
-              { label: 'Status', cls: 'w-[10%]' },
-              { label: 'Updated', cls: 'w-[10%]' },
+              { label: 'Sự kiện & Nghệ sĩ', cls: 'pl-6 w-[35%]' },
+              { label: 'Địa điểm & Thành phố', cls: 'w-[25%]' },
+              { label: 'Lịch trình', cls: 'w-[20%]' },
+              { label: 'Trạng thái', cls: 'w-[10%]' },
+              { label: 'Cập nhật', cls: 'w-[10%]' },
               { label: '', cls: 'pr-6 w-8' },
             ].map(({ label, cls = '' }) => (
               <TableHead key={label || 'action'} className={cls}>
@@ -71,9 +73,15 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
             const { label, variant, dotClass } = mapStatus(concert.status);
             const isCancelled = concert.status === 'CANCELLED';
             const isSelected = selectedId === concert.id;
-            const imageUrl = concert.posterAssetId
-              ? getAssetUrl(concert.posterAssetId)
-              : null;
+            const imageUrl = resolveConcertPosterUrl(concert);
+            const typeLabel = eventTypeLabel(concert.eventType);
+            const orderedArtists = concert.artists
+              ? [...concert.artists].sort((a, b) => a.displayOrder - b.displayOrder)
+              : [];
+            const artistSummary =
+              orderedArtists.length > 0
+                ? orderedArtists.map((a) => a.displayName).join(', ')
+                : concert.artistName;
 
             return (
               <TableRow
@@ -113,17 +121,24 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div
-                        className={cn(
-                          'block truncate text-sm font-bold leading-normal py-[1px] text-on-surface transition-colors',
-                          isSelected ? 'text-primary' : 'group-hover:text-primary',
-                          isCancelled && 'line-through opacity-50 decoration-on-surface-variant/40',
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            'block truncate text-sm font-bold leading-normal py-[1px] text-on-surface transition-colors',
+                            isSelected ? 'text-primary' : 'group-hover:text-primary',
+                            isCancelled && 'line-through opacity-50 decoration-on-surface-variant/40',
+                          )}
+                        >
+                          {concert.title}
+                        </div>
+                        {typeLabel && concert.eventType !== 'CONCERT' && (
+                          <span className="shrink-0 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-on-surface-variant">
+                            {typeLabel}
+                          </span>
                         )}
-                      >
-                        {concert.title}
                       </div>
                       <div className="mt-0.5 truncate text-xs text-on-surface-variant">
-                        {concert.artistName}
+                        {artistSummary}
                       </div>
                     </div>
                   </div>
@@ -152,7 +167,7 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
                       isCancelled && 'opacity-50',
                     )}
                   >
-                    {new Date(concert.startsAt).toLocaleDateString('en-US', {
+                    {new Date(concert.startsAt).toLocaleDateString('vi-VN', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
@@ -163,7 +178,7 @@ export function ConcertTable({ concerts, onSelect, selectedId }: ConcertTablePro
                     isCancelled && 'opacity-50'
                   )}>
                     <span>
-                      {new Date(concert.startsAt).toLocaleTimeString('en-US', {
+                      {new Date(concert.startsAt).toLocaleTimeString('vi-VN', {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: false,

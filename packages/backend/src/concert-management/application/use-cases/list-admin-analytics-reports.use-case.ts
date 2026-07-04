@@ -9,6 +9,7 @@ export interface ReportConcertRow {
   startsAt: Date;
   status: string;
   posterAssetId: string | null;
+  posterPublicUrl: string | null;
   organizerId: string;
   organizerDisplayName: string;
   revenueVnd: number | bigint | string | null;
@@ -58,6 +59,7 @@ export class ListAdminAnalyticsReportsUseCase {
     const rows = await this.prisma.$queryRaw<ReportConcertRow[]>`
       SELECT
         c.id, c.title, c.starts_at as "startsAt", c.status::text, c.poster_asset_id as "posterAssetId",
+        pa.public_url as "posterPublicUrl",
         u.id as "organizerId", u.display_name as "organizerDisplayName",
         (SELECT SUM(total_amount_vnd)::bigint FROM orders WHERE concert_id = c.id AND status = 'PAID'::order_status) as "revenueVnd",
         (SELECT SUM(total_quantity)::bigint FROM ticket_types WHERE concert_id = c.id AND status != 'ARCHIVED'::ticket_type_status) as "totalTickets",
@@ -66,6 +68,7 @@ export class ListAdminAnalyticsReportsUseCase {
         (SELECT COUNT(DISTINCT ticket_id)::bigint FROM checkin_events WHERE concert_id = c.id AND result = 'ACCEPTED'::checkin_event_result) as "checkedInTickets"
       FROM concerts c
       INNER JOIN users u ON u.id = c.created_by_id
+      LEFT JOIN assets pa ON pa.id = c.poster_asset_id
       ${where}
       ORDER BY "revenueVnd" DESC NULLS LAST, c.starts_at DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -87,6 +90,7 @@ export class ListAdminAnalyticsReportsUseCase {
         startsAt: row.startsAt,
         status: row.status,
         posterAssetId: row.posterAssetId,
+        posterPublicUrl: row.posterPublicUrl,
         organizerId: row.organizerId,
         organizerDisplayName: row.organizerDisplayName,
         revenueVnd: toNumber(row.revenueVnd),

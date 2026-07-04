@@ -1,7 +1,7 @@
 # web-concert-management Specification
 
 ## Purpose
-TBD
+Define role-scoped admin and organizer concert management screens, lifecycle actions, editing flows, and consistent asset rendering behavior.
 
 ## Requirements
 
@@ -59,6 +59,11 @@ The web app SHALL present concert detail in a shared panel beside the role-speci
 - **WHEN** the organizer or admin selects a concert from their role-specific list
 - **THEN** the app SHALL show that concert's detail panel beside the list with its event info (venue, city, schedule), current status, and setup/inventory summary
 - **AND** the panel SHALL offer an Edit action, a Publish action when the concert is DRAFT, and a Cancel action when the concert is not already ENDED or CANCELLED
+
+#### Scenario: Management concert poster uses its public URL
+- **WHEN** an admin or organizer concert response contains a poster with a non-empty `posterAsset.publicUrl`
+- **THEN** the concert table, detail panel, and edit page SHALL render that `publicUrl` as the primary poster source
+- **AND** the web app SHALL fall back to `GET /assets/:posterAssetId` only when `publicUrl` is absent
 
 #### Scenario: Organizer editing a concert opens the organizer edit route
 

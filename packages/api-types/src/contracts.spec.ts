@@ -188,6 +188,8 @@ describe('public concert catalog contracts', () => {
         description: 'A summer concert.',
         publishedArtistBio: 'The Suns are a live act.',
         venueAddress: '1 Nguyen Hue',
+        latitude: null,
+        longitude: null,
         seoTitle: null,
         seoDescription: null,
         seoImageUrl: null,
@@ -239,6 +241,8 @@ describe('public concert catalog contracts', () => {
         description: null,
         publishedArtistBio: null,
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         seatingMapAsset: null,
         seatingZones: [],
         ticketTypes: [{ ...ticketType, status: 'UNKNOWN' }],
@@ -811,5 +815,70 @@ describe('online scan contracts', () => {
     },
   ])('rejects incomplete, cross-outcome, null, or unknown response fields', (response) => {
     expect(OnlineScanResponseSchema.safeParse(response).success).toBe(false);
+  });
+});
+
+import {
+  OrganizerCreateConcertSchema,
+} from './concert-management/management-concert.contract';
+import { ReplaceConcertArtistsRequestSchema as ReplaceSchema } from './concert-management/replace-artists.contract';
+
+describe('management concert contracts', () => {
+  it('validates organizer create concert (no moderation fields)', () => {
+    expect(
+      OrganizerCreateConcertSchema.safeParse({
+        slug: 'test-slug',
+        title: 'Title',
+        artistName: 'Artist',
+        venueName: 'Venue',
+        city: 'City',
+        startsAt: '2026-07-01T12:00:00.000Z',
+        endsAt: '2026-07-01T14:00:00.000Z',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      OrganizerCreateConcertSchema.safeParse({
+        slug: 'test-slug',
+        title: 'Title',
+        artistName: 'Artist',
+        venueName: 'Venue',
+        city: 'City',
+        startsAt: '2026-07-01T12:00:00.000Z',
+        endsAt: '2026-07-01T14:00:00.000Z',
+        isFeatured: true, // Should be rejected by strict()
+      }).success,
+    ).toBe(false);
+  });
+
+  it('validates artist replacement requests', () => {
+    expect(
+      ReplaceSchema.safeParse({
+        artists: [
+          { artistId: '11111111-1111-4111-8111-111111111111', displayOrder: 0 },
+          { artistId: '22222222-2222-4222-8222-222222222222', displayOrder: 1 },
+        ],
+      }).success,
+    ).toBe(true);
+
+    // Duplicate artist
+    expect(
+      ReplaceSchema.safeParse({
+        artists: [
+          { artistId: '11111111-1111-4111-8111-111111111111', displayOrder: 0 },
+          { artistId: '11111111-1111-4111-8111-111111111111', displayOrder: 1 },
+        ],
+      }).success,
+    ).toBe(false);
+
+    // Non-contiguous order
+    expect(
+      ReplaceSchema.safeParse({
+        artists: [
+          { artistId: '11111111-1111-4111-8111-111111111111', displayOrder: 0 },
+          { artistId: '22222222-2222-4222-8222-222222222222', displayOrder: 2 },
+        ],
+      }).success,
+    ).toBe(false);
   });
 });

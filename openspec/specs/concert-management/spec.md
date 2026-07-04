@@ -79,6 +79,12 @@ debug, or development path.
 - **THEN** the system SHALL stream the asset bytes with the stored content type
 - **AND** this endpoint SHALL NOT replace `publicUrl` as the primary production asset delivery path
 
+#### Scenario: Protected concert reads include poster metadata
+- **WHEN** an organizer or admin list/detail response contains a concert associated with a poster asset
+- **THEN** the response SHALL include safe `posterAsset` metadata with at least `id`, `publicUrl`, `kind`, `status`, `originalName`, `contentType`, and `sizeBytes`
+- **AND** it SHALL retain `posterAssetId` for backward compatibility
+- **AND** it SHALL NOT embed storage keys, checksums, or binary image content
+
 #### Scenario: Poster upload persists public URL
 - **WHEN** an organizer or admin uploads a valid poster image
 - **THEN** the system SHALL store the object and persist the asset `publicUrl` returned by `ObjectStoragePort.getPublicUrl(storageKey)`
@@ -621,8 +627,6 @@ The system SHALL expose read-only protected admin and organizer endpoints for lo
 #### Scenario: Non-existent concert authoring read returns not found
 - **WHEN** an authenticated admin or organizer requests any seating-map authoring read endpoint for a concert id that does not exist
 - **THEN** the system SHALL respond with a not-found error
-## ADDED Requirements
-
 ### Requirement: Standardized Status Badge Colors
 The system SHALL use standardized colors for concert status badges across all views: DRAFT (Amber), PUBLISHED (Purple), CANCELLED (Red), ENDED (Gray).
 

@@ -25,7 +25,7 @@ import { ConcertCacheKeys } from './concert-cache-keys';
 class FakeCacheService implements CacheServicePort {
   private readonly store = new Map<string, { value: unknown; expiresAt: number }>();
 
-  async getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>, _options?: { lockTtlSeconds?: number }): Promise<T> {
     const entry = this.store.get(key);
     if (entry && Date.now() < entry.expiresAt) {
       return entry.value as T;
@@ -71,7 +71,7 @@ class FakeCacheService implements CacheServicePort {
  * The decorator's fail-open behavior should bypass cache and call the loader.
  */
 class AlwaysThrowingCacheService implements CacheServicePort {
-  async getOrSet<T>(_key: string, _ttl: number, _loader: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(_key: string, _ttl: number, _loader: () => Promise<T>, _options?: { lockTtlSeconds?: number }): Promise<T> {
     throw new Error('Redis is down');
   }
   async del(_key: string): Promise<void> {
@@ -118,6 +118,8 @@ const sampleDetail: ConcertDetail = {
   publishedArtistBio: null,
   venueName: 'Arena',
   venueAddress: null,
+  latitude: null,
+  longitude: null,
   city: 'HCM',
   startsAt: new Date('2026-07-01T18:00:00.000Z'),
   endsAt: new Date('2026-07-01T22:00:00.000Z'),
@@ -295,7 +297,7 @@ describe('5.3 Fail-open: cache error falls through to the wrapped use-case', () 
     // implementation falls through to the loader (as RedisCacheService does),
     // the decorator returns the correct result.
     const failOpenCache: CacheServicePort = {
-      getOrSet: async <T>(_key: string, _ttl: number, loader: () => Promise<T>) => loader(),
+      getOrSet: async <T>(_key: string, _ttl: number, loader: () => Promise<T>, _options?: { lockTtlSeconds?: number }) => loader(),
       del: async () => {},
       delByPrefix: async () => {},
     };

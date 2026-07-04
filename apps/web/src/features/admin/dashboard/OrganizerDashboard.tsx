@@ -49,10 +49,10 @@ function ActivityLine() {
 function StatusBar() {
   const s = MOCK_STATS;
   const segments = [
-    { label: 'Published', value: s.published, className: 'bg-primary' },
-    { label: 'Draft', value: s.drafts, className: 'bg-on-surface-variant' },
-    { label: 'Ended', value: s.ended, className: 'bg-tertiary' },
-    { label: 'Cancelled', value: s.cancelled, className: 'bg-error' },
+    { label: 'Đã xuất bản', value: s.published, className: 'bg-primary' },
+    { label: 'Bản nháp', value: s.drafts, className: 'bg-on-surface-variant' },
+    { label: 'Đã kết thúc', value: s.ended, className: 'bg-tertiary' },
+    { label: 'Đã hủy', value: s.cancelled, className: 'bg-error' },
   ];
   const total = segments.reduce((sum, item) => sum + item.value, 0);
 
@@ -120,18 +120,17 @@ export function OrganizerDashboard() {
       <div className="mx-auto flex max-w-[86rem] flex-col gap-8">
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <p className="font-mono text-xs font-medium text-on-surface-variant">TicketBox admin</p>
+            <p className="font-mono text-xs font-medium text-on-surface-variant">Quản trị viên TicketBox</p>
             <h1 className="mt-3 text-pretty font-display text-4xl font-extrabold leading-tight text-on-surface md:text-5xl">
-              Operations dashboard
+              Bảng điều khiển hoạt động
             </h1>
             <p className="mt-3 max-w-2xl text-pretty text-sm leading-6 text-on-surface-variant">
-              Track concert moderation, inventory pressure, and staff readiness across the
-              management console.
+              Theo dõi kiểm duyệt sự kiện, áp lực kho vé và sự sẵn sàng của nhân viên qua bảng quản lý.
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-surface-container/80 px-4 py-3 text-sm text-on-surface-variant">
             <span className="size-2 rounded-sm bg-tertiary" aria-hidden="true" />
-            <span className="font-medium">Live queue</span>
+            <span className="font-medium">Hàng đợi trực tiếp</span>
             <span className="font-mono tabular-nums text-on-surface">
               {numberFormatter.format(s.reviewQueue)}
             </span>
@@ -144,16 +143,16 @@ export function OrganizerDashboard() {
               <div className="flex flex-col gap-8 p-6 md:p-8">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-mono text-xs text-on-surface-variant">approval activity</p>
+                    <p className="font-mono text-xs text-on-surface-variant">hoạt động phê duyệt</p>
                     <h2 className="mt-2 font-display text-2xl font-bold text-on-surface">
-                      Concerts are moving through review
+                      Các sự kiện đang được xem xét
                     </h2>
                   </div>
                   <Link
                     to="/admin/concerts"
                     className="inline-flex h-10 items-center justify-center rounded-lg border border-white/10 px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    Open Concerts
+                    Mở sự kiện
                   </Link>
                 </div>
                 <ActivityLine />
@@ -161,22 +160,22 @@ export function OrganizerDashboard() {
               </div>
 
               <aside className="border-t border-white/5 bg-surface-container-low/70 p-6 lg:border-l lg:border-t-0">
-                <p className="font-mono text-xs text-on-surface-variant">moderation load</p>
+                <p className="font-mono text-xs text-on-surface-variant">tải lượng kiểm duyệt</p>
                 <p className="mt-4 font-display text-5xl font-extrabold leading-none tabular-nums text-on-surface">
                   {moderationLoad}%
                 </p>
                 <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-                  {s.reviewQueue} concerts need admin review before publishing.
+                  {s.reviewQueue} sự kiện cần xem xét trước khi xuất bản.
                 </p>
                 <div className="mt-8 flex flex-col gap-3">
                   <div className="flex items-center justify-between rounded-lg bg-surface-container-high/50 p-3">
-                    <span className="text-sm text-on-surface-variant">Staff assigned</span>
+                    <span className="text-sm text-on-surface-variant">Nhân viên được phân công</span>
                     <span className="font-mono tabular-nums text-on-surface">
                       {s.staffAssigned}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-surface-container-high/50 p-3">
-                    <span className="text-sm text-on-surface-variant">Check-in readiness</span>
+                    <span className="text-sm text-on-surface-variant">Sẵn sàng check-in</span>
                     <span className="font-mono tabular-nums text-on-surface">{s.checkinRate}%</span>
                   </div>
                 </div>
@@ -189,27 +188,27 @@ export function OrganizerDashboard() {
 
         <section className="grid gap-6 lg:grid-cols-4">
           <MetricCard
-            label="Total concerts"
+            label="Tổng số sự kiện"
             value={numberFormatter.format(s.totalConcerts)}
-            detail={`${s.totalTrend} compared with the previous month`}
+            detail={`${s.totalTrend} so với tháng trước`}
             icon="queue_music"
           />
           <MetricCard
-            label="Published"
+            label="Đã xuất bản"
             value={numberFormatter.format(s.published)}
-            detail={`${s.drafts} drafts still need organizer updates`}
+            detail={`${s.drafts} bản nháp vẫn cần cập nhật`}
             icon="published_with_changes"
           />
           <MetricCard
-            label="Available inventory"
+            label="Kho vé hiện có"
             value={compactFormatter.format(s.ticketsAvailable)}
-            detail={`${s.soldOutRate}% of ${compactFormatter.format(s.ticketsTotal)} tickets allocated`}
+            detail={`Đã phân bổ ${s.soldOutRate}% trong số ${compactFormatter.format(s.ticketsTotal)} vé`}
             icon="confirmation_number"
           />
           <MetricCard
-            label="Staff coverage"
+            label="Độ phủ nhân viên"
             value={`${s.checkinRate}%`}
-            detail={`${s.staffAssigned} check-in staff assigned to active events`}
+            detail={`${s.staffAssigned} nhân viên check-in được phân công cho các sự kiện`}
             icon="badge"
           />
         </section>
