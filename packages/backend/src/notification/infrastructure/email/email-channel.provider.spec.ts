@@ -76,6 +76,7 @@ describe('createEmailChannelAdapter', () => {
 
   it('defaults EMAIL_PROVIDER to local when it is absent', () => {
     const env = validateEnv({
+      NODE_ENV: 'test',
       DATABASE_URL: 'postgresql://ticketbox:ticketbox@localhost:5432/ticketbox',
       JWT_SECRET: 'test-secret',
       MOMO_PARTNER_CODE: 'momo-partner',
@@ -83,6 +84,12 @@ describe('createEmailChannelAdapter', () => {
       MOMO_SECRET_KEY: 'momo-secret',
       VNPAY_TMN_CODE: 'vnpay-terminal',
       VNPAY_HASH_SECRET: 'vnpay-secret',
+      S3_ENDPOINT: 'https://storage.example.com',
+      S3_REGION: 'auto',
+      S3_BUCKET: 'ticketbox-test',
+      S3_ACCESS_KEY_ID: 'test-key',
+      S3_SECRET_ACCESS_KEY: 'test-secret',
+      S3_PUBLIC_BASE_URL: 'https://assets.example.com',
     });
 
     expect(env.EMAIL_PROVIDER).toBe('local');
