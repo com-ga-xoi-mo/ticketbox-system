@@ -91,6 +91,23 @@ export function SeatingZoneMap({
     const svgElement = containerRef.current.querySelector('svg');
     if (!svgElement) return;
 
+    // Auto-crop whitespace by updating the viewBox to match the actual drawn content
+    try {
+      // Use requestAnimationFrame to ensure the SVG is rendered in the DOM before calculating BBox
+      requestAnimationFrame(() => {
+        if (!svgElement) return;
+        if (typeof svgElement.getBBox !== 'function') return;
+        const bbox = svgElement.getBBox();
+        if (bbox && bbox.width > 0 && bbox.height > 0) {
+          const padding = 10; // 10px padding
+          const newViewBox = `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`;
+          svgElement.setAttribute('viewBox', newViewBox);
+        }
+      });
+    } catch (e) {
+      // Ignore
+    }
+
     seatingZones.forEach((zone) => {
       const element = svgElement.querySelector(`[id="${zone.svgElementId}"]`) as SVGElement | null;
       if (!element) return;
@@ -203,7 +220,7 @@ export function SeatingZoneMap({
       >
         <div
           ref={containerRef}
-          className="w-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full"
+          className="w-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-auto [&>svg]:max-h-[70vh]"
           dangerouslySetInnerHTML={{ __html: svgText ?? '' }}
         />
       </div>

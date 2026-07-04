@@ -76,6 +76,21 @@ export function VenueMapSvgViewer({
     const svgElement = containerRef.current.querySelector('svg');
     if (!svgElement) return;
 
+    try {
+      requestAnimationFrame(() => {
+        if (!svgElement) return;
+        if (typeof svgElement.getBBox !== 'function') return;
+        const bbox = svgElement.getBBox();
+        if (bbox && bbox.width > 0 && bbox.height > 0) {
+          const padding = 10;
+          const newViewBox = `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`;
+          svgElement.setAttribute('viewBox', newViewBox);
+        }
+      });
+    } catch (e) {
+      // Ignore
+    }
+
     // Apply styles to elements based on their status
     seatingMap.svgElementIds.forEach((id) => {
       const element = svgElement.querySelector(`[id="${id}"]`) as SVGElement | null;
