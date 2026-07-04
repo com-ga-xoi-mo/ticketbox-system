@@ -13,6 +13,7 @@ import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
+import { ArtistSelector } from '../../concerts-shared/ui/ArtistSelector';
 import { toast } from 'sonner';
 import { VenueLocationPicker } from '../../concerts-shared/components/VenueLocationPicker';
 
@@ -82,6 +83,7 @@ export function ConcertEditPage() {
     endsAt: '',
     description: '',
   });
+  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [errors, setErrors] = useState<ConcertFormErrors>({});
   const [submitError, setSubmitError] = useState('');
@@ -103,6 +105,15 @@ export function ConcertEditPage() {
         endsAt: formatDateForInput(concert.endsAt),
         description: concert.description || '',
       });
+  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
+      setSelectedArtists(
+        concert.artists?.map((a: any) => ({
+          artistId: a.id,
+          displayName: a.displayName,
+          avatarUrl: a.avatarAsset?.publicUrl || null,
+          status: a.status,
+        })) || []
+      );
       setSlugManuallyEdited(true);
     }
   }, [concert]);
