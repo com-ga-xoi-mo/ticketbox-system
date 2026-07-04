@@ -82,6 +82,10 @@ export function ConcertEditPage() {
     startsAt: '',
     endsAt: '',
     description: '',
+    eventType: 'CONCERT',
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: '',
   });
   const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
@@ -104,8 +108,11 @@ export function ConcertEditPage() {
         startsAt: formatDateForInput(concert.startsAt),
         endsAt: formatDateForInput(concert.endsAt),
         description: concert.description || '',
+        eventType: concert.eventType,
+        seoTitle: concert.seoTitle || '',
+        seoDescription: concert.seoDescription || '',
+        seoImageUrl: concert.seoImageUrl || '',
       });
-  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
       setSelectedArtists(
         concert.artists?.map((a: any) => ({
           artistId: a.id,

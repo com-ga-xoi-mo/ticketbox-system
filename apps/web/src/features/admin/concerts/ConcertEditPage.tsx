@@ -86,6 +86,12 @@ export function ConcertEditPage() {
     startsAt: '',
     endsAt: '',
     description: '',
+    eventType: 'CONCERT',
+    isFeatured: false,
+    displayOrder: 0,
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: '',
   });
   const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
@@ -109,8 +115,13 @@ export function ConcertEditPage() {
         startsAt: formatDateForInput(concert.startsAt),
         endsAt: formatDateForInput(concert.endsAt),
         description: concert.description || '',
+        eventType: concert.eventType,
+        isFeatured: concert.isFeatured,
+        displayOrder: concert.displayOrder,
+        seoTitle: concert.seoTitle || '',
+        seoDescription: concert.seoDescription || '',
+        seoImageUrl: concert.seoImageUrl || '',
       });
-  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
       setSelectedArtists(
         concert.artists?.map((a: any) => ({
           artistId: a.id,
@@ -218,7 +229,6 @@ export function ConcertEditPage() {
       ...values,
       artistName: primaryArtist ? primaryArtist.displayName : values.artistName,
     });
-  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
 
     updateMutation.mutate(
       { id: concert.id, payload: basePayload },
@@ -458,36 +468,35 @@ export function ConcertEditPage() {
             </FormSection>
 
             {/* SEO Metadata */}
-            <FormSection icon="search" title="Siêu dữ liệu SEO">
+            <FormSection icon="search" title="Tối ưu tìm kiếm (SEO)">
               <p className="-mt-1 text-xs text-on-surface-variant">
-                Có thể để trống — hệ thống sẽ tự dùng tiêu đề, mô tả và poster của sự kiện khi chia
-                sẻ lên mạng xã hội / công cụ tìm kiếm.
+                Bạn có thể bỏ qua phần này. Hệ thống sẽ tự động dùng tiêu đề, mô tả và poster của sự kiện để hiển thị khi link được chia sẻ lên mạng xã hội (Facebook, Zalo...) hoặc trên Google.
               </p>
               <Input
                 id="edit-seo-title"
                 name="seoTitle"
-                label="Tiêu đề SEO"
+                label="Tiêu đề (khi chia sẻ link)"
                 value={values.seoTitle}
                 onChange={handleChange}
-                placeholder={values.title ? `Mặc định: "${values.title} | Ticketbox"` : 'Mặc định: "<Tiêu đề sự kiện> | Ticketbox"'}
+                placeholder={values.title ? `Tự động: "${values.title} | Ticketbox"` : 'Tự động lấy theo tên sự kiện'}
               />
               <Textarea
                 id="edit-seo-desc"
                 name="seoDescription"
-                label="Mô tả SEO"
+                label="Mô tả ngắn"
                 value={values.seoDescription}
                 onChange={handleChange}
                 rows={2}
-                placeholder={values.description ? `Mặc định: "${values.description.substring(0, 80)}…"` : 'Mặc định dùng mô tả của sự kiện'}
+                placeholder={values.description ? `Tự động: "${values.description.substring(0, 80)}…"` : 'Tự động trích xuất từ phần Mô tả sự kiện'}
               />
               <Input
                 id="edit-seo-image"
                 name="seoImageUrl"
-                label="URL Ảnh SEO"
+                label="Ảnh Thumbnail (URL)"
                 value={values.seoImageUrl}
                 onChange={handleChange}
                 error={errors.seoImageUrl}
-                placeholder="Mặc định dùng ảnh poster của sự kiện (https://...)"
+                placeholder="Link ảnh (https://...). Để trống sẽ tự dùng Poster."
               />
             </FormSection>
 
