@@ -295,7 +295,7 @@ export function ConcertEditPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
-                    Event Type
+                    Loại sự kiện
                   </label>
                   <select
                     name="eventType"
@@ -303,12 +303,12 @@ export function ConcertEditPage() {
                     onChange={(e) => setValues(prev => ({ ...prev, eventType: e.target.value }))}
                     className="w-full h-10 rounded-lg border border-white/10 bg-surface-container px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="CONCERT">Sự kiện âm nhạc</option>
+                    <option value="CONCERT">Hoà nhạc</option>
                     <option value="WORKSHOP">Hội thảo</option>
                     <option value="SPORT">Thể thao</option>
-                    <option value="MOVIE">Phim</option>
+                    <option value="MOVIE">Điện ảnh</option>
                     <option value="THEATRE">Kịch</option>
-                    <option value="VOUCHER">Voucher</option>
+                    <option value="VOUCHER">Khuyến mãi</option>
                   </select>
                 </div>
               </div>
@@ -329,7 +329,7 @@ export function ConcertEditPage() {
 
               <div>
                 <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
-                  Linked Artists
+                  Nghệ sĩ liên kết
                 </label>
                 <ArtistSelector selectedArtists={selectedArtists} onChange={setSelectedArtists} />
               </div>
@@ -440,7 +440,7 @@ export function ConcertEditPage() {
                   id="edit-starts-at"
                   type="datetime-local"
                   name="startsAt"
-                  label="Event Start *"
+                  label="Thời gian bắt đầu *"
                   value={values.startsAt}
                   onChange={handleChange}
                   error={errors.startsAt}
