@@ -78,6 +78,7 @@ export const envSchema = z
           : Boolean(value),
       z.boolean(),
     ),
+    FRONTEND_URL: z.string().url().default('http://localhost:5173'),
     MAILDEV_WEB_URL: z.string().url().optional(),
     ARTIST_BIO_PDF_MAX_BYTES: z.coerce
       .number()
