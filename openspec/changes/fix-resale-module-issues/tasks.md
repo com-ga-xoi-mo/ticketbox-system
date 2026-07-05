@@ -7,7 +7,7 @@
 - [x] 1.5 Add `defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } }` to all four `BullModule.registerQueue` calls in `resale.module.ts`
 - [x] 1.6 Wrap the batch update loop in `listing-expiry.processor.ts` in a Prisma `$transaction` to ensure all-or-nothing semantics
 - [x] 1.7 Add a configurable batch size limit to the listing expiry processor to prevent oversized single transactions
-- [ ] 1.8 Write unit tests for queue processors verifying: error re-throw behavior, retry configuration, and transaction rollback on partial failure
+- [x] 1.8 Write unit tests for queue processors verifying: error re-throw behavior, retry configuration, and transaction rollback on partial failure
 
 ## 2. Group 2a — Users Module Encapsulation
 
@@ -62,12 +62,12 @@
 
 ## 7. Group 3 — Controller Validation and Tests
 
-- [ ] 7.1 Create `ResolveDisputeDto` with `class-validator` decorators and apply to `AdminResaleOrderController` dispute resolution endpoint
-- [ ] 7.2 Create `CreateListingDto` with `class-validator` decorators and apply to `ResaleListingsController` create endpoint
-- [ ] 7.3 Create `InitiateOrderDto` with `class-validator` decorators and apply to `ResaleOrderController` initiation endpoint
-- [ ] 7.4 Replace manual `parseInt(page, 10)` / `parseInt(limit, 10)` in `ResaleListingsController` with `ParseIntPipe`
-- [ ] 7.5 Ensure `ValidationPipe` is applied at the module level or globally so DTO validation runs on all resale endpoints
-- [ ] 7.6 Write unit tests for `CreateListingUseCase` covering: seller has no bank profile (domain error), listing created successfully
-- [ ] 7.7 Write unit tests for `InitiateP2POrderUseCase` covering: listing not found, listing already reserved, successful initiation
-- [ ] 7.8 Write unit tests for `CancelP2POrderUseCase` covering: not the seller, order already cancelled, successful cancellation
-- [ ] 7.9 Write unit tests for `ResaleDomainErrorFilter` covering: known code maps to correct HTTP status, unknown code returns 500
+- [x] 7.1 Create `ResolveDisputeDto` with `class-validator` decorators and apply to `AdminResaleOrderController` dispute resolution endpoint
+- [x] 7.2 Create `CreateListingDto` with `class-validator` decorators and apply to `ResaleListingsController` create endpoint
+- [x] 7.3 Create `InitiateOrderDto` with `class-validator` decorators and apply to `ResaleOrderController` initiation endpoint
+- [x] 7.4 Replace manual `parseInt(page, 10)` / `parseInt(limit, 10)` in `ResaleListingsController` with `ParseIntPipe`
+- [x] 7.5 Ensure `ValidationPipe` is applied at the module level or globally so DTO validation runs on all resale endpoints
+- [x] 7.6 Write unit tests for `CreateListingUseCase` covering: seller has no bank profile (domain error), listing created successfully
+- [x] 7.7 Write unit tests for `InitiateP2POrderUseCase` covering: listing not found, listing already reserved, successful initiation
+- [x] 7.8 Write unit tests for `CancelP2POrderUseCase` covering: not the seller, order already cancelled, successful cancellation
+- [x] 7.9 Write unit tests for `ResaleDomainErrorFilter` covering: known code maps to correct HTTP status, unknown code returns 500

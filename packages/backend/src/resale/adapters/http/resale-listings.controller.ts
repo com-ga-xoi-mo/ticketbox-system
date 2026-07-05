@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Get, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Delete, Get, Body, Param, Query, UseGuards, Req, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CreateListingUseCase } from '../../application/use-cases/create-listing.use-case';
 import { CancelListingUseCase } from '../../application/use-cases/cancel-listing.use-case';
 import { GetMyListingsUseCase } from '../../application/use-cases/get-my-listings.use-case';
@@ -9,6 +9,7 @@ import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { Role } from '../../../identity/domain/role.enum';
 import { OptionalJwtAuthGuard } from '../../../identity/infrastructure/passport/optional-jwt-auth.guard';
+import { CreateListingDto } from './dto/create-listing.dto';
 
 @Controller()
 export class ResaleListingsController {
@@ -23,7 +24,7 @@ export class ResaleListingsController {
   @Post('resale/listings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
-  async createListingAction(@Req() req: any, @Body() body: { ticketId: string; askingPriceVnd: number }) {
+  async createListingAction(@Req() req: any, @Body() body: CreateListingDto) {
     return this.createListing.execute(req.user.id, body.ticketId, body.askingPriceVnd);
   }
 
@@ -47,23 +48,21 @@ export class ResaleListingsController {
     @Req() req: any,
     @Query('concertId') concertId?: string,
     @Query('sort') sort?: 'trending' | 'newest' | 'price_asc' | 'price_desc',
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number = 20,
     @Query('search') search?: string,
     @Query('priceMin') priceMin?: string,
     @Query('priceMax') priceMax?: string
   ) {
     const userId = req.user?.id;
-    const p = page ? parseInt(page, 10) : 1;
-    const l = limit ? parseInt(limit, 10) : 20;
     const parsedPriceMin = priceMin ? parseInt(priceMin, 10) : undefined;
     const parsedPriceMax = priceMax ? parseInt(priceMax, 10) : undefined;
     
     return this.getFeed.execute({ 
       concertId, 
       sort: sort || 'trending', 
-      page: p, 
-      limit: l, 
+      page, 
+      limit, 
       userId,
       search,
       priceMin: parsedPriceMin,

@@ -9,6 +9,8 @@ import { RaiseDisputeUseCase } from '../../../application/use-cases/p2p-order/ra
 import { GetP2POrderUseCase } from '../../../application/use-cases/p2p-order/get-p2p-order.use-case';
 import type { AuthenticatedUser } from '../../../../identity/domain/authenticated-user.interface';
 
+import { InitiateOrderDto, ConfirmPaymentDto, RaiseDisputeDto } from '../dto/p2p-order.dto';
+
 @Controller('resale')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ResaleOrderController {
@@ -31,7 +33,7 @@ export class ResaleOrderController {
   @HttpCode(201)
   async initiateOrder(
     @Request() req: { user: AuthenticatedUser },
-    @Body() body: { listingId: string }
+    @Body() body: InitiateOrderDto
   ) {
     return this.initiateP2POrderUseCase.execute({
       buyerId: req.user.id,
@@ -44,7 +46,7 @@ export class ResaleOrderController {
   async confirmPayment(
     @Request() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() body: { paymentProofUrl: string }
+    @Body() body: ConfirmPaymentDto
   ) {
     return this.confirmPaymentUseCase.execute({
       orderId: id,
@@ -82,7 +84,7 @@ export class ResaleOrderController {
   async raiseDispute(
     @Request() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() body: { reason: string }
+    @Body() body: RaiseDisputeDto
   ) {
     return this.raiseDisputeUseCase.execute({
       orderId: id,
