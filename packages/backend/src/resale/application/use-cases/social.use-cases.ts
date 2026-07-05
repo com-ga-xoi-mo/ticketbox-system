@@ -26,7 +26,7 @@ export class AddCommentUseCase {
       listingId,
       type: 'comment.added',
       id: Date.now().toString(),
-      data: { commentId: res.id, body: res.body, authorName: res.author.displayName, createdAt: res.createdAt }
+      data: { commentId: res.id, body: res.body, authorName: res.author?.displayName || 'Unknown', createdAt: res.createdAt }
     });
     return res;
   }
@@ -41,7 +41,7 @@ export class AddReplyUseCase {
       listingId,
       type: 'comment.added',
       id: Date.now().toString(),
-      data: { commentId: res.id, parentCommentId: commentId, body: res.body, authorName: res.author.displayName, createdAt: res.createdAt }
+      data: { commentId: res.id, parentCommentId: commentId, body: res.body, authorName: res.author?.displayName || 'Unknown', createdAt: res.createdAt }
     });
     return res;
   }
