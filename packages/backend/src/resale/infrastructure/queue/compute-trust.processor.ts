@@ -8,7 +8,7 @@ export class ResaleTrustProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<{ sellerId: string }>) {
-    await this.computeTrustScoreUseCase.execute(job.data.sellerId);
+  async process(job: Job<{ sellerId: string; event?: string }>) {
+    await this.computeTrustScoreUseCase.execute(job.data.sellerId, job.data.event);
   }
 }

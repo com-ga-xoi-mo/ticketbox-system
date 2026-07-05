@@ -12,7 +12,7 @@ export class GetSellerProfileUseCase {
 @Injectable()
 export class ComputeTrustScoreUseCase {
   constructor(@Inject(RESALE_TRUST_REPOSITORY) private readonly trustRepo: IResaleTrustRepository) {}
-  async execute(sellerId: string) {
-    return this.trustRepo.computeTrustScore(sellerId);
+  async execute(sellerId: string, event?: string) {
+    return this.trustRepo.computeTrustScore(sellerId, event);
   }
 }

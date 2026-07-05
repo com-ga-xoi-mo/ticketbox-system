@@ -31,7 +31,7 @@ export class PrismaResaleTrustRepository implements IResaleTrustRepository {
     };
   }
 
-  async computeTrustScore(sellerId: string) {
+  async computeTrustScore(sellerId: string, event?: string) {
     const completedSales = await this.db.resaleTransaction.count({ where: { sellerId } });
 
     const threads = await this.db.directMessageThread.findMany({
@@ -67,6 +67,11 @@ export class PrismaResaleTrustRepository implements IResaleTrustRepository {
       }
       trustScore -= (noShowRate * 100);
     }
+    
+    if (event === 'dispute_loss') {
+      trustScore -= 30; // Heavy penalty for dispute loss
+    }
+    
     trustScore = Math.max(0, Math.min(100, trustScore));
 
     let tier: 'NEW' | 'TRUSTED' | 'HIGHLY_TRUSTED' | 'TOP_SELLER' = 'NEW';
