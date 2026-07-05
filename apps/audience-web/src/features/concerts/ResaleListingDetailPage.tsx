@@ -77,7 +77,7 @@ export function ResaleListingDetailPage({ backHref }: { backHref?: string }) {
       navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`);
       return;
     }
-    if (confirm('Bạn có chắc chắn muốn mua vé này không?')) {
+    if (confirm('Bạn có chắc chắn muốn mua vé này không? Thao tác này sẽ khoá vé và yêu cầu bạn chuyển khoản.')) {
       purchaseMutation.mutate(listingId as string);
     }
   };
