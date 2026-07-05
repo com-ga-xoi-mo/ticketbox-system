@@ -41,11 +41,11 @@
 
 ## 5. Group 2d — IEventPublisher Port for BullMQ
 
-- [ ] 5.1 Define `IEventPublisher` port interface in `resale/domain/ports/event-publisher.port.ts` with `publish(eventName: string, payload: unknown): Promise<void>`
-- [ ] 5.2 Define `EVENT_PUBLISHER` injection token in the same file
-- [ ] 5.3 Create `resale/infrastructure/queue/bullmq-event-publisher.ts` implementing `IEventPublisher` using injected BullMQ queues
-- [ ] 5.4 Register `BullmqEventPublisher` as `EVENT_PUBLISHER` provider in `resale.module.ts`
-- [ ] 5.5 Update all use-cases that directly inject `@InjectQueue(...)` to instead inject `IEventPublisher` via `EVENT_PUBLISHER` token (affects: `execute-purchase.use-case.ts`, `messaging.use-cases.ts`, `initiate-p2p-order.use-case.ts`, `confirm-payment.use-case.ts`, `resolve-dispute.use-case.ts`)
+- [x] 5.1 Define `IEventPublisher` port interface in `resale/domain/ports/event-publisher.port.ts` with `publish(eventName: string, payload: unknown): Promise<void>`
+- [x] 5.2 Define `EVENT_PUBLISHER` injection token in the same file
+- [x] 5.3 Create `resale/infrastructure/queue/bullmq-event-publisher.ts` implementing `IEventPublisher` using injected BullMQ queues
+- [x] 5.4 Register `BullmqEventPublisher` as `EVENT_PUBLISHER` provider in `resale.module.ts`
+- [x] 5.5 Update all use-cases that directly inject `@InjectQueue(...)` to instead inject `IEventPublisher` via `EVENT_PUBLISHER` token (affects: `execute-purchase.use-case.ts`, `messaging.use-cases.ts`, `initiate-p2p-order.use-case.ts`, `confirm-payment.use-case.ts`, `resolve-dispute.use-case.ts`)
 
 ## 6. Group 2e — Domain Port Contracts and Typed Enums
 

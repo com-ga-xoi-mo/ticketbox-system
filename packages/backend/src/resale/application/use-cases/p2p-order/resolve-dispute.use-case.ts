@@ -1,8 +1,8 @@
-import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { ExecutePurchaseUseCase } from '../execute-purchase.use-case';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
+import { IEventPublisher, EVENT_PUBLISHER } from '../../../domain/ports/event-publisher.port';
+import * as errors from '../../../domain/errors';
 
 export interface ResolveDisputeCommand {
   orderId: string;
@@ -16,17 +16,17 @@ export class ResolveDisputeUseCase {
   constructor(
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
     private readonly executePurchaseUseCase: ExecutePurchaseUseCase,
-    @InjectQueue('compute-seller-trust') private trustQueue: Queue
+    @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher
   ) {}
 
   async execute(command: ResolveDisputeCommand) {
     const order = await this.orderRepo.findById(command.orderId);
     if (!order) {
-      throw new BadRequestException('ORDER_NOT_FOUND');
+      throw new errors.OrderNotFoundError();
     }
 
     if (order.status !== 'IN_DISPUTE') {
-      throw new ConflictException('INVALID_ORDER_STATE');
+      throw new errors.InvalidOrderStateError();
     }
 
     if (command.action === 'complete') {
@@ -36,7 +36,7 @@ export class ResolveDisputeUseCase {
       const updated = await this.orderRepo.resolveDispute(order.id, 'complete', command.resolutionNote);
 
       // Penalize seller
-      await this.trustQueue.add('compute-trust', { 
+      await this.eventPublisher.publish('compute-trust', { 
         sellerId: order.sellerId,
         event: 'dispute_loss'
       });

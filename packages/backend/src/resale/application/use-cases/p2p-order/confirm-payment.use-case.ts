@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
+import { IEventPublisher, EVENT_PUBLISHER } from '../../../domain/ports/event-publisher.port';
 import * as errors from '../../../domain/errors';
 
 export interface ConfirmPaymentCommand {
@@ -14,7 +13,7 @@ export interface ConfirmPaymentCommand {
 export class ConfirmPaymentUseCase {
   constructor(
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
-    @InjectQueue('resale.order.confirm.expiry') private readonly expiryQueue: Queue,
+    @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher,
   ) {}
 
   async execute(command: ConfirmPaymentCommand) {
@@ -41,7 +40,7 @@ export class ConfirmPaymentUseCase {
     });
 
     // Enqueue expiry job (2 hours)
-    await this.expiryQueue.add(
+    await this.eventPublisher.publish(
       'expire-confirm-order',
       { orderId: order.id },
       { delay: 2 * 60 * 60 * 1000 }

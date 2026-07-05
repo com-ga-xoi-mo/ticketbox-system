@@ -1,14 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { IResaleTransferRepository, RESALE_TRANSFER_REPOSITORY } from '../../domain/ports/resale-transfer-repository.port';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { IEventPublisher, EVENT_PUBLISHER } from '../../domain/ports/event-publisher.port';
 import { randomBytes } from 'crypto';
 
 @Injectable()
 export class ExecutePurchaseUseCase {
   constructor(
     @Inject(RESALE_TRANSFER_REPOSITORY) private readonly transferRepo: IResaleTransferRepository,
-    @InjectQueue('compute-seller-trust') private trustQueue: Queue
+    @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher
   ) {}
 
   async execute(buyerId: string, listingId: string) {
@@ -16,7 +15,7 @@ export class ExecutePurchaseUseCase {
     const result = await this.transferRepo.executePurchase(buyerId, listingId, newQrHash);
     
     if (result.sellerIdToUpdate) {
-      await this.trustQueue.add('compute-trust', { sellerId: result.sellerIdToUpdate });
+      await this.eventPublisher.publish('compute-trust', { sellerId: result.sellerIdToUpdate });
     }
     
     return result.transaction;

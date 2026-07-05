@@ -1,13 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { IResaleMessagingRepository, RESALE_MESSAGING_REPOSITORY } from '../../domain/ports/resale-messaging-repository.port';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { IEventPublisher, EVENT_PUBLISHER } from '../../domain/ports/event-publisher.port';
 
 @Injectable()
 export class SendMessageUseCase {
   constructor(
     @Inject(RESALE_MESSAGING_REPOSITORY) private readonly messagingRepo: IResaleMessagingRepository,
-    @InjectQueue('compute-seller-trust') private trustQueue: Queue,
+    @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher,
     @Inject('GATEWAY_SENDER') private readonly gatewaySender: any
   ) {}
 
@@ -24,7 +23,7 @@ export class SendMessageUseCase {
     });
 
     if (res.isFirstSellerReply) {
-      await this.trustQueue.add('compute-trust', { sellerId: res.listing.sellerId });
+      await this.eventPublisher.publish('compute-trust', { sellerId: res.listing.sellerId });
     }
 
     return res.message;

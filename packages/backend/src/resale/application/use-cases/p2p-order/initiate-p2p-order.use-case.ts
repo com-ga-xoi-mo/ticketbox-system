@@ -2,8 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { IResaleListingRepository, RESALE_LISTING_REPOSITORY } from '../../../domain/ports/resale-listing-repository.port';
 import { ISellerBankProfileRepository, SELLER_BANK_PROFILE_REPOSITORY } from '../../../../users/domain/ports/seller-bank-profile-repository.port';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
+import { IEventPublisher, EVENT_PUBLISHER } from '../../../domain/ports/event-publisher.port';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import * as errors from '../../../domain/errors';
 
@@ -18,7 +17,7 @@ export class InitiateP2POrderUseCase {
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
     @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
     @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly bankProfileRepo: ISellerBankProfileRepository,
-    @InjectQueue('resale.order.reserved.expiry') private readonly expiryQueue: Queue,
+    @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher,
     private readonly prisma: PrismaService, // For checking suspended user
   ) {}
 
@@ -55,7 +54,7 @@ export class InitiateP2POrderUseCase {
     }
 
     // Enqueue expiry job (15 minutes)
-    await this.expiryQueue.add(
+    await this.eventPublisher.publish(
       'expire-reserved-order',
       { orderId: order.id },
       { delay: 15 * 60 * 1000 }

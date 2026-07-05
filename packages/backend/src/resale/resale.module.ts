@@ -71,6 +71,9 @@ import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-
 import { APP_FILTER } from '@nestjs/core';
 import { ResaleDomainErrorFilter } from './adapters/http/filters/resale-domain-error.filter';
 
+import { EVENT_PUBLISHER } from './domain/ports/event-publisher.port';
+import { BullmqEventPublisher } from './infrastructure/queue/bullmq-event-publisher';
+
 @Module({
   imports: [
     DatabaseModule,
@@ -118,6 +121,7 @@ import { ResaleDomainErrorFilter } from './adapters/http/filters/resale-domain-e
     { provide: RESALE_TRUST_REPOSITORY, useClass: PrismaResaleTrustRepository },
     { provide: RESALE_TICKET_PROVIDER, useClass: PrismaResaleTicketProvider },
     { provide: RESALE_TRANSACTION_REPOSITORY, useClass: PrismaResaleTransactionRepository },
+    { provide: EVENT_PUBLISHER, useClass: BullmqEventPublisher },
     { provide: APP_FILTER, useClass: ResaleDomainErrorFilter },
 
     // Use Cases
