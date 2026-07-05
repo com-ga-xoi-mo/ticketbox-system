@@ -378,6 +378,7 @@ model User {
 
   roles               UserRole[]
   authIdentities      AuthIdentity[]
+  passwordResetTokens PasswordResetToken[]
   avatarAsset         Asset?                   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   assets              Asset[]                  @relation("AssetUploader")
   createdConcerts     Concert[]                @relation("ConcertCreator")
@@ -399,6 +400,18 @@ model User {
   concertFavorites    FavoriteConcert[]        @relation("UserConcertFavorites")
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model AuthIdentity {
