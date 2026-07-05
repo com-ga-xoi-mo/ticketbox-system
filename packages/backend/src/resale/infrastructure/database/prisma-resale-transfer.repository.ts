@@ -16,7 +16,7 @@ export class PrismaResaleTransferRepository implements IResaleTransferRepository
       if (!lockRes || lockRes.length === 0) throw new errors.ListingNotFoundError();
 
       const listing = lockRes[0];
-      if (listing.status !== 'ACTIVE') throw new errors.ListingNotActiveError();
+      if (listing.status !== 'ACTIVE' && listing.status !== 'RESERVED') throw new errors.ListingNotActiveError();
       if (listing.seller_id === buyerId) throw new errors.SelfPurchaseNotAllowedError();
       if (new Date() >= listing.expires_at) throw new errors.ListingExpiredError();
 

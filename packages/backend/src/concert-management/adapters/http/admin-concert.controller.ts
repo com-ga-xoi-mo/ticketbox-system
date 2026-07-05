@@ -121,9 +121,11 @@ export class AdminConcertController {
         eventType: dto.eventType,
         isFeatured: dto.isFeatured,
         displayOrder: dto.displayOrder,
-        seoTitle: dto.seoTitle,
-        seoDescription: dto.seoDescription,
-        seoImageUrl: dto.seoImageUrl,
+        seoTitle: 'seoTitle' in dto ? dto.seoTitle : undefined,
+        seoDescription: 'seoDescription' in dto ? dto.seoDescription : undefined,
+        seoImageUrl: 'seoImageUrl' in dto ? dto.seoImageUrl : undefined,
+        ...(dto.resaleEnabled !== undefined && { resaleEnabled: dto.resaleEnabled }),
+        ...(dto.resaleMaxPricePercent !== undefined && { resaleMaxPricePercent: dto.resaleMaxPricePercent }),
       }),
     );
     return mapToManagementConcertResponse(concert);

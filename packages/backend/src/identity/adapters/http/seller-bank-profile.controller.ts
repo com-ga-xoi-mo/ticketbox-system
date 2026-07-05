@@ -4,10 +4,19 @@ import { RolesGuard } from './guards/roles.guard';
 import { GetBankProfileQuery } from '../../../users/application/queries/get-bank-profile.query';
 import { SaveBankProfileUseCase } from '../../../users/application/use-cases/save-bank-profile.use-case';
 import type { AuthenticatedUser } from '../../domain/authenticated-user.interface';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class SaveBankProfileDto {
+  @IsString()
+  @IsNotEmpty()
   bankAccountName!: string;
+
+  @IsString()
+  @IsNotEmpty()
   bankAccountNumber!: string;
+
+  @IsString()
+  @IsNotEmpty()
   bankName!: string;
 }
 
