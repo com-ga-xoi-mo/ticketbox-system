@@ -3,6 +3,8 @@ import {
   LoginResponseSchema,
   GoogleLoginRequestSchema,
   RegisterRequestSchema,
+  ForgotPasswordRequestSchema,
+  ResetPasswordRequestSchema,
   type LoginRequest,
   type RegisterRequest,
 } from '@ticketbox/api-types';
@@ -27,4 +29,14 @@ export async function registerRequest(data: RegisterRequest): Promise<string> {
   const res = await apiPost<unknown>('/auth/register', validated);
   const { accessToken } = LoginResponseSchema.parse(res);
   return accessToken;
+}
+
+export async function forgotPasswordRequest(email: string): Promise<void> {
+  const validated = ForgotPasswordRequestSchema.parse({ email });
+  await apiPost<unknown>('/auth/forgot-password', validated);
+}
+
+export async function resetPasswordRequest(token: string, newPassword: string): Promise<void> {
+  const validated = ResetPasswordRequestSchema.parse({ token, newPassword });
+  await apiPost<unknown>('/auth/reset-password', validated);
 }
