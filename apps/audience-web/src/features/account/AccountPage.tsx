@@ -174,6 +174,19 @@ export function AccountPage() {
               </Button>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-500" />
+                Bán vé (Resale)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/account/bank-profile">Thiết lập tài khoản nhận tiền</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AudienceProtectedRoute>
