@@ -1166,6 +1166,7 @@ model ResaleListing {
   ticketType           TicketType            @relation(fields: [ticketTypeId], references: [id])
   listingComments      ListingComment[]
   directMessageThreads DirectMessageThread[]
+  transactions         ResaleTransaction[]
 
   @@map("resale_listings")
 }
@@ -1183,6 +1184,8 @@ model ResaleTransaction {
   payoutStatus      PayoutStatus @default(PENDING) @map("payout_status")
   payoutProcessedAt DateTime?    @map("payout_processed_at") @db.Timestamptz(6)
   createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing ResaleListing @relation(fields: [listingId], references: [id])
 
   @@map("resale_transactions")
 }
