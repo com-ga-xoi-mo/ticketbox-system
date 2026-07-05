@@ -2,15 +2,23 @@ import { Injectable, Inject } from '@nestjs/common';
 import { IResaleListingRepository, RESALE_LISTING_REPOSITORY } from '../../domain/ports/resale-listing-repository.port';
 import { IResaleTicketProvider, RESALE_TICKET_PROVIDER } from '../../domain/ports/resale-ticket-provider.port';
 import * as errors from '../../domain/errors';
+import { PrismaSellerBankProfileRepository } from '../../../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { UnprocessableEntityException } from '@nestjs/common';
 
 @Injectable()
 export class CreateListingUseCase {
   constructor(
     @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
     @Inject(RESALE_TICKET_PROVIDER) private readonly ticketProvider: IResaleTicketProvider,
+    private readonly bankProfileRepo: PrismaSellerBankProfileRepository,
   ) {}
 
   async execute(userId: string, ticketId: string, askingPriceVnd: number) {
+    const bankProfile = await this.bankProfileRepo.findByUserId(userId);
+    if (!bankProfile) {
+      throw new UnprocessableEntityException('BANK_PROFILE_REQUIRED', 'Vui lòng cập nhật tài khoản nhận tiền trước khi đăng bán vé.');
+    }
+
     const ticket = await this.ticketProvider.findTicketById(ticketId);
 
     if (!ticket) throw new errors.ListingNotFoundError(ticketId); // re-using error or create TicketNotFoundError
