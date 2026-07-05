@@ -4,6 +4,29 @@
 TBD - Add purpose here.
 
 ## Requirements
+### Requirement: Feed API Filter Support
+
+`GET /resale/listings` SHALL support the following additional optional query parameters: `search` (string, matches against concert title), `priceMin` (number), `priceMax` (number). All existing parameters remain unchanged; this change is fully backwards compatible.
+
+#### Scenario: Search by concert name
+
+- **WHEN** the request includes `search=anh trai`
+- **THEN** only listings belonging to concerts whose `title ILIKE '%anh trai%'` are returned
+
+#### Scenario: Price range filter
+
+- **WHEN** the request includes `priceMin=500000&priceMax=1000000`
+- **THEN** only listings with `askingPriceVnd` within that range are returned
+
+### Requirement: Feed Response Concert Context
+
+Each item in the feed response SHALL include: `concertTitle` (string), `concertSlug` (string), `concertStartsAt` (ISO datetime string).
+
+#### Scenario: Feed item includes concert fields
+
+- **WHEN** `GET /resale/listings` returns results
+- **THEN** each item has `concertTitle`, `concertSlug`, and `concertStartsAt` populated via a JOIN with the `concerts` table
+
 ### Requirement: Community feed lists resale listings as social posts
 The system SHALL expose a public community feed endpoint `GET /resale/listings` that returns `ACTIVE` resale listings presented as social posts. Each listing item in the feed SHALL include: asking price, original face value, ticket type, event name and date, seller display name, seller trust badge, upvote count, comment count, unread DM indicator (for authenticated users), and a "Verified by TicketBox" authenticity badge. The feed SHALL support filtering by `concertId` and sort modes: `trending` (default), `newest`, `price_asc`, `price_desc`.
 
