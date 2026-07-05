@@ -1,4 +1,4 @@
-import { ResaleOrderStatus } from '@prisma/client';
+import { ResaleOrderStatus } from '../../resale-order-status';
 
 export interface ResaleOrderData {
   id: string;

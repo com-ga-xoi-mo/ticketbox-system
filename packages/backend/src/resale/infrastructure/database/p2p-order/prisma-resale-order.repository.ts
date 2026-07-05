@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../platform/database/prisma.service';
 import { IResaleOrderRepository, ResaleOrderData } from '../../../domain/ports/p2p-order/resale-order-repository.port';
-import { ResaleOrderStatus } from '@prisma/client';
+import { ResaleOrderStatus } from '../../../domain/resale-order-status';
 
 @Injectable()
 export class PrismaResaleOrderRepository implements IResaleOrderRepository {

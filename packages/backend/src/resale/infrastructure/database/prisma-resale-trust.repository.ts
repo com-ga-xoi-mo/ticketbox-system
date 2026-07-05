@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { IResaleTrustRepository } from '../../domain/ports/resale-trust-repository.port';
+import { ResaleTrustProfile } from '../../domain/resale-trust.entity';
 import * as errors from '../../domain/errors';
 
 @Injectable()
 export class PrismaResaleTrustRepository implements IResaleTrustRepository {
   constructor(private readonly db: PrismaService) {}
 
-  async getSellerProfile(userId: string) {
+  async getSellerProfile(userId: string): Promise<ResaleTrustProfile | null> {
     const user = await this.db.user.findUnique({
       where: { id: userId },
       select: { id: true, displayName: true, createdAt: true }
     });
 
-    if (!user) throw new errors.ResaleDomainError('Seller not found');
+    if (!user) throw new errors.ResaleDomainError('Seller not found', 'SELLER_NOT_FOUND');
 
     const trustProfile = await this.db.sellerTrustProfile.findUnique({ where: { userId } });
     const activeListings = await this.db.resaleListing.findMany({

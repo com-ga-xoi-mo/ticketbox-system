@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { IResaleMessagingRepository } from '../../domain/ports/resale-messaging-repository.port';
+import { SendMessageResult, ResaleMessageThread, ResaleMessage } from '../../domain/resale-message.entity';
 import * as errors from '../../domain/errors';
 
 @Injectable()
 export class PrismaResaleMessagingRepository implements IResaleMessagingRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async sendMessage(userId: string, listingId: string, body: string, threadId?: string) {
+  async sendMessage(userId: string, listingId: string, body: string, threadId?: string): Promise<SendMessageResult> {
     if (!body || body.trim().length === 0 || body.length > 1000) throw new errors.InvalidMessageBodyError();
 
     const listing = await this.prisma.resaleListing.findUnique({ where: { id: listingId } });
@@ -52,7 +53,7 @@ export class PrismaResaleMessagingRepository implements IResaleMessagingReposito
     return { message, thread, isFirstSellerReply, listing };
   }
 
-  async getMyThreads(userId: string) {
+  async getMyThreads(userId: string): Promise<ResaleMessageThread[]> {
     const threads = await this.prisma.directMessageThread.findMany({
       where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
       orderBy: { lastMessageAt: 'desc' },
@@ -66,11 +67,11 @@ export class PrismaResaleMessagingRepository implements IResaleMessagingReposito
       const unreadCount = await this.prisma.directMessage.count({
         where: { threadId: t.id, senderId: { not: userId }, isReadByRecipient: false }
       });
-      return { ...t, unreadCount };
+      return { ...t, unreadCount } as ResaleMessageThread;
     }));
   }
 
-  async getThreadMessages(userId: string, threadId: string) {
+  async getThreadMessages(userId: string, threadId: string): Promise<ResaleMessage[]> {
     const thread = await this.prisma.directMessageThread.findUnique({ where: { id: threadId } });
     if (!thread) throw new errors.ThreadNotFoundError();
     if (thread.buyerId !== userId && thread.sellerId !== userId) throw new errors.NotParticipantError();
@@ -80,9 +81,10 @@ export class PrismaResaleMessagingRepository implements IResaleMessagingReposito
       data: { isReadByRecipient: true }
     });
 
-    return this.prisma.directMessage.findMany({
+    const messages = await this.prisma.directMessage.findMany({
       where: { threadId },
       orderBy: { createdAt: 'asc' }
     });
+    return messages as ResaleMessage[];
   }
 }

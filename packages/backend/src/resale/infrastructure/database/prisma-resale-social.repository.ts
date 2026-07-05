@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { IResaleSocialRepository } from '../../domain/ports/resale-social-repository.port';
+import { ResaleSocialComment } from '../../domain/resale-social.entity';
 import * as errors from '../../domain/errors';
 
 @Injectable()
@@ -11,7 +12,7 @@ export class PrismaResaleSocialRepository implements IResaleSocialRepository {
     const listing = await this.prisma.resaleListing.findUnique({ where: { id: listingId } });
     if (!listing) throw new errors.ListingNotFoundError(listingId);
     if (listing.status !== 'ACTIVE') throw new errors.ListingNotActiveError();
-    if (listing.sellerId === userId) throw new errors.ResaleDomainError('Cannot upvote your own listing');
+    if (listing.sellerId === userId) throw new errors.ResaleDomainError('Cannot upvote your own listing', 'CANNOT_UPVOTE_OWN_LISTING');
 
     let upvotedByMe = false;
     let upvoteCount = listing.upvoteCount;
@@ -37,7 +38,7 @@ export class PrismaResaleSocialRepository implements IResaleSocialRepository {
     return { upvoteCount, upvotedByMe };
   }
 
-  async addComment(userId: string, listingId: string, body: string) {
+  async addComment(userId: string, listingId: string, body: string): Promise<ResaleSocialComment> {
     const listing = await this.prisma.resaleListing.findUnique({ where: { id: listingId } });
     if (!listing) throw new errors.ListingNotFoundError(listingId);
     
@@ -51,21 +52,22 @@ export class PrismaResaleSocialRepository implements IResaleSocialRepository {
       });
       await tx.resaleListing.update({ where: { id: listingId }, data: { commentCount } });
     });
-    return comment;
+    return comment as ResaleSocialComment;
   }
 
-  async addReply(userId: string, listingId: string, commentId: string, body: string) {
+  async addReply(userId: string, listingId: string, commentId: string, body: string): Promise<ResaleSocialComment> {
     const comment = await this.prisma.listingComment.findUnique({ where: { id: commentId } });
     if (!comment) throw new errors.CommentNotFoundError();
 
-    return this.prisma.listingCommentReply.create({
+    const reply = await this.prisma.listingCommentReply.create({
       data: { commentId, authorId: userId, body },
       include: { author: { select: { displayName: true } } }
     });
+    return { ...reply, listingId, parentId: commentId, isHidden: false } as any as ResaleSocialComment;
   }
 
-  async getComments(listingId: string, page: number, limit: number) {
-    return this.prisma.listingComment.findMany({
+  async getComments(listingId: string, page: number, limit: number): Promise<ResaleSocialComment[]> {
+    const comments = await this.prisma.listingComment.findMany({
       where: { listingId, isHidden: false },
       skip: (page - 1) * limit,
       take: limit,
@@ -79,13 +81,14 @@ export class PrismaResaleSocialRepository implements IResaleSocialRepository {
         }
       }
     });
+    return comments as unknown as ResaleSocialComment[];
   }
 
   async flagComment(userId: string, commentId: string) {
     const existing = await this.prisma.commentFlag.findUnique({
       where: { commentId_flaggedByUserId: { commentId, flaggedByUserId: userId } }
     });
-    if (existing) throw new errors.ResaleDomainError('Already flagged');
+    if (existing) throw new errors.ResaleDomainError('Already flagged', 'ALREADY_FLAGGED');
 
     await this.prisma.$transaction(async (tx) => {
       await tx.commentFlag.create({ data: { commentId, flaggedByUserId: userId } });

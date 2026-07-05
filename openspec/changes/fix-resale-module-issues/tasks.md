@@ -49,16 +49,16 @@
 
 ## 6. Group 2e — Domain Port Contracts and Typed Enums
 
-- [ ] 6.1 Define `ResaleOrderStatus` enum in `resale/domain/enums/resale-order-status.ts`
-- [ ] 6.2 Remove `@prisma/client` import from `domain/ports/p2p-order/resale-order-repository.port.ts` and use the domain enum
-- [ ] 6.3 Update `PrismaResaleOrderRepository` to map Prisma's `ResaleOrderStatus` to the domain enum in all query results
-- [ ] 6.4 Define explicit domain entity interfaces for `ResaleListing`, `ResaleMessage`, `ResaleSocialComment`, `ResaleTransaction`, `ResaleTrustProfile` in `domain/entities/` or inline in their respective port files
-- [ ] 6.5 Replace all `Promise<any>` and `data: any` in `resale-listing-repository.port.ts` with typed domain interfaces
-- [ ] 6.6 Replace all `Promise<any>` / `any` in `resale-messaging-repository.port.ts`
-- [ ] 6.7 Replace all `Promise<any>` / `any` in `resale-social-repository.port.ts`
-- [ ] 6.8 Replace all `Promise<any>` / `any` in `resale-transaction-repository.port.ts`
-- [ ] 6.9 Replace all `Promise<any>` / `any` in `resale-trust-repository.port.ts`
-- [ ] 6.10 Update all corresponding Prisma repository implementations to satisfy the new typed port interfaces
+- [x] 6.1 Define `ResaleOrderStatus` enum in `resale/domain/enums/resale-order-status.ts`
+- [x] 6.2 Remove `@prisma/client` import from `domain/ports/p2p-order/resale-order-repository.port.ts` and use the domain enum
+- [x] 6.3 Update `PrismaResaleOrderRepository` to map Prisma's `ResaleOrderStatus` to the domain enum in all query results
+- [x] 6.4 Define explicit domain entity interfaces for `ResaleListing`, `ResaleMessage`, `ResaleSocialComment`, `ResaleTransaction`, `ResaleTrustProfile` in `domain/entities/` or inline in their respective port files
+- [x] 6.5 Replace all `Promise<any>` and `data: any` in `resale-listing-repository.port.ts` with typed domain interfaces
+- [x] 6.6 Replace all `Promise<any>` / `any` in `resale-messaging-repository.port.ts`
+- [x] 6.7 Replace all `Promise<any>` / `any` in `resale-social-repository.port.ts`
+- [x] 6.8 Replace all `Promise<any>` / `any` in `resale-transaction-repository.port.ts`
+- [x] 6.9 Replace all `Promise<any>` / `any` in `resale-trust-repository.port.ts`
+- [x] 6.10 Update all corresponding Prisma repository implementations to satisfy the new typed port interfaces
 
 ## 7. Group 3 — Controller Validation and Tests
 
