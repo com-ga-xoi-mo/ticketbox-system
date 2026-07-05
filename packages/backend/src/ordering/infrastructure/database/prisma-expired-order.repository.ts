@@ -12,6 +12,7 @@ export class PrismaExpiredOrderRepository implements IExpiredOrderRepository {
     const orders = await this.prisma.order.findMany({
       where: {
         status: OrderStatus.PENDING_PAYMENT,
+        orderSourceType: 'DIRECT',
         reservationExpiresAt: {
           lte: now,
         },

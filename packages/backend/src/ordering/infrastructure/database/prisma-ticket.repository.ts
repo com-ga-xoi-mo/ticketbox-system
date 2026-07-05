@@ -39,11 +39,15 @@ interface PrismaTicketReadRecord extends PrismaTicketRecord {
   concert: {
     title: string;
     startsAt: Date;
+    resaleEnabled?: boolean;
+    resaleMaxPricePercent?: number;
   };
   ticketType: {
     name: string;
     code: string;
+    priceVnd?: number;
   };
+  resaleListings?: Array<{ id: string }>;
 }
 
 @Injectable()
@@ -195,13 +199,21 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
         select: {
           title: true,
           startsAt: true,
+          resaleEnabled: true,
+          resaleMaxPricePercent: true,
         },
       },
       ticketType: {
         select: {
           name: true,
           code: true,
+          priceVnd: true,
         },
+      },
+      resaleListings: {
+        where: { status: 'ACTIVE' },
+        select: { id: true },
+        take: 1,
       },
     } satisfies Prisma.TicketInclude;
   }
@@ -249,7 +261,7 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
     });
   }
 
-  private toSummary(ticket: PrismaTicketReadRecord): TicketSummary {
+  private toSummary(ticket: PrismaTicketReadRecord): any {
     return {
       id: ticket.id,
       ticketNumber: ticket.ticketNumber,
@@ -265,6 +277,10 @@ export class PrismaTicketRepository implements TicketRepositoryPort {
       status: ticket.status as TicketStatus,
       issuedAt: ticket.issuedAt,
       checkedInAt: ticket.checkedInAt,
+      resaleEnabled: ticket.concert.resaleEnabled,
+      resaleMaxPricePercent: ticket.concert.resaleMaxPricePercent,
+      originalPriceVnd: ticket.ticketType.priceVnd,
+      resaleListingId: ticket.resaleListings?.[0]?.id ?? null,
     };
   }
 }

@@ -21,11 +21,11 @@ export function AdminDashboard() {
   });
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#dae2fd]">Loading...</div>;
+    return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#dae2fd]">Đang tải...</div>;
   }
 
   if (error || !data) {
-    return <div className="p-6 text-red-500">Failed to load dashboard metrics.</div>;
+    return <div className="p-6 text-red-500">Không thể tải số liệu bảng điều khiển.</div>;
   }
 
   // Calculate upcoming concerts
@@ -45,8 +45,8 @@ export function AdminDashboard() {
         {/* Header Section */}
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-[#dae2fd] mb-1">Platform Overview</h2>
-            <p className="text-[#cbc3d7] text-sm">Real-time performance metrics for the TicketBox ecosystem.</p>
+            <h2 className="text-3xl font-bold text-[#dae2fd] mb-1">Tổng quan nền tảng</h2>
+            <p className="text-[#cbc3d7] text-sm">Số liệu hiệu suất theo thời gian thực cho hệ sinh thái TicketBox.</p>
           </div>
           <div className="flex items-center gap-2 bg-[#222a3d] px-4 py-2 rounded-xl border border-[#494454] focus-within:border-[#d0bcff] focus-within:ring-1 focus-within:ring-[#d0bcff] transition-all">
             <Calendar className="w-5 h-5 text-[#d0bcff]" />
@@ -56,10 +56,10 @@ export function AdminDashboard() {
               onChange={(e) => setWindowDays(Number(e.target.value))}
               style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23cbc3d7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
             >
-              <option value={7} className="bg-[#131b2e]">Last 7 Days</option>
-              <option value={14} className="bg-[#131b2e]">Last 14 Days</option>
-              <option value={30} className="bg-[#131b2e]">Last 30 Days</option>
-              <option value={90} className="bg-[#131b2e]">Last 90 Days</option>
+              <option value={7} className="bg-[#131b2e]">7 ngày qua</option>
+              <option value={14} className="bg-[#131b2e]">14 ngày qua</option>
+              <option value={30} className="bg-[#131b2e]">30 ngày qua</option>
+              <option value={90} className="bg-[#131b2e]">90 ngày qua</option>
             </select>
           </div>
         </div>
@@ -74,7 +74,7 @@ export function AdminDashboard() {
                 <Activity className="w-6 h-6 text-[#d0bcff]" />
               </div>
             </div>
-            <p className="text-[#cbc3d7] text-sm mb-1">Platform Total Gross</p>
+            <p className="text-[#cbc3d7] text-sm mb-1">Tổng doanh thu nền tảng</p>
             <p className="text-3xl font-bold text-[#dae2fd]">{formatCurrency(data.totalPlatformRevenueVnd)}</p>
           </div>
 
@@ -86,8 +86,8 @@ export function AdminDashboard() {
                 <Ticket className="w-6 h-6 text-[#fbabff]" />
               </div>
             </div>
-            <p className="text-[#cbc3d7] text-sm mb-1">Active Events</p>
-            <p className="text-3xl font-bold text-[#dae2fd]">{data.totalActiveConcerts} <span className="text-base opacity-60 font-normal">Events</span></p>
+            <p className="text-[#cbc3d7] text-sm mb-1">Sự kiện hoạt động</p>
+            <p className="text-3xl font-bold text-[#dae2fd]">{data.totalActiveConcerts} <span className="text-base opacity-60 font-normal">Sự kiện</span></p>
           </div>
 
           {/* KPI 3 */}
@@ -98,8 +98,8 @@ export function AdminDashboard() {
                 <Users className="w-6 h-6 text-[#4cd7f6]" />
               </div>
             </div>
-            <p className="text-[#cbc3d7] text-sm mb-1">Total Concerts (All time)</p>
-            <p className="text-3xl font-bold text-[#dae2fd]">{concerts?.length || 0} <span className="text-base opacity-60 font-normal">Shows</span></p>
+            <p className="text-[#cbc3d7] text-sm mb-1">Tổng số buổi biểu diễn (Toàn thời gian)</p>
+            <p className="text-3xl font-bold text-[#dae2fd]">{concerts?.length || 0} <span className="text-base opacity-60 font-normal">Chương trình</span></p>
           </div>
         </div>
 
@@ -112,10 +112,10 @@ export function AdminDashboard() {
             {/* Revenue Trend Chart */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[12px] border border-white/5 border-t-white/10 p-6 rounded-2xl">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-base font-bold text-[#dae2fd]">Platform Revenue Trend</h3>
+                <h3 className="text-base font-bold text-[#dae2fd]">Xu hướng doanh thu nền tảng</h3>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-[#d0bcff]"></div>
-                  <span className="text-xs text-[#cbc3d7]">Daily Gross</span>
+                  <span className="text-xs text-[#cbc3d7]">Doanh thu hàng ngày</span>
                 </div>
               </div>
               <div className="h-64 w-full mt-4">
@@ -144,26 +144,38 @@ export function AdminDashboard() {
             {/* Top Grossing Concerts Table */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[12px] border border-white/5 border-t-white/10 rounded-2xl overflow-hidden">
               <div className="p-6 border-b border-[#494454]/30 flex justify-between items-center">
-                <h3 className="text-base font-bold text-[#dae2fd]">Top Grossing Concerts</h3>
-                <Link to="/admin/reports" className="text-[#d0bcff] text-xs font-medium hover:underline">View All Report</Link>
+                <h3 className="text-base font-bold text-[#dae2fd]">Các buổi biểu diễn doanh thu cao nhất</h3>
+                <Link to="/admin/reports" className="text-[#d0bcff] text-xs font-medium hover:underline">Xem tất cả báo cáo</Link>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-[#222a3d]/50">
                     <tr>
-                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7]">RANK</th>
-                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7]">CONCERT NAME</th>
-                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7] text-right">TOTAL GROSS</th>
+                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7]">HẠNG</th>
+                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7]">TÊN BUỔI BIỂU DIỄN</th>
+                      <th className="px-6 py-4 font-mono text-xs text-[#cbc3d7] text-right">TỔNG DOANH THU</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#494454]/20">
                     {data.topGrossingConcerts.length === 0 ? (
-                      <tr><td colSpan={3} className="px-6 py-4 text-[#cbc3d7] text-sm text-center">No data available.</td></tr>
+                      <tr><td colSpan={3} className="px-6 py-4 text-[#cbc3d7] text-sm text-center">Không có dữ liệu.</td></tr>
                     ) : (
                       data.topGrossingConcerts.map((concert, idx) => (
                         <tr key={concert.concertId} className="hover:bg-white/[0.02] transition-colors">
                           <td className="px-6 py-4">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-[#F59E0B]/20 text-[#F59E0B] font-bold text-xs">{idx + 1}</span>
+                            <span
+                              className={`w-6 h-6 flex items-center justify-center rounded-full font-bold text-xs ${
+                                idx === 0
+                                  ? 'bg-[#FFD700]/20 text-[#FFD700] ring-1 ring-[#FFD700]/40'
+                                  : idx === 1
+                                    ? 'bg-[#C0C7D1]/20 text-[#C0C7D1] ring-1 ring-[#C0C7D1]/40'
+                                    : idx === 2
+                                      ? 'bg-[#CD7F32]/20 text-[#CD7F32] ring-1 ring-[#CD7F32]/40'
+                                      : 'bg-white/5 text-[#cbc3d7]'
+                              }`}
+                            >
+                              {idx + 1}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <p className="text-sm font-semibold text-[#dae2fd]">{concert.title}</p>
@@ -188,14 +200,14 @@ export function AdminDashboard() {
             {/* Upcoming Concerts Timeline */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[12px] border border-white/5 border-t-white/10 p-6 rounded-2xl">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-base font-bold text-[#dae2fd]">Upcoming Concerts</h3>
-                <span className="px-2 py-1 bg-[#4cd7f6]/10 text-[#4cd7f6] text-[10px] font-bold rounded-full uppercase tracking-tighter">Next Up</span>
+                <h3 className="text-base font-bold text-[#dae2fd]">Các buổi biểu diễn sắp tới</h3>
+                <span className="px-2 py-1 bg-[#4cd7f6]/10 text-[#4cd7f6] text-[10px] font-bold rounded-full uppercase tracking-tighter">Sắp diễn ra</span>
               </div>
               
               <div className="space-y-6 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1px] before:bg-[#494454]/30">
                 
                 {upcomingConcerts.length === 0 ? (
-                   <p className="text-sm text-[#cbc3d7] pl-2">No upcoming published concerts found.</p>
+                   <p className="text-sm text-[#cbc3d7] pl-2">Không tìm thấy buổi biểu diễn nào sắp tới.</p>
                 ) : (
                   upcomingConcerts.map((concert, index) => {
                     const isFirst = index === 0;
@@ -222,26 +234,26 @@ export function AdminDashboard() {
 
             {/* System Actions */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[12px] border border-white/5 border-t-white/10 p-6 rounded-2xl">
-              <h3 className="text-base font-bold text-[#dae2fd] mb-6">System Actions</h3>
+              <h3 className="text-base font-bold text-[#dae2fd] mb-6">Hành động hệ thống</h3>
               <div className="grid grid-cols-1 gap-3">
                 <Link to="/admin/accounts" className="flex items-center justify-between p-4 bg-[#222a3d] rounded-xl border border-[#494454] group hover:border-[#d0bcff]/50 transition-all">
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-[#d0bcff] group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-medium">Manage Users</span>
+                    <span className="text-sm font-medium">Quản lý người dùng</span>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#cbc3d7]" />
                 </Link>
                 <Link to="/admin/assignments" className="flex items-center justify-between p-4 bg-[#222a3d] rounded-xl border border-[#494454] group hover:border-[#d0bcff]/50 transition-all">
                   <div className="flex items-center gap-3">
                     <ClipboardList className="w-5 h-5 text-[#d0bcff] group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-medium">Staff Assignments</span>
+                    <span className="text-sm font-medium">Phân công nhân viên</span>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#cbc3d7]" />
                 </Link>
                 <Link to="/admin/venue-maps" className="flex items-center justify-between p-4 bg-[#222a3d] rounded-xl border border-[#494454] group hover:border-[#d0bcff]/50 transition-all">
                   <div className="flex items-center gap-3">
                     <Map className="w-5 h-5 text-[#d0bcff] group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-medium">Manage Venue Maps</span>
+                    <span className="text-sm font-medium">Quản lý bản đồ địa điểm</span>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#cbc3d7]" />
                 </Link>

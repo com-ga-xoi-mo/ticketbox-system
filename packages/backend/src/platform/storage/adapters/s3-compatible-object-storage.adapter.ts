@@ -139,24 +139,13 @@ export class S3CompatibleObjectStorageAdapter implements ObjectStoragePort {
 }
 
 function readS3Config(config: PlatformConfigService): S3Config {
-  const endpoint = config.s3Endpoint;
-  const region = config.s3Region;
-  const bucket = config.s3Bucket;
-  const accessKeyId = config.s3AccessKeyId;
-  const secretAccessKey = config.s3SecretAccessKey;
-  const publicBaseUrl = config.s3PublicBaseUrl;
-
-  if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey || !publicBaseUrl) {
-    throw new StorageUnavailableError('S3 storage configuration is incomplete');
-  }
-
   return {
-    endpoint,
-    region,
-    bucket,
-    accessKeyId,
-    secretAccessKey,
-    publicBaseUrl,
+    endpoint: config.s3Endpoint,
+    region: config.s3Region,
+    bucket: config.s3Bucket,
+    accessKeyId: config.s3AccessKeyId,
+    secretAccessKey: config.s3SecretAccessKey,
+    publicBaseUrl: config.s3PublicBaseUrl,
   };
 }
 

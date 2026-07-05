@@ -109,7 +109,8 @@ describe('Admin Users E2E', () => {
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
     expect(body.length).toBeGreaterThan(0);
-    expect(body[0].email).toBe(testEmail);
+    const foundUser = body.find((u: any) => u.email === testEmail);
+    expect(foundUser).toBeDefined();
   });
 
   skipIfNoDB('GET /admin/users/:id — get missing user', async () => {

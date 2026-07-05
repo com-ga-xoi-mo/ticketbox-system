@@ -15,10 +15,10 @@ interface EditAccountDialogProps {
 const AVAILABLE_ROLES: UserRole[] = ['ADMIN', 'ORGANIZER', 'CHECKIN_STAFF', 'AUDIENCE'];
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  ADMIN: 'Admin',
-  ORGANIZER: 'Organizer',
-  CHECKIN_STAFF: 'Staff',
-  AUDIENCE: 'Audience',
+  ADMIN: 'Quản trị viên',
+  ORGANIZER: 'Người tổ chức',
+  CHECKIN_STAFF: 'Nhân viên',
+  AUDIENCE: 'Khán giả',
 };
 
 export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDialogProps) {
@@ -42,12 +42,12 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
     if (!account) return;
 
     if (roles.length === 0) {
-      toast.error('At least one role must be selected.');
+      toast.error('Phải chọn ít nhất một vai trò.');
       return;
     }
 
     if (!email.trim()) {
-      toast.error('Email cannot be empty.');
+      toast.error('Email không được để trống.');
       return;
     }
 
@@ -55,11 +55,11 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
       { id: account.id, payload: { displayName, email, roles } },
       {
         onSuccess: () => {
-          toast.success('Account updated successfully');
+          toast.success('Cập nhật tài khoản thành công');
           onOpenChange(false);
         },
         onError: (err: any) => {
-          toast.error(err.response?.data?.message || err.message || 'An error occurred');
+          toast.error(err.response?.data?.message || err.message || 'Đã xảy ra lỗi');
         },
       }
     );
@@ -76,9 +76,9 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
       <DialogContent className="sm:max-w-[425px] bg-slate-900 border border-white/10 text-white shadow-2xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Edit Account</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Chỉnh sửa tài khoản</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Update information for the system account.
+              Cập nhật thông tin cho tài khoản hệ thống.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -89,22 +89,22 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email address..."
+                placeholder="Nhập địa chỉ email..."
                 className="bg-slate-800/50 border-white/10 text-white placeholder:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Display Name *</label>
+              <label className="text-sm font-medium text-slate-400">Tên hiển thị *</label>
               <Input
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter display name..."
+                placeholder="Nhập tên hiển thị..."
                 className="bg-slate-800/50 border-white/10 text-white placeholder:placeholder:text-slate-500"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Role *</label>
+              <label className="text-sm font-medium text-slate-400">Vai trò *</label>
               <div className="flex flex-wrap gap-2">
                 {AVAILABLE_ROLES.map((role) => (
                   <button
@@ -122,27 +122,25 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
                 ))}
               </div>
               {roles.length === 0 && (
-                <p className="text-red-400 text-xs">At least one role must be selected.</p>
+                <p className="text-red-400 text-xs">Phải chọn ít nhất một vai trò.</p>
               )}
             </div>
           </div>
-          <DialogFooter className="border-t border-white/10 pt-4">
+          <div className="mt-6 flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 hover:bg-white/5 text-white"
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type="submit"
               disabled={updateAccount.isPending || roles.length === 0}
-              className="bg-gradient-to-br from-[#d0bcff] to-[#e14ef6] text-slate-900 font-semibold shadow-[0_0_15px_rgba(225,78,246,0.3)] hover:shadow-[0_0_25px_rgba(225,78,246,0.5)] border-0"
             >
-              {updateAccount.isPending ? 'Saving...' : 'Save Changes'}
+              {updateAccount.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

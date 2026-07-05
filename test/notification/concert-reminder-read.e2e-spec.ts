@@ -105,6 +105,7 @@ beforeAll(async () => {
   const creator = await prisma.user.create({
     data: {
       email: `${NONCE}-creator@ticketbox.test`,
+      normalizedEmail: `${NONCE}-creator@ticketbox.test`,
       passwordHash: 'x',
       displayName: 'Creator',
     },
@@ -112,12 +113,12 @@ beforeAll(async () => {
   ids.creator = creator.id;
 
   const buyer = await prisma.user.create({
-    data: { email: `${NONCE}-buyer@ticketbox.test`, passwordHash: 'x', displayName: 'Buyer One' },
+    data: { email: `${NONCE}-buyer@ticketbox.test`, normalizedEmail: `${NONCE}-buyer@ticketbox.test`, passwordHash: 'x', displayName: 'Buyer One' },
   });
   ids.buyer = buyer.id;
 
   const otherBuyer = await prisma.user.create({
-    data: { email: `${NONCE}-other@ticketbox.test`, passwordHash: 'x', displayName: 'Buyer Two' },
+    data: { email: `${NONCE}-other@ticketbox.test`, normalizedEmail: `${NONCE}-other@ticketbox.test`, passwordHash: 'x', displayName: 'Buyer Two' },
   });
   ids.otherBuyer = otherBuyer.id;
 

@@ -39,7 +39,7 @@ export function ChangeStatusDialog({ account, open, onOpenChange }: ChangeStatus
           onOpenChange(false);
         },
         onError: (err) => {
-          setError(err.message || 'Failed to update account status.');
+          setError(err.message || 'Cập nhật trạng thái tài khoản thất bại.');
         },
       }
     );
@@ -52,18 +52,17 @@ export function ChangeStatusDialog({ account, open, onOpenChange }: ChangeStatus
           <AlertDialogMedia className={isActive ? 'text-destructive' : 'text-primary'}>
             {isActive ? <AlertTriangle /> : <RotateCcw />}
           </AlertDialogMedia>
-          <AlertDialogTitle>{isActive ? 'Deactivate Account' : 'Reactivate Account'}</AlertDialogTitle>
+          <AlertDialogTitle>{isActive ? 'Vô hiệu hóa tài khoản' : 'Kích hoạt lại tài khoản'}</AlertDialogTitle>
           <AlertDialogDescription>
             {isActive ? (
               <>
-                Are you sure you want to deactivate <strong>{account.displayName}</strong>?
-                This is a soft delete. The user will be blocked from logging in,
-                and any active check-in assignments will be revoked.
+                Bạn có chắc chắn muốn vô hiệu hóa <strong>{account.displayName}</strong>?
+                Đây là hành động xóa mềm. Người dùng sẽ bị chặn đăng nhập và mọi phân công check-in đang hoạt động sẽ bị thu hồi.
               </>
             ) : (
               <>
-                Are you sure you want to reactivate <strong>{account.displayName}</strong>?
-                The user will be able to log in again.
+                Bạn có chắc chắn muốn kích hoạt lại <strong>{account.displayName}</strong>?
+                Người dùng sẽ có thể đăng nhập trở lại.
               </>
             )}
           </AlertDialogDescription>
@@ -71,7 +70,7 @@ export function ChangeStatusDialog({ account, open, onOpenChange }: ChangeStatus
         {error && <FieldError message={error} />}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={updateStatus.isPending}>
-            Cancel
+            Hủy
           </AlertDialogCancel>
           <AlertDialogAction
             variant={isActive ? 'destructive' : 'default'}
@@ -82,7 +81,7 @@ export function ChangeStatusDialog({ account, open, onOpenChange }: ChangeStatus
               handleConfirm();
             }}
           >
-            {updateStatus.isPending ? 'Processing...' : isActive ? 'Deactivate' : 'Reactivate'}
+            {updateStatus.isPending ? 'Đang xử lý...' : isActive ? 'Vô hiệu hóa' : 'Kích hoạt lại'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -11,11 +11,6 @@ function isValidFiveFieldCron(value: string): boolean {
   }
 }
 
-const optionalUrl = z.preprocess(
-  (value) => (value === '' ? undefined : value),
-  z.string().url().optional(),
-);
-
 const optionalNonEmpty = z.preprocess(
   (value) => (value === '' ? undefined : value),
   z.string().min(1).optional(),
@@ -33,6 +28,7 @@ export const envSchema = z
     INTERNAL_API_KEY: z.string().min(1).default('ticketbox-internal-dev-key'),
     JWT_SECRET: z.string().min(1),
     JWT_EXPIRY: z.string().min(1).default('1h'),
+    GOOGLE_CLIENT_ID: optionalNonEmpty,
     QR_TOKEN_SECRET: z.string().min(1).default('ticketbox-qr-token-dev-secret'),
     BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
     ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
@@ -82,6 +78,7 @@ export const envSchema = z
           : Boolean(value),
       z.boolean(),
     ),
+    FRONTEND_URL: z.string().url().default('http://localhost:5173'),
     MAILDEV_WEB_URL: z.string().url().optional(),
     ARTIST_BIO_PDF_MAX_BYTES: z.coerce
       .number()
@@ -117,34 +114,31 @@ export const envSchema = z
     GUEST_LIST_RETRY_BACKOFF_MS: z.coerce.number().int().min(100).default(5000),
     GUEST_LIST_PROCESSING_LEASE_MS: z.coerce.number().int().min(1000).default(120000),
     TICKET_ACCESS_BASE_URL: z.string().url().default('http://localhost:5173'),
-    STORAGE_DRIVER: z.enum(['s3', 'local']).default('local'),
-    LOCAL_STORAGE_ROOT_DIR: z.string().min(1).default('data/uploads'),
-    LOCAL_STORAGE_PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000/storage'),
-    S3_ENDPOINT: optionalUrl,
-    S3_REGION: optionalNonEmpty,
-    S3_BUCKET: optionalNonEmpty,
-    S3_ACCESS_KEY_ID: optionalNonEmpty,
-    S3_SECRET_ACCESS_KEY: optionalNonEmpty,
-    S3_PUBLIC_BASE_URL: optionalUrl,
+    NOMINATIM_BASE_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
+    NOMINATIM_USER_AGENT: z.string().optional(),
+    NOMINATIM_CONTACT_EMAIL: z.string().email().optional(),
+    NOMINATIM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(15000).default(5000),
+    S3_ENDPOINT: z.string().url(),
+    S3_REGION: z.string().min(1),
+    S3_BUCKET: z.string().min(1),
+    S3_ACCESS_KEY_ID: z.string().min(1),
+    S3_SECRET_ACCESS_KEY: z.string().min(1),
+    S3_PUBLIC_BASE_URL: z.string().url(),
   })
-  .superRefine((config, ctx) => {
-    if (config.STORAGE_DRIVER !== 's3') return;
-
-    for (const key of [
-      'S3_ENDPOINT',
-      'S3_REGION',
-      'S3_BUCKET',
-      'S3_ACCESS_KEY_ID',
-      'S3_SECRET_ACCESS_KEY',
-      'S3_PUBLIC_BASE_URL',
-    ] as const) {
-      if (!config[key]) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [key],
-          message: `${key} is required when STORAGE_DRIVER=s3`,
-        });
-      }
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV !== 'test' && !env.GOOGLE_CLIENT_ID) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['GOOGLE_CLIENT_ID'],
+        message: 'Required in development and production',
+      });
+    }
+    if (env.NODE_ENV !== 'test' && !env.NOMINATIM_USER_AGENT) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['NOMINATIM_USER_AGENT'],
+        message: 'Required in development and production (e.g. TicketBox/1.0 contact@example.com)',
+      });
     }
   });
 

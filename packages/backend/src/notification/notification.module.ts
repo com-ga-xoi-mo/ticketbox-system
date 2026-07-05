@@ -1,10 +1,20 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 
 import { QrTicketTokenService } from '../ordering/domain/qr-ticket-token.service';
 import { DatabaseModule } from '../platform/database/database.module';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { QueueModule } from '../platform/queue/queue.module';
+import {
+  REALTIME_NOTIFICATION_PUBLISHER,
+  type RealtimeNotificationPublisherPort,
+} from './domain/ports/realtime-notification-publisher.port';
+import { RedisRealtimeNotificationPublisher } from './infrastructure/realtime/redis-realtime-notification.publisher';
+import { NotificationStreamRegistry } from './infrastructure/realtime/notification-stream.registry';
+import { NotificationStreamTokenService } from './infrastructure/realtime/notification-stream-token.service';
+import { RedisNotificationStreamSubscriber } from './infrastructure/realtime/redis-notification-stream.subscriber';
+import { NotificationStreamController } from './adapters/http/notification-stream.controller';
 import { CreatePurchaseConfirmationNotificationsUseCase } from './application/use-cases/create-purchase-confirmation-notifications.use-case';
 import { DeliverNotificationUseCase } from './application/use-cases/deliver-notification.use-case';
 import { EnqueuePurchaseConfirmationUseCase } from './application/use-cases/enqueue-purchase-confirmation.use-case';
@@ -51,9 +61,27 @@ import { QrcodePngRenderer } from './infrastructure/qr/qrcode-png-renderer';
 import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue/purchase-confirmation-notification.producer';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, QueueModule],
-  controllers: [AudienceNotificationController],
+  imports: [
+    PlatformConfigModule,
+    DatabaseModule,
+    QueueModule,
+    JwtModule.registerAsync({
+      imports: [PlatformConfigModule],
+      inject: [PlatformConfigService],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      useFactory: (config: PlatformConfigService) => ({ secret: config.jwtSecret }) as any,
+    }),
+  ],
+  controllers: [AudienceNotificationController, NotificationStreamController],
   providers: [
+    NotificationStreamRegistry,
+    NotificationStreamTokenService,
+    RedisNotificationStreamSubscriber,
+    RedisRealtimeNotificationPublisher,
+    {
+      provide: REALTIME_NOTIFICATION_PUBLISHER,
+      useExisting: RedisRealtimeNotificationPublisher,
+    },
     {
       provide: NOTIFICATION_REPOSITORY,
       useClass: PrismaNotificationRepository,
@@ -104,9 +132,15 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
     },
     {
       provide: CreatePurchaseConfirmationNotificationsUseCase,
-      inject: [NOTIFICATION_REPOSITORY],
-      useFactory: (notificationRepository: NotificationRepositoryPort) =>
-        new CreatePurchaseConfirmationNotificationsUseCase(notificationRepository),
+      inject: [NOTIFICATION_REPOSITORY, REALTIME_NOTIFICATION_PUBLISHER],
+      useFactory: (
+        notificationRepository: NotificationRepositoryPort,
+        realtimePublisher: RealtimeNotificationPublisherPort,
+      ) =>
+        new CreatePurchaseConfirmationNotificationsUseCase(
+          notificationRepository,
+          realtimePublisher,
+        ),
     },
     {
       provide: DeliverNotificationUseCase,

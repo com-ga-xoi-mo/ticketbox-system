@@ -3,10 +3,15 @@ import { useMyProfile } from '../../shared/api/profile';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
-import { AlertCircle, Bell, LifeBuoy, Mail, ReceiptText, ShieldAlert, Ticket, User } from 'lucide-react';
+import { AlertCircle, Bell, Heart, LifeBuoy, Mail, ReceiptText, ShieldAlert, Ticket, User } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
+import { ProfileEditForm } from './ProfileEditForm';
+import { PasswordChangeForm } from './PasswordChangeForm';
+import { AvatarUploader } from './AvatarUploader';
+import { KeyRound } from 'lucide-react';
+
 
 export function AccountPage() {
   const { data: profile, isLoading, isError, refetch } = useMyProfile();
@@ -46,24 +51,18 @@ export function AccountPage() {
                   </Button>
                 </AlertDescription>
               </Alert>
-            ) : profile ? (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Họ và tên
-                  </span>
-                  <span className="text-lg font-semibold">{profile.displayName}</span>
-                </div>
 
-                <div className="flex flex-col gap-1">
+            ) : profile ? (
+              <div className="space-y-8">
+                <AvatarUploader profile={profile} />
+                <div className="flex flex-col gap-1 mt-4">
                   <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     Email
                   </span>
                   <span className="text-lg">{profile.email}</span>
                 </div>
-
+                
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4" />
@@ -77,8 +76,29 @@ export function AccountPage() {
                     ))}
                   </div>
                 </div>
+
+                <ProfileEditForm profile={profile} />
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+
+
+        <Card className="shadow-sm mt-6">
+          <CardHeader className="border-b bg-muted/20 pb-6">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <KeyRound className="h-6 w-6 text-primary" />
+              {profile?.hasPassword ? 'Đổi mật khẩu' : 'Phương thức đăng nhập'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {profile?.hasPassword ? (
+              <PasswordChangeForm />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Tài khoản này đang đăng nhập bằng Google và chưa có mật khẩu TicketBox.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -138,6 +158,32 @@ export function AccountPage() {
             <CardContent>
               <Button variant="ghost" asChild>
                 <Link to="/account/tickets">Mở ví vé</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-rose-500" />
+                Sự kiện yêu thích
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/me/favorites">Xem danh sách</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-500" />
+                Bán vé (Resale)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" asChild>
+                <Link to="/account/bank-profile">Thiết lập tài khoản nhận tiền</Link>
               </Button>
             </CardContent>
           </Card>

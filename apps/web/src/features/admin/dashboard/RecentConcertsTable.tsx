@@ -18,10 +18,10 @@ const STATUS_VARIANT: Record<ConcertStatus, 'success' | 'muted' | 'default' | 'd
 };
 
 const STATUS_LABEL: Record<ConcertStatus, string> = {
-  PUBLISHED: 'Published',
-  DRAFT: 'Draft',
-  ENDED: 'Ended',
-  CANCELLED: 'Cancelled',
+  PUBLISHED: 'Đã xuất bản',
+  DRAFT: 'Bản nháp',
+  ENDED: 'Đã kết thúc',
+  CANCELLED: 'Đã hủy',
 };
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -35,14 +35,14 @@ export function RecentConcertsTable() {
     <article className="glass-panel flex flex-col overflow-hidden rounded-xl">
       <div className="flex flex-col gap-4 border-b border-white/5 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-mono text-xs text-on-surface-variant">recent queue</p>
-          <h2 className="mt-2 font-display text-xl font-bold text-on-surface">Concert activity</h2>
+          <p className="font-mono text-xs text-on-surface-variant">hàng đợi gần đây</p>
+          <h2 className="mt-2 font-display text-xl font-bold text-on-surface">Hoạt động sự kiện</h2>
         </div>
         <Link
           to="/admin/concerts"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          View Concerts
+          Xem Sự kiện
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             arrow_forward
           </span>
@@ -54,12 +54,12 @@ export function RecentConcertsTable() {
           <TableHeader>
             <TableRow className="bg-surface-container-high/20">
               {[
-                { label: 'Concert', cls: 'pl-6' },
-                { label: 'Organizer' },
-                { label: 'Date' },
-                { label: 'Venue' },
-                { label: 'Status' },
-                { label: 'Action', cls: 'pr-6 text-right' },
+                { label: 'Sự kiện', cls: 'pl-6' },
+                { label: 'Ban tổ chức' },
+                { label: 'Ngày' },
+                { label: 'Địa điểm' },
+                { label: 'Trạng thái' },
+                { label: 'Thao tác', cls: 'pr-6 text-right' },
               ].map(({ label, cls = '' }) => (
                 <TableHead key={label} className={cls}>
                   {label}
@@ -106,7 +106,7 @@ export function RecentConcertsTable() {
                       to={`/admin/concerts/${concert.id}/edit`}
                       className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      Edit
+                      Chỉnh sửa
                     </Link>
                   </TableCell>
                 </TableRow>

@@ -92,7 +92,7 @@ export function ConcertsPage() {
           className="size-10 animate-spin rounded-full border-b-2 border-t-2 border-primary"
           aria-hidden="true"
         />
-        <p className="mt-4 font-mono text-sm text-on-surface-variant">Loading concerts…</p>
+        <p className="mt-4 font-mono text-sm text-on-surface-variant">Đang tải danh sách sự kiện…</p>
       </div>
     );
   }
@@ -103,13 +103,13 @@ export function ConcertsPage() {
         <span className="material-symbols-outlined mb-4 text-4xl text-error" aria-hidden="true">
           error
         </span>
-        <h3 className="font-display text-lg font-bold text-on-surface">Failed to load concerts</h3>
+        <h3 className="font-display text-lg font-bold text-on-surface">Không thể tải danh sách sự kiện</h3>
         <p className="mt-2 max-w-sm text-sm text-on-surface-variant">
-          {error?.message || 'There was an issue fetching the concert records from the server.'}
+          {error?.message || 'Đã xảy ra lỗi khi lấy dữ liệu sự kiện từ máy chủ.'}
         </p>
         <Button onClick={() => refetch()} className="mt-6">
           <span className="material-symbols-outlined text-sm" aria-hidden="true">refresh</span>
-          Retry connection
+          Thử lại
         </Button>
       </div>
     );
@@ -121,17 +121,17 @@ export function ConcertsPage() {
       <div className="flex shrink-0 items-start justify-between">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight text-on-surface">
-            Concert Management
+            Quản lý sự kiện
           </h2>
           <p className="mt-1 text-sm text-on-surface-variant">
-            Create, update, publish, and cancel your concert events.
+            Tạo, cập nhật, xuất bản và hủy bỏ sự kiện của bạn.
           </p>
         </div>
         <Button onClick={handleOpenCreate}>
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             add_circle
           </span>
-          Create concert
+          Tạo sự kiện
         </Button>
       </div>
 
@@ -164,8 +164,8 @@ export function ConcertsPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Search concerts"
-                    placeholder="Search by title or artist..."
+                    aria-label="Tìm kiếm sự kiện"
+                    placeholder="Tìm kiếm theo tiêu đề hoặc nghệ sĩ..."
                     className="w-full rounded-md border border-white/10 bg-surface-container-low py-1.5 pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant transition-all focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/50"
                   />
                 </div>
@@ -179,11 +179,11 @@ export function ConcertsPage() {
                       onChange={(e) => setSelectedStatus(e.target.value as ConcertStatus | 'ALL')}
                       className="appearance-none cursor-pointer rounded-md border border-white/10 bg-surface-container-low py-1.5 pl-3 pr-8 text-sm text-on-surface transition-all focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/50"
                     >
-                      <option value="ALL">Status: All</option>
-                      <option value="PUBLISHED">Published</option>
-                      <option value="DRAFT">Draft</option>
-                      <option value="CANCELLED">Cancelled</option>
-                      <option value="ENDED">Ended</option>
+                      <option value="ALL">Trạng thái: Tất cả</option>
+                      <option value="PUBLISHED">Đã xuất bản</option>
+                      <option value="DRAFT">Bản nháp</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                      <option value="ENDED">Đã kết thúc</option>
                     </select>
                     <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">
                       expand_more
@@ -197,7 +197,7 @@ export function ConcertsPage() {
                       onChange={(e) => setSelectedCity(e.target.value)}
                       className="appearance-none cursor-pointer rounded-md border border-white/10 bg-surface-container-low py-1.5 pl-3 pr-8 text-sm text-on-surface transition-all focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/50"
                     >
-                      <option value="ALL">City: All</option>
+                      <option value="ALL">Thành phố: Tất cả</option>
                       {uniqueCities.map((city) => (
                         <option key={city} value={city}>{city}</option>
                       ))}
@@ -211,7 +211,7 @@ export function ConcertsPage() {
                   <button
                     onClick={() => { setSearchQuery(''); setSelectedStatus('ALL'); setSelectedCity('ALL'); }}
                     className="flex size-8 shrink-0 items-center justify-center rounded-md text-on-surface-variant transition-colors hover:bg-white/10 hover:text-white"
-                    title="Clear filters"
+                    title="Xóa bộ lọc"
                   >
                     <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
                   </button>
@@ -222,7 +222,7 @@ export function ConcertsPage() {
             <div className="min-h-0 flex-1 overflow-auto">
               {filteredConcerts.length === 0 ? (
                 <div className="p-12 text-center text-sm font-semibold text-on-surface-variant">
-                  No concerts matching current filters.
+                  Không có sự kiện nào khớp với bộ lọc hiện tại.
                 </div>
               ) : (
                 <ConcertTable

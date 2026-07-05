@@ -5,6 +5,7 @@ import { Button } from '../../../shared/ui/button';
 import { Pagination } from '../../../shared/ui/pagination';
 import { EditAccountDialog } from './EditAccountDialog';
 import { ChangeStatusDialog } from './ChangeStatusDialog';
+import { resolveAvatarImageUrl } from '../../../shared/api/client';
 
 interface AccountsListProps {
   role?: string;
@@ -25,7 +26,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
   }, [role, status, search]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-400">Loading...</div>;
+    return <div className="p-8 text-center text-slate-400">Đang tải...</div>;
   }
 
   const filteredAccounts = accounts?.filter((acc: any) => {
@@ -33,7 +34,8 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
     const lowerSearch = search.toLowerCase();
     return (
       acc.displayName?.toLowerCase().includes(lowerSearch) ||
-      acc.email?.toLowerCase().includes(lowerSearch)
+      acc.email?.toLowerCase().includes(lowerSearch) ||
+      acc.phone?.includes(lowerSearch)
     );
   }) || [];
 
@@ -50,18 +52,19 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-slate-900/40 uppercase tracking-[0.05em] text-xs font-mono">
-              <th className="p-4 font-medium text-slate-400">Display Name</th>
+              <th className="p-4 font-medium text-slate-400">Tên hiển thị</th>
               <th className="p-4 font-medium text-slate-400">Email</th>
-              <th className="p-4 font-medium text-slate-400">Role</th>
-              <th className="p-4 font-medium text-slate-400">Status</th>
-              <th className="p-4 font-medium text-slate-400 text-right">Actions</th>
+              <th className="p-4 font-medium text-slate-400">Số điện thoại</th>
+              <th className="p-4 font-medium text-slate-400">Vai trò</th>
+              <th className="p-4 font-medium text-slate-400">Trạng thái</th>
+              <th className="p-4 font-medium text-slate-400 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {paginatedAccounts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-sm text-slate-400">
-                  No accounts found.
+                <td colSpan={6} className="p-8 text-center text-sm text-slate-400">
+                  Không tìm thấy tài khoản nào.
                 </td>
               </tr>
             ) : (
@@ -70,8 +73,8 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-white/10">
-                        {account.avatarUrl ? (
-                          <img src={account.avatarUrl} alt={account.displayName} className="w-full h-full object-cover" />
+                        {resolveAvatarImageUrl(account.avatarAssetId, account.avatarUrl) ? (
+                          <img src={resolveAvatarImageUrl(account.avatarAssetId, account.avatarUrl)} alt={account.displayName} className="w-full h-full object-cover" />
                         ) : (
                           <div className="text-xs font-medium text-white">
                             {account.displayName ? account.displayName.substring(0, 2).toUpperCase() : account.email.substring(0, 2).toUpperCase()}
@@ -83,6 +86,9 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                   </td>
                   <td className="px-4 py-4">
                     <div className="text-sm leading-5 text-slate-400">{account.email}</div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm leading-5 text-slate-400">{account.phone || '—'}</div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-1.5">
@@ -100,7 +106,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                         className="h-7 text-xs bg-transparent border-white/10 hover:bg-white/5 hover:text-white"
                         onClick={() => setEditingAccount(account)}
                       >
-                        Edit
+                        Chỉnh sửa
                       </Button>
                       <Button
                         variant="outline"
@@ -108,7 +114,7 @@ export const AccountsList = ({ role, status, search }: AccountsListProps) => {
                         className="h-7 text-xs bg-transparent border-white/10 hover:bg-white/5 hover:text-white"
                         onClick={() => setStatusChangeAccount(account)}
                       >
-                        Change Status
+                        Đổi trạng thái
                       </Button>
                     </div>
                   </td>

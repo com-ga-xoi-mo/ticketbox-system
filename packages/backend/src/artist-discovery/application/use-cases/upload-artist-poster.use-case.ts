@@ -1,17 +1,18 @@
 import { UploadArtistAssetUseCaseBase } from './upload-artist-asset.use-case.base';
 import { ArtistRepositoryPort } from '../../domain/ports/artist-repository.port';
 import { ObjectStoragePort } from '../../../platform/storage';
+import { PlatformConfigService } from '../../../platform/config/platform-config.service';
 
 export class UploadArtistPosterUseCase extends UploadArtistAssetUseCaseBase {
   constructor(
     repository: ArtistRepositoryPort,
     storage: ObjectStoragePort,
-    maxBytes: number = 5242880,
+    config: PlatformConfigService,
   ) {
-    super(repository, storage, maxBytes, 'ARTIST_POSTER', 'poster');
+    super(repository, storage, config, 'ARTIST_POSTER', 'poster');
   }
 
-  protected async updateArtistAsset(artistId: string, assetData: any): Promise<void> {
-    // Implementation
+  protected async updateArtistAsset(artistId: string, assetData: any): Promise<{ replacedStorageKey?: string }> {
+    return this.repository.createAssetAndLinkPoster(artistId, assetData);
   }
 }

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../platform/database/prisma.service';
 import { EmailAlreadyRegisteredError } from '../../domain/errors';
 import { UserStatus } from '../../domain/user-status.enum';
+import { normalizeEmail } from '../../domain/email-normalization';
 import type {
   CreateUserData,
   IUserRepository,
@@ -55,14 +56,22 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
       const user = await this.prisma.user.create({
         data: {
           email: data.email,
+          normalizedEmail: normalizeEmail(data.email),
           passwordHash: data.passwordHash,
           displayName: data.displayName,
+          phone: data.phone ?? null,
+          dateOfBirth: data.dateOfBirth ?? null,
+          gender: data.gender as any,
+          addressLine: data.addressLine ?? null,
+          city: data.city ?? null,
+          district: data.district ?? null,
           roles: {
             create: roleIds.map((roleId) => ({ roleId })),
           },
         },
         include: {
           roles: { include: { role: true } },
+          avatarAsset: true,
         },
       });
 
@@ -78,15 +87,95 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
   async findById(id: string): Promise<UserRecord | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { roles: { include: { role: true } } },
+      include: { roles: { include: { role: true } }, avatarAsset: true },
     });
     if (!user) return null;
     return this.toUserRecord(user);
   }
 
+
+  async findByIdWithPassword(id: string): Promise<UserRecordWithPassword | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { roles: { include: { role: true } }, avatarAsset: true },
+    });
+    if (!user) return null;
+    return this.toUserRecordWithPassword(user);
+  }
+
+
+  async replaceAvatar(userId: string, newAsset: { id: string; storageKey: string; publicUrl: string; originalName: string; contentType: string; sizeBytes: number }): Promise<string | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { avatarAsset: true },
+      });
+      if (!user) throw new Error('User not found');
+
+      const previousStorageKey = user.avatarAsset?.storageKey ?? null;
+      const previousAssetId = user.avatarAssetId;
+
+      await tx.asset.create({
+        data: {
+          id: newAsset.id,
+          kind: 'USER_AVATAR',
+          status: 'ACTIVE',
+          storageKey: newAsset.storageKey,
+          publicUrl: newAsset.publicUrl,
+          originalName: newAsset.originalName,
+          contentType: newAsset.contentType,
+          sizeBytes: newAsset.sizeBytes,
+          uploadedById: userId,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { avatarAssetId: newAsset.id },
+      });
+
+      if (previousAssetId) {
+        await tx.asset.delete({ where: { id: previousAssetId } });
+      }
+
+      return previousStorageKey;
+    });
+  }
+
+  async clearAvatar(userId: string): Promise<string | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { avatarAsset: true },
+      });
+      if (!user) throw new Error('User not found');
+
+      const previousStorageKey = user.avatarAsset?.storageKey ?? null;
+      const previousAssetId = user.avatarAssetId;
+
+      if (!previousAssetId) return null;
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { avatarAssetId: null },
+      });
+
+      await tx.asset.delete({ where: { id: previousAssetId } });
+
+      return previousStorageKey;
+    });
+  }
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
+
   async findByEmail(email: string): Promise<UserRecordWithPassword | null> {
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { normalizedEmail: normalizeEmail(email) },
       include: {
         roles: { include: { role: true } },
       },
@@ -102,7 +191,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
     }
 
     const users = await this.prisma.user.findMany({
-      where: { email: { in: emails } },
+      where: { normalizedEmail: { in: emails.map(normalizeEmail) } },
       select: { email: true },
     });
 
@@ -140,7 +229,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
 
     const users = await this.prisma.user.findMany({
       where,
-      include: { roles: { include: { role: true } } },
+      include: { roles: { include: { role: true } }, avatarAsset: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -153,9 +242,17 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
         where: { id },
         data: {
           ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
-          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.email !== undefined
+            ? { email: data.email.trim(), normalizedEmail: normalizeEmail(data.email) }
+            : {}),
+          ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          ...(data.dateOfBirth !== undefined ? { dateOfBirth: data.dateOfBirth } : {}),
+          ...(data.gender !== undefined ? { gender: data.gender as any } : {}),
+          ...(data.addressLine !== undefined ? { addressLine: data.addressLine } : {}),
+          ...(data.city !== undefined ? { city: data.city } : {}),
+          ...(data.district !== undefined ? { district: data.district } : {}),
         },
-        include: { roles: { include: { role: true } } },
+        include: { roles: { include: { role: true } }, avatarAsset: true },
       });
       return this.toUserRecord(user);
     } catch (err) {
@@ -172,7 +269,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
       data: {
         status: status as any,
       },
-      include: { roles: { include: { role: true } } },
+      include: { roles: { include: { role: true } }, avatarAsset: true },
     });
     return this.toUserRecord(user);
   }
@@ -192,7 +289,7 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
           create: roleIds.map((roleId) => ({ roleId })),
         },
       },
-      include: { roles: { include: { role: true } } },
+      include: { roles: { include: { role: true } }, avatarAsset: true },
     });
     return this.toUserRecord(user);
   }
@@ -208,6 +305,14 @@ export class PrismaUserRepository implements IUserRepository, OnModuleInit {
       displayName: user.displayName,
       status: user.status as UserStatus,
       roles: user.roles.map((ur: any) => ur.role.code),
+      phone: user.phone ?? null,
+      dateOfBirth: user.dateOfBirth ?? null,
+      gender: user.gender ?? null,
+      addressLine: user.addressLine ?? null,
+      city: user.city ?? null,
+      district: user.district ?? null,
+      avatarAssetId: user.avatarAssetId ?? null,
+      avatarUrl: user.avatarAsset?.publicUrl ?? null,
     };
   }
 

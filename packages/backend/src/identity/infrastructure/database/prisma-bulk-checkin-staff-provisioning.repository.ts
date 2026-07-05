@@ -7,6 +7,7 @@ import type {
   ConcertCredentialHandoffSummary,
 } from '../../domain/ports/bulk-checkin-staff-provisioning.port';
 import { UserStatus } from '../../domain/user-status.enum';
+import { normalizeEmail } from '../../domain/email-normalization';
 
 const CHECKIN_STAFF_ROLE = 'CHECKIN_STAFF';
 const ACTIVE_ASSIGNMENT_STATUS = 'ACTIVE';
@@ -45,6 +46,7 @@ export class PrismaBulkCheckinStaffProvisioningRepository
         const user = await tx.user.create({
           data: {
             email: account.email,
+            normalizedEmail: normalizeEmail(account.email),
             displayName: account.displayName,
             passwordHash: account.passwordHash,
             roles: {

@@ -51,6 +51,11 @@ export async function markAllAudienceNotificationsRead(): Promise<AudienceNotifi
   return AudienceNotificationMarkAllReadResponseSchema.parse(data);
 }
 
+/** Mint a short-lived token used to open the realtime notification SSE stream. */
+export async function fetchNotificationStreamToken(): Promise<{ token: string }> {
+  return apiGet<{ token: string }>('/me/notifications/stream-token');
+}
+
 export function useAudienceNotifications(filters?: { unreadOnly?: boolean; type?: string }) {
   return useQuery({
     queryKey: notificationKeys.list(filters),
@@ -64,7 +69,9 @@ export function useAudienceNotificationUnreadCount(enabled = true) {
     queryFn: fetchAudienceNotificationUnreadCount,
     enabled,
     staleTime: 10 * 1000,
-    refetchInterval: 5000, // <--- Polling every 5 seconds for "streaming" updates
+    // Realtime updates come from the SSE stream (NotificationStreamListener); this slow
+    // poll is only a safety-net fallback for missed signals / lost connections.
+    refetchInterval: 60_000,
   });
 }
 

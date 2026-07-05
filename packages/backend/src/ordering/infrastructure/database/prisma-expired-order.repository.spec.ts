@@ -20,7 +20,7 @@ describe('PrismaExpiredOrderRepository', () => {
     repository = new PrismaExpiredOrderRepository(prisma as never);
   });
 
-  it('finds overdue pending orders in expiration order', async () => {
+  it('finds overdue pending orders in expiration order (excluding RESALE)', async () => {
     const now = new Date('2026-06-16T10:30:00.000Z');
     prisma.order.findMany.mockResolvedValue([{ id: 'order-1' }, { id: 'order-2' }]);
 
@@ -29,6 +29,7 @@ describe('PrismaExpiredOrderRepository', () => {
     expect(prisma.order.findMany).toHaveBeenCalledWith({
       where: {
         status: OrderStatus.PENDING_PAYMENT,
+        orderSourceType: 'DIRECT',
         reservationExpiresAt: {
           lte: now,
         },

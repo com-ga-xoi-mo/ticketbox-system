@@ -4,6 +4,7 @@ import { useAccounts } from '../../accounts/hooks';
 import { Button } from '../../../../shared/ui/button';
 import { Badge } from '../../../../shared/ui/badge';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog';
+import { resolveAvatarImageUrl } from '../../../../shared/api/client';
 import { toast } from 'sonner';
 import { UserMinus, ShieldAlert, DoorOpen } from 'lucide-react';
 
@@ -39,7 +40,7 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
   if (isLoading) {
     return (
       <div className="bg-slate-800/60 backdrop-blur-xl border border-white/10 rounded-xl p-8 flex justify-center text-slate-400">
-        Loading assignments...
+        Đang tải phân công...
       </div>
     );
   }
@@ -47,17 +48,17 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
   return (
     <div className="bg-slate-800/60 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden flex flex-col h-full">
       <div className="p-6 border-b border-white/10 bg-slate-900/40">
-        <h3 className="text-xl font-semibold text-white">Current Assignments</h3>
+        <h3 className="text-xl font-semibold text-white">Phân công hiện tại</h3>
       </div>
 
       <div className="overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-slate-900/40">
-              <th className="p-4 text-sm font-medium text-slate-400">Staff</th>
-              <th className="p-4 text-sm font-medium text-slate-400">Gate</th>
-              <th className="p-4 text-sm font-medium text-slate-400">Status</th>
-              <th className="p-4 text-sm font-medium text-slate-400 text-right">Actions</th>
+              <th className="p-4 text-sm font-medium text-slate-400">Nhân viên</th>
+              <th className="p-4 text-sm font-medium text-slate-400">Cổng</th>
+              <th className="p-4 text-sm font-medium text-slate-400">Trạng thái</th>
+              <th className="p-4 text-sm font-medium text-slate-400 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +67,7 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
                 <td colSpan={4} className="p-12 text-center text-slate-400">
                   <div className="flex flex-col items-center gap-3">
                     <ShieldAlert className="w-8 h-8 text-slate-400" />
-                    <p>No staff assigned to this event yet.</p>
+                    <p>Chưa có nhân viên nào được phân công cho sự kiện này.</p>
                   </div>
                 </td>
               </tr>
@@ -78,8 +79,8 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-white/10">
-                        {user?.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                        {resolveAvatarImageUrl(user?.avatarAssetId, user?.avatarUrl) ? (
+                          <img src={resolveAvatarImageUrl(user?.avatarAssetId, user?.avatarUrl)} alt={user.displayName} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-sm font-bold text-slate-400">
                             {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
@@ -87,20 +88,20 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
                         )}
                       </div>
                       <div>
-                        <div className="font-medium text-white">{user?.displayName || 'Unknown User'}</div>
-                        <div className="text-sm text-slate-400">{user?.email || 'No email'}</div>
+                        <div className="font-medium text-white">{user?.displayName || 'Người dùng không xác định'}</div>
+                        <div className="text-sm text-slate-400">{user?.email || 'Không có email'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2 text-white bg-slate-900/50 px-3 py-1.5 rounded-lg border border-white/10 w-fit">
                       <DoorOpen className="w-4 h-4 text-[#4cd7f6]" />
-                      <span className="font-medium">{assignment.gateName || 'All gates'}</span>
+                      <span className="font-medium">{assignment.gateName || 'Tất cả các cổng'}</span>
                     </div>
                   </td>
                   <td className="p-4">
                     <Badge variant="outline" className="bg-[#4cd7f6]/10 text-[#4cd7f6] border-[#4cd7f6]/30 font-medium px-2.5 py-0.5 rounded-full">
-                      Assigned
+                      Đã phân công
                     </Badge>
                   </td>
                   <td className="p-4 text-right">
@@ -112,7 +113,7 @@ export const AssignmentList = ({ concertId }: AssignmentListProps) => {
                       className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
                     >
                       <UserMinus className="w-4 h-4 mr-2" />
-                      Revoke
+                      Thu hồi
                     </Button>
                   </td>
                 </tr>

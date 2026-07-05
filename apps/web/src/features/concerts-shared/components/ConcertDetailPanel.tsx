@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
 import type { Concert } from '../types';
-
-import { getAssetUrl } from '../../../shared/api/client';
+import { resolveConcertPosterUrl } from '../concert-image';
 import { mapStatus } from '../status';
+import { eventTypeLabel } from '../event-type';
 import { Badge } from '../../../shared/ui/badge';
 import { Button } from '../../../shared/ui/button';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
@@ -46,7 +46,7 @@ export function ConcertDetailPanel({
   };
 
   const formatJustDate = (dateStr: string) => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('vi-VN', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -54,7 +54,7 @@ export function ConcertDetailPanel({
   };
 
   const formatJustTime = (dateStr: string) => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
       timeZoneName: 'short',
@@ -62,12 +62,12 @@ export function ConcertDetailPanel({
   };
 
   const getRelativeTime = (dateStr: string) => {
-    if (!dateStr) return 'Unknown';
+    if (!dateStr) return 'Không rõ';
     const diff = new Date().getTime() - new Date(dateStr).getTime();
     const hours = Math.floor(diff / 3600000);
-    if (hours < 1) return 'Just now';
-    if (hours < 24) return `${hours} hours ago`;
-    return `${Math.floor(hours / 24)} days ago`;
+    if (hours < 1) return 'Vừa xong';
+    if (hours < 24) return `${hours} giờ trước`;
+    return `${Math.floor(hours / 24)} ngày trước`;
   };
   const isDraft = concert.status === 'DRAFT';
   const isEnded = concert.status === 'ENDED';
@@ -75,9 +75,11 @@ export function ConcertDetailPanel({
   const canModify = !isEnded && !isCancelled;
   const canEditDetails = canModify;
 
-  const posterUrl = concert.posterAssetId
-    ? getAssetUrl(concert.posterAssetId)
-    : null;
+  const posterUrl = resolveConcertPosterUrl(concert);
+  const typeLabel = eventTypeLabel(concert.eventType);
+  const orderedArtists = concert.artists
+    ? [...concert.artists].sort((a, b) => a.displayOrder - b.displayOrder)
+    : [];
 
   return (
     <div className="glass-panel flex h-full w-full flex-col overflow-hidden rounded-xl">
@@ -117,14 +119,25 @@ export function ConcertDetailPanel({
 
           {/* Status + title anchored at bottom */}
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 pt-10">
-            <Badge variant={variant} className="mb-2.5 shadow-sm border-white/10 backdrop-blur-md">
-              {dotClass && <span className={`size-1.5 rounded-full ${dotClass}`} />}
-              {label}
-            </Badge>
+            <div className="mb-2.5 flex items-center gap-2">
+              <Badge variant={variant} className="shadow-sm border-white/10 backdrop-blur-md">
+                {dotClass && <span className={`size-1.5 rounded-full ${dotClass}`} />}
+                {label}
+              </Badge>
+              {typeLabel && (
+                <span className="rounded border border-white/15 bg-black/30 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-white/80 backdrop-blur-md">
+                  {typeLabel}
+                </span>
+              )}
+            </div>
             <h4 className="break-words font-display text-xl font-bold leading-normal text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
               {concert.title}
             </h4>
-            <p className="mt-1 break-words text-sm text-white/70">{concert.artistName}</p>
+            <p className="mt-1 break-words text-sm text-white/70">
+              {orderedArtists.length > 0
+                ? orderedArtists.map((a) => a.displayName).join(', ')
+                : concert.artistName}
+            </p>
           </div>
         </div>
 
@@ -136,7 +149,7 @@ export function ConcertDetailPanel({
           {/* EVENT INFO */}
           <div className="flex flex-col gap-4">
             <h5 className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70">
-              Event Info
+              Thông tin sự kiện
             </h5>
             
             <div className="flex flex-col gap-4">
@@ -147,10 +160,10 @@ export function ConcertDetailPanel({
                 </span>
                 <div>
                   <div className="text-sm font-medium text-on-surface">
-                    {concert.venueName || 'No venue'}
+                    {concert.venueName || 'Chưa có địa điểm'}
                   </div>
                   <div className="mt-0.5 text-xs text-on-surface-variant">
-                    {concert.city || 'No city'}
+                    {concert.city || 'Chưa có thành phố'}
                   </div>
                 </div>
               </div>
@@ -169,18 +182,46 @@ export function ConcertDetailPanel({
                   </div>
                 </div>
               </div>
+
+              {/* Artists */}
+              {orderedArtists.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined mt-0.5 text-[20px] text-on-surface-variant">
+                    person
+                  </span>
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    {orderedArtists.map((artist, index) => (
+                      <div key={artist.id} className="flex items-center gap-2 text-sm">
+                        <span className="truncate font-medium text-on-surface">
+                          {artist.displayName}
+                        </span>
+                        {index === 0 && (
+                          <span className="shrink-0 rounded bg-primary/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-primary">
+                            Chính
+                          </span>
+                        )}
+                        {artist.status === 'INACTIVE' && (
+                          <span className="shrink-0 rounded bg-error/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-error">
+                            Không hoạt động
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* INVENTORY SUMMARY */}
           <div className="flex flex-col gap-3">
             <h5 className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70">
-              Inventory Summary
+              Tóm tắt kho vé
             </h5>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1 rounded-lg bg-surface-container-high/50 p-3">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/70">
-                  Updated
+                  Đã cập nhật
                 </div>
                 <div className="text-sm font-semibold text-on-surface">
                   {getRelativeTime(concert.updatedAt)}
@@ -188,13 +229,13 @@ export function ConcertDetailPanel({
               </div>
               <div className="flex flex-col gap-1 rounded-lg bg-surface-container-high/50 p-3">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/70">
-                  Ticket Types
+                  Loại vé
                 </div>
                 <div className="text-sm font-semibold text-on-surface">
-                  {concert.ticketTypesCount || 0} Types
+                  {concert.ticketTypesCount || 0} Loại
                 </div>
                 <div className="text-[10px] text-on-surface-variant">
-                  {concert.ticketTypesCount ? 'Configured' : 'None'}
+                  {concert.ticketTypesCount ? 'Đã cấu hình' : 'Chưa có'}
                 </div>
               </div>
             </div>
@@ -203,55 +244,55 @@ export function ConcertDetailPanel({
           {/* SETUP PROGRESS */}
           <div className="flex flex-col gap-3">
             <h5 className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/70">
-              Setup Progress
+              Tiến trình thiết lập
             </h5>
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Seating Map</span>
+                <span className="text-on-surface-variant">Sơ đồ ghế</span>
                 {concert.seatingMapConfigured ? (
                   <div className="flex items-center gap-1.5 text-emerald-400">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    <span className="text-xs font-medium">Configured</span>
+                    <span className="text-xs font-medium">Đã cấu hình</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-on-surface-variant/50">
                     <span className="material-symbols-outlined text-[16px]">pending</span>
-                    <span className="text-xs font-medium">Pending</span>
+                    <span className="text-xs font-medium">Đang chờ</span>
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Seating Zones</span>
+                <span className="text-on-surface-variant">Khu vực ghế</span>
                 {concert.seatingZonesCount ? (
                   <div className="flex items-center gap-1.5 text-emerald-400">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    <span className="text-xs font-medium">{concert.seatingZonesCount} Zones Ready</span>
+                    <span className="text-xs font-medium">{concert.seatingZonesCount} Khu vực sẵn sàng</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-on-surface-variant/50">
                     <span className="material-symbols-outlined text-[16px]">pending</span>
-                    <span className="text-xs font-medium">Pending</span>
+                    <span className="text-xs font-medium">Đang chờ</span>
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Zone Mapping</span>
+                <span className="text-on-surface-variant">Ánh xạ khu vực</span>
                 {concert.ticketTypesCount && concert.seatingZonesCount ? (
                   <div className="flex items-center gap-1.5 text-emerald-400">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    <span className="text-xs font-medium">Complete</span>
+                    <span className="text-xs font-medium">Hoàn tất</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-on-surface-variant/50">
                     <span className="material-symbols-outlined text-[16px]">pending</span>
-                    <span className="text-xs font-medium">Pending</span>
+                    <span className="text-xs font-medium">Đang chờ</span>
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Check-in Staff</span>
+                <span className="text-on-surface-variant">Nhân viên check-in</span>
                 <span className="text-xs font-medium text-on-surface-variant">
-                  {concert.checkinStaffCount || 0} assigned
+                  {concert.checkinStaffCount || 0} người được gán
                 </span>
               </div>
             </div>
@@ -269,7 +310,7 @@ export function ConcertDetailPanel({
             <span className="material-symbols-outlined text-sm" aria-hidden="true">
               edit
             </span>
-            Edit details
+            Chỉnh sửa chi tiết
           </button>
         )}
 
@@ -283,7 +324,7 @@ export function ConcertDetailPanel({
               <span className="material-symbols-outlined text-sm" aria-hidden="true">
                 publish
               </span>
-              {isPublishing ? 'Publishing…' : 'Publish concert'}
+              {isPublishing ? 'Đang xuất bản…' : 'Xuất bản sự kiện'}
             </Button>
           )}
 
@@ -297,7 +338,7 @@ export function ConcertDetailPanel({
               <span className="material-symbols-outlined text-sm" aria-hidden="true">
                 cancel
               </span>
-              {isCancelling ? 'Cancelling…' : 'Cancel concert'}
+              {isCancelling ? 'Đang hủy…' : 'Hủy sự kiện'}
             </Button>
           )}
         </div>

@@ -94,10 +94,13 @@ export type ConcertDetail = {
   publishedArtistBio: string | null;
   venueName: string;
   venueAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
   city: string;
   startsAt: Date;
   endsAt: Date;
   eventType: string;
+  resaleEnabled?: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   seoImageUrl: string | null;

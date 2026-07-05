@@ -8,6 +8,7 @@ export interface RegisterCommand {
   email: string;
   password: string;
   displayName: string;
+  phone?: string;
 }
 
 export interface AuthTokenResponse {
@@ -39,6 +40,7 @@ export class RegisterUseCase {
       email: cmd.email,
       passwordHash,
       displayName: cmd.displayName,
+      phone: cmd.phone,
     });
 
     const payload: JwtPayload = { sub: user.id, roles: user.roles as Role[] };

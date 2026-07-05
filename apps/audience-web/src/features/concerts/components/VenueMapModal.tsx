@@ -94,7 +94,7 @@ export function VenueMapModal({ latitude, longitude, venueName, address, open, o
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <Marker position={[latitude, longitude]}>
                 <Popup>

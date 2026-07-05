@@ -40,4 +40,10 @@ export class UpdateConcertDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  resaleEnabled?: boolean;
+
+  @IsOptional()
+  resaleMaxPricePercent?: number;
 }

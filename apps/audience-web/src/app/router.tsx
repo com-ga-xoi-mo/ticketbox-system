@@ -5,6 +5,9 @@ import { HomePage } from '../features/concerts/HomePage';
 import { EventListPage } from '../features/concerts/EventListPage';
 import { EventDetailPage } from '../features/concerts/EventDetailPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { AccessDeniedPage } from '../features/auth/AccessDeniedPage';
 import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
@@ -19,10 +22,20 @@ const SupportCenterPage = lazy(() => import('../features/account/SupportCenterPa
 const SupportRequestDetailPage = lazy(() => import('../features/account/SupportRequestDetailPage').then(m => ({ default: m.SupportRequestDetailPage })));
 const RefundRequestDetailPage = lazy(() => import('../features/account/RefundRequestDetailPage').then(m => ({ default: m.RefundRequestDetailPage })));
 const NotificationCenterPage = lazy(() => import('../features/account/NotificationCenterPage').then(m => ({ default: m.NotificationCenterPage })));
+const ResaleInboxPage = lazy(() => import('../features/account/ResaleInboxPage').then(m => ({ default: m.ResaleInboxPage })));
+const ResaleThreadPage = lazy(() => import('../features/account/ResaleThreadPage').then(m => ({ default: m.ResaleThreadPage })));
 const TicketDownloadPage = lazy(() => import('../features/account/TicketDownloadPage').then(m => ({ default: m.TicketDownloadPage })));
 const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
 const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
 const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
+const FavoritesPage = lazy(() => import('../features/favorites').then(m => ({ default: m.FavoritesPage })));
+const ResalePlatformPage = lazy(() => import('../features/resale/ResalePlatformPage').then(m => ({ default: m.ResalePlatformPage })));
+const ResalePlatformListingDetailPage = lazy(() => import('../features/resale/ResalePlatformListingDetailPage').then(m => ({ default: m.ResalePlatformListingDetailPage })));
+const ResaleListingDetailPage = lazy(() => import('../features/concerts/ResaleListingDetailPage').then(m => ({ default: m.ResaleListingDetailPage })));
+const SellerProfilePage = lazy(() => import('../features/account/SellerProfilePage').then(m => ({ default: m.SellerProfilePage })));
+const TransactionHistoryPage = lazy(() => import('../features/account/TransactionHistoryPage').then(m => ({ default: m.TransactionHistoryPage })));
+const BankProfilePage = lazy(() => import('../features/account/BankProfilePage').then(m => ({ default: m.BankProfilePage })));
+const P2POrderTrackingPage = lazy(() => import('../features/resale/P2POrderTrackingPage').then(m => ({ default: m.P2POrderTrackingPage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -35,10 +48,27 @@ const OrderDetailRedirect = () => {
   return <Navigate to={`/account/orders/${id}`} replace />;
 };
 
+const ResaleListingRedirect = () => {
+  const { listingId } = useParams();
+  return <Navigate to={`/resale/${listingId}`} replace />;
+};
+
 export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/access-denied',
@@ -50,6 +80,18 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
+      { 
+        path: '/events/:slug/resale', 
+        element: <Navigate to="/resale" replace /> 
+      },
+      { 
+        path: '/events/:slug/resale/:listingId', 
+        element: <ResaleListingRedirect /> 
+      },
+      { path: '/resale', element: <SuspenseWrapper><ResalePlatformPage /></SuspenseWrapper> },
+      { path: '/resale/orders/:id', element: <SuspenseWrapper><P2POrderTrackingPage /></SuspenseWrapper> },
+      { path: '/resale/:listingId', element: <SuspenseWrapper><ResalePlatformListingDetailPage /></SuspenseWrapper> },
+      { path: '/sellers/:userId', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
       { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
       { path: '/artists/:slug', element: <SuspenseWrapper><ArtistProfilePage /></SuspenseWrapper> },
       { path: '/checkout', element: <CheckoutPage /> },
@@ -65,6 +107,10 @@ export const router = createBrowserRouter([
       {
         path: '/account',
         element: <SuspenseWrapper><AccountPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/bank-profile',
+        element: <SuspenseWrapper><BankProfilePage /></SuspenseWrapper>
       },
       {
         path: '/account/orders',
@@ -105,6 +151,22 @@ export const router = createBrowserRouter([
       {
         path: '/account/notifications',
         element: <SuspenseWrapper><NotificationCenterPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/messages',
+        element: <SuspenseWrapper><ResaleInboxPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/messages/:threadId',
+        element: <SuspenseWrapper><ResaleThreadPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/transactions',
+        element: <SuspenseWrapper><TransactionHistoryPage /></SuspenseWrapper>
+      },
+      {
+        path: '/me/favorites',
+        element: <SuspenseWrapper><FavoritesPage /></SuspenseWrapper>
       },
       { path: '*', element: <NotFoundPage /> },
     ],

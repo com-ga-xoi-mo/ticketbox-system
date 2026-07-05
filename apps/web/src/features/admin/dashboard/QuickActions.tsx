@@ -3,20 +3,20 @@ import { Link } from 'react-router-dom';
 const actions = [
   {
     to: '/concerts',
-    label: 'Review concerts',
-    detail: 'Moderate drafts, publish approved events, and cancel invalid listings.',
+    label: 'Xem xét sự kiện',
+    detail: 'Kiểm duyệt bản nháp, xuất bản sự kiện, và hủy danh sách không hợp lệ.',
     icon: 'fact_check',
   },
   {
     to: '/staff',
-    label: 'Manage staff',
-    detail: 'Assign check-in teams to venues before doors open.',
+    label: 'Quản lý nhân viên',
+    detail: 'Phân công đội check-in đến địa điểm trước khi mở cửa.',
     icon: 'groups',
   },
   {
     to: '/settings',
-    label: 'Portal settings',
-    detail: 'Update operational defaults and account controls.',
+    label: 'Cài đặt cổng thông tin',
+    detail: 'Cập nhật mặc định hoạt động và kiểm soát tài khoản.',
     icon: 'tune',
   },
 ];
@@ -25,8 +25,8 @@ export function QuickActions() {
   return (
     <aside className="glass-panel flex flex-col rounded-xl p-5">
       <div className="border-b border-white/5 pb-5">
-        <p className="font-mono text-xs text-on-surface-variant">admin shortcuts</p>
-        <h2 className="mt-2 font-display text-xl font-bold text-on-surface">Next actions</h2>
+        <p className="font-mono text-xs text-on-surface-variant">phím tắt quản trị</p>
+        <h2 className="mt-2 font-display text-xl font-bold text-on-surface">Thao tác tiếp theo</h2>
       </div>
 
       <div className="flex flex-1 flex-col gap-3 pt-5">

@@ -13,6 +13,7 @@ import { UpdateArtistUseCase } from './application/use-cases/update-artist.use-c
 import { SetConcertArtistsUseCase } from './application/use-cases/set-concert-artists.use-case';
 import { UploadArtistAvatarUseCase } from './application/use-cases/upload-artist-avatar.use-case';
 import { UploadArtistPosterUseCase } from './application/use-cases/upload-artist-poster.use-case';
+import { ListAdminArtistsUseCase } from './application/use-cases/list-admin-artists.use-case';
 import { PublicArtistController } from './adapters/http/public-artist.controller';
 import { AudienceArtistController } from './adapters/http/audience-artist.controller';
 import { AdminArtistController } from './adapters/http/admin-artist.controller';
@@ -24,8 +25,14 @@ import { AuthModule } from '../identity/auth.module';
 import { PrismaService } from '../platform/database/prisma.service';
 import { DatabaseModule } from '../platform/database/database.module';
 
+import { PlatformConfigService } from '../platform/config/platform-config.service';
+
+import { CACHE_SERVICE } from '../platform/cache/cache.tokens';
+import { InvalidatingUpdateArtistUseCase, InvalidatingUploadArtistAvatarUseCase, InvalidatingUploadArtistPosterUseCase, InvalidatingSetConcertArtistsUseCase } from './application/cache/invalidating-artist-write.use-cases';
+import { CacheModule } from '../platform/cache/cache.module';
+
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, CacheModule],
   controllers: [
     PublicArtistController,
     AudienceArtistController,
@@ -80,23 +87,28 @@ import { DatabaseModule } from '../platform/database/database.module';
     },
     {
       provide: UpdateArtistUseCase,
-      useFactory: (repo) => new UpdateArtistUseCase(repo),
-      inject: [ARTIST_REPOSITORY],
+      useFactory: (repo, cache) => new InvalidatingUpdateArtistUseCase(new UpdateArtistUseCase(repo), cache),
+      inject: [ARTIST_REPOSITORY, CACHE_SERVICE],
     },
     {
       provide: SetConcertArtistsUseCase,
-      useFactory: (repo, auth) => new SetConcertArtistsUseCase(repo, auth),
-      inject: [ARTIST_REPOSITORY, AuthorizeConcertManagementUseCase],
+      useFactory: (repo, auth, cache) => new InvalidatingSetConcertArtistsUseCase(new SetConcertArtistsUseCase(repo, auth), cache),
+      inject: [ARTIST_REPOSITORY, AuthorizeConcertManagementUseCase, CACHE_SERVICE],
     },
     {
       provide: UploadArtistAvatarUseCase,
-      useFactory: (repo, storage) => new UploadArtistAvatarUseCase(repo, storage),
-      inject: [ARTIST_REPOSITORY, OBJECT_STORAGE],
+      useFactory: (repo, storage, config, cache) => new InvalidatingUploadArtistAvatarUseCase(new UploadArtistAvatarUseCase(repo, storage, config), cache),
+      inject: [ARTIST_REPOSITORY, OBJECT_STORAGE, PlatformConfigService, CACHE_SERVICE],
     },
     {
       provide: UploadArtistPosterUseCase,
-      useFactory: (repo, storage) => new UploadArtistPosterUseCase(repo, storage),
-      inject: [ARTIST_REPOSITORY, OBJECT_STORAGE],
+      useFactory: (repo, storage, config, cache) => new InvalidatingUploadArtistPosterUseCase(new UploadArtistPosterUseCase(repo, storage, config), cache),
+      inject: [ARTIST_REPOSITORY, OBJECT_STORAGE, PlatformConfigService, CACHE_SERVICE],
+    },
+    {
+      provide: ListAdminArtistsUseCase,
+      useFactory: (repo) => new ListAdminArtistsUseCase(repo),
+      inject: [ARTIST_REPOSITORY],
     },
   ],
   exports: [ARTIST_REPOSITORY],

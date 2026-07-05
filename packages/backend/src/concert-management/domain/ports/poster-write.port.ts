@@ -24,5 +24,15 @@ export interface PosterWriteRepositoryPort {
     replacedStorageKey: string | null;
   }>;
 
+  createAssetAndAssociateConcertBanner(
+    assetData: CreatePosterAssetData,
+    concertId: string,
+    oldAssetId?: string,
+  ): Promise<{
+    asset: PosterAsset;
+    concert: { id: string; bannerAssetId: string };
+    replacedStorageKey: string | null;
+  }>;
+
   findAssetById(id: string): Promise<PosterAsset | null>;
 }

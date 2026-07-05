@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,7 +8,10 @@ import {
   Post,
   Request,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { Role } from '../../../identity/domain/role.enum';
 import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
@@ -20,9 +24,15 @@ import { PublishConcertUseCase } from '../../application/use-cases/publish-conce
 import { UpdateConcertUseCase } from '../../application/use-cases/update-concert.use-case';
 import { ListOrganizerConcertsUseCase } from '../../application/use-cases/list-organizer-concerts.use-case';
 import { GetOrganizerConcertUseCase } from '../../application/use-cases/get-organizer-concert.use-case';
+import { UploadBannerUseCase } from '../../application/use-cases/upload-banner.use-case';
 import { mapConcertErrors } from './concert-error.mapper';
-import { CreateConcertDto } from './dto/create-concert.dto';
-import { UpdateConcertDto } from './dto/update-concert.dto';
+import { mapPosterErrors } from './poster-error.mapper';
+import { mapToManagementConcertResponse } from './management-concert.mapper';
+
+import {
+  OrganizerCreateConcertSchema,
+  OrganizerUpdateConcertSchema,
+} from '@ticketbox/api-types';
 
 @Controller('organizer/concerts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,26 +45,36 @@ export class OrganizerConcertController {
     private readonly cancelConcertUseCase: CancelConcertUseCase,
     private readonly listOrganizerConcertsUseCase: ListOrganizerConcertsUseCase,
     private readonly getOrganizerConcertUseCase: GetOrganizerConcertUseCase,
+    private readonly uploadBannerUseCase: UploadBannerUseCase,
   ) {}
 
   @Get()
   async list(@Request() req: { user: AuthenticatedUser }) {
-    return mapConcertErrors(() => this.listOrganizerConcertsUseCase.execute(req.user.id));
+    const concerts = await mapConcertErrors(() => this.listOrganizerConcertsUseCase.execute(req.user.id));
+    return concerts.map(mapToManagementConcertResponse);
   }
 
   @Get(':id')
   async get(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
-    return mapConcertErrors(() =>
+    const concert = await mapConcertErrors(() =>
       this.getOrganizerConcertUseCase.execute({
         concertId: id,
         organizerId: req.user.id,
       }),
     );
+    return mapToManagementConcertResponse(concert);
   }
 
   @Post()
-  async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
-    return mapConcertErrors(() =>
+  async create(@Body() body: any, @Request() req: { user: AuthenticatedUser }) {
+    let dto;
+    try {
+      dto = OrganizerCreateConcertSchema.parse(body);
+    } catch (err: any) {
+      throw new BadRequestException('Invalid request body', { cause: err });
+    }
+
+    const concert = await mapConcertErrors(() =>
       this.createConcertUseCase.execute({
         createdById: req.user.id,
         slug: dto.slug,
@@ -62,21 +82,35 @@ export class OrganizerConcertController {
         artistName: dto.artistName,
         venueName: dto.venueName,
         venueAddress: dto.venueAddress,
+        latitude: dto.latitude ?? null,
+        longitude: dto.longitude ?? null,
         city: dto.city,
         startsAt: new Date(dto.startsAt),
         endsAt: new Date(dto.endsAt),
         description: dto.description,
+        eventType: dto.eventType,
+        seoTitle: dto.seoTitle,
+        seoDescription: dto.seoDescription,
+        seoImageUrl: dto.seoImageUrl,
       }),
     );
+    return mapToManagementConcertResponse(concert);
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() dto: UpdateConcertDto,
+    @Body() body: any,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return mapConcertErrors(() =>
+    let dto;
+    try {
+      dto = OrganizerUpdateConcertSchema.parse(body);
+    } catch (err: any) {
+      throw new BadRequestException('Invalid request body', { cause: err });
+    }
+
+    const concert = await mapConcertErrors(() =>
       this.updateConcertUseCase.execute({
         concertId: id,
         requesterId: req.user.id,
@@ -86,13 +120,20 @@ export class OrganizerConcertController {
         artistName: dto.artistName,
         venueName: dto.venueName,
         venueAddress: dto.venueAddress,
+        latitude: 'latitude' in dto ? dto.latitude : undefined,
+        longitude: 'longitude' in dto ? dto.longitude : undefined,
         city: dto.city,
         startsAt: dto.startsAt ? new Date(dto.startsAt) : undefined,
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
         description: dto.description,
         slug: dto.slug,
+        eventType: dto.eventType,
+        seoTitle: dto.seoTitle,
+        seoDescription: dto.seoDescription,
+        seoImageUrl: dto.seoImageUrl,
       }),
     );
+    return mapToManagementConcertResponse(concert);
   }
 
   @Post(':id/publish')
@@ -115,6 +156,30 @@ export class OrganizerConcertController {
         requesterId: req.user.id,
         requesterRole: Role.ORGANIZER,
         allowAdminOverride: false,
+      }),
+    );
+  }
+
+  @Post(':id/banner')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: Number(process.env.POSTER_IMAGE_MAX_BYTES ?? 5_242_880) },
+    }),
+  )
+  async uploadBanner(
+    @Param('id') concertId: string,
+    @UploadedFile() file: any,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    return mapPosterErrors(() =>
+      this.uploadBannerUseCase.execute({
+        concertId,
+        userId: req.user.id,
+        allowAdminOverride: false,
+        fileBuffer: file?.buffer ?? Buffer.alloc(0),
+        originalName: file?.originalname ?? '',
+        mimeType: file?.mimetype ?? '',
+        sizeBytes: file?.size ?? 0,
       }),
     );
   }

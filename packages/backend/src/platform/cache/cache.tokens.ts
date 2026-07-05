@@ -11,8 +11,17 @@ export interface CacheServicePort {
    *
    * Fail-open: any *Redis* error falls through to `loader()`.
    * Exceptions from `loader()` are propagated and NOT cached.
+   *
+   * Optional `options.lockTtlSeconds` overrides the default 1-second
+   * distributed-lock TTL. Use a value of `ceil(providerTimeoutMs / 1000) + 2`
+   * for slow external providers (e.g. Nominatim geocoding).
    */
-  getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>): Promise<T>;
+  getOrSet<T>(
+    key: string,
+    ttlSeconds: number,
+    loader: () => Promise<T>,
+    options?: { lockTtlSeconds?: number },
+  ): Promise<T>;
 
   /** Remove a single key. Fail-open on Redis errors. */
   del(key: string): Promise<void>;

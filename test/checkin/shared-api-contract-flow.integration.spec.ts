@@ -14,8 +14,13 @@ import { AuthController } from '../../packages/backend/src/identity/adapters/htt
 import { RolesGuard } from '../../packages/backend/src/identity/adapters/http/guards/roles.guard';
 import { ProfileController } from '../../packages/backend/src/identity/adapters/http/profile.controller';
 import { GetMyProfileQuery } from '../../packages/backend/src/identity/application/queries/get-my-profile.query';
+import { GoogleSignInUseCase } from '../../packages/backend/src/identity/application/use-cases/google-sign-in.use-case';
 import { LoginUseCase } from '../../packages/backend/src/identity/application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../packages/backend/src/identity/application/use-cases/register.use-case';
+import { RemoveMyAvatarUseCase } from '../../packages/backend/src/identity/application/use-cases/remove-my-avatar.use-case';
+import { UpdateMyPasswordUseCase } from '../../packages/backend/src/identity/application/use-cases/update-my-password.use-case';
+import { UpdateMyProfileUseCase } from '../../packages/backend/src/identity/application/use-cases/update-my-profile.use-case';
+import { UploadMyAvatarUseCase } from '../../packages/backend/src/identity/application/use-cases/upload-my-avatar.use-case';
 import { Role } from '../../packages/backend/src/identity/domain/role.enum';
 import { JwtAuthGuard } from '../../packages/backend/src/identity/infrastructure/passport/jwt-auth.guard';
 
@@ -79,6 +84,11 @@ describe('shared API contracts across real HTTP routes and mobile client', () =>
             })),
           },
         },
+        { provide: GoogleSignInUseCase, useValue: { execute: vi.fn() } },
+        { provide: UpdateMyProfileUseCase, useValue: { execute: vi.fn() } },
+        { provide: UpdateMyPasswordUseCase, useValue: { execute: vi.fn() } },
+        { provide: UploadMyAvatarUseCase, useValue: { execute: vi.fn() } },
+        { provide: RemoveMyAvatarUseCase, useValue: { execute: vi.fn() } },
         {
           provide: GetMyProfileQuery,
           useValue: {

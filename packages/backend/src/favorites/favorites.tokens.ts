@@ -1,0 +1,1 @@
+export const FAVORITE_REPOSITORY = Symbol('FAVORITE_REPOSITORY');

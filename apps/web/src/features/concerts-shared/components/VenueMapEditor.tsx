@@ -120,6 +120,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
   // Modals state
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [editingTicketId, setEditingTicketId] = useState<string | null>(null);
+  const [ticketFormError, setTicketFormError] = useState('');
   const [ticketFormData, setTicketFormData] = useState({
     code: '',
     name: '',
@@ -184,7 +185,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
     };
   }, [pendingFile]);
 
-  if (props.isLoading) return <div className="p-8 text-white">Loading editor...</div>;
+  if (props.isLoading) return <div className="p-8 text-white">Đang tải trình chỉnh sửa...</div>;
 
   const hasPendingPreview = !!pendingFile;
   const pendingFileName = pendingFile ? pendingFile.name : null;
@@ -232,19 +233,40 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
         maxPerUser: 1,
       });
     }
+    setTicketFormError('');
     setIsTicketModalOpen(true);
   };
 
   const handleSaveTicket = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Mirror the backend rules so invalid input never leaves the modal as a silent 400.
+    if (!ticketFormData.saleStartsAt || !ticketFormData.saleEndsAt) {
+      setTicketFormError('Vui lòng chọn thời gian bắt đầu và kết thúc bán vé.');
+      return;
+    }
+    if (new Date(ticketFormData.saleEndsAt) <= new Date(ticketFormData.saleStartsAt)) {
+      setTicketFormError('Thời gian kết thúc bán phải sau thời gian bắt đầu bán.');
+      return;
+    }
+    if (ticketFormData.totalQuantity < 1) {
+      setTicketFormError('Tổng số lượng vé phải ít nhất là 1.');
+      return;
+    }
+    if (ticketFormData.maxPerUser < 1) {
+      setTicketFormError('Số vé tối đa mỗi người phải ít nhất là 1.');
+      return;
+    }
+    if (ticketFormData.priceVnd < 0) {
+      setTicketFormError('Giá vé không được âm.');
+      return;
+    }
+    setTicketFormError('');
+
     const payload = {
       ...ticketFormData,
-      saleStartsAt: ticketFormData.saleStartsAt
-        ? new Date(ticketFormData.saleStartsAt).toISOString()
-        : new Date().toISOString(),
-      saleEndsAt: ticketFormData.saleEndsAt
-        ? new Date(ticketFormData.saleEndsAt).toISOString()
-        : new Date().toISOString(),
+      saleStartsAt: new Date(ticketFormData.saleStartsAt).toISOString(),
+      saleEndsAt: new Date(ticketFormData.saleEndsAt).toISOString(),
     };
 
     if (editingTicketId) {
@@ -291,7 +313,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           </Badge>
           {props.isReadOnly && (
             <Badge variant="muted" className="bg-amber-500/10 text-amber-400">
-              Read Only
+              Chỉ đọc
             </Badge>
           )}
         </div>
@@ -308,8 +330,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
       {props.isReadOnly && (
         <div className="bg-amber-900/30 border-b border-amber-900/50 p-3 text-amber-200 text-sm flex items-center justify-center gap-2 shrink-0">
           <AlertCircle className="w-4 h-4" />
-          This concert is no longer in DRAFT status. Mapping changes are disabled to prevent data
-          corruption.
+          Sự kiện này không còn ở trạng thái DRAFT. Thay đổi ánh xạ đã bị tắt để tránh hỏng dữ liệu.
         </div>
       )}
 
@@ -324,10 +345,9 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6">
                   <Upload className="w-8 h-8 text-slate-400" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">Upload Venue Map</h2>
+                <h2 className="text-xl font-semibold mb-2">Tải lên sơ đồ</h2>
                 <p className="text-slate-400 mb-6 max-w-md text-center">
-                  Upload an SVG file to start mapping seating zones. Elements with IDs will become
-                  selectable zones.
+                  Tải lên một tệp SVG để bắt đầu ánh xạ các khu vực ghế. Các phần tử có ID sẽ trở thành các khu vực có thể chọn.
                 </p>
                 <input
                   type="file"
@@ -346,20 +366,20 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                     document.getElementById('svg-upload')?.click();
                   }}
                 >
-                  <span>Select SVG File</span>
+                  <span>Chọn tệp SVG</span>
                 </Button>
                 {pendingFileName && (
                   <div className="mt-4 text-indigo-300 text-sm flex items-center gap-2 bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20">
                     <Upload className="w-4 h-4 shrink-0" />
                     <span className="truncate">
-                      {pendingFileName} — click <strong>Save</strong> to upload
+                      {pendingFileName} — nhấn <strong>Lưu</strong> để tải lên
                     </span>
                   </div>
                 )}
                 {props.seatingZones.length > 0 && (
                   <div className="mt-4 text-amber-400 text-sm flex items-center gap-2 bg-amber-400/10 p-3 rounded-lg">
                     <AlertCircle className="w-4 h-4" />
-                    Uploading a new map will invalidate existing zones and mappings
+                    Việc tải lên sơ đồ mới sẽ làm mất hiệu lực các khu vực và ánh xạ hiện có
                   </div>
                 )}
               </div>
@@ -368,8 +388,8 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 <div className="w-full h-full max-w-3xl flex items-center justify-center relative overflow-hidden">
                   <span className="text-slate-500 absolute top-4 left-4 z-10 font-mono text-sm">
                     {hasPendingPreview
-                      ? `Pending SVG Preview (${pendingFileName})`
-                      : `SVG Preview (${props.seatingMap?.assetId})`}
+                      ? `Đang xem trước SVG (${pendingFileName})`
+                      : `Xem trước SVG (${props.seatingMap?.assetId})`}
                   </span>
                   {pendingPreview?.error ? (
                     <div className="flex h-full w-full items-center justify-center p-8 text-center text-sm text-red-400">
@@ -387,7 +407,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                     />
                   ) : hasPendingPreview ? (
                     <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
-                      Loading selected SVG preview...
+                      Đang tải xem trước SVG đã chọn...
                     </div>
                   ) : null}
                 </div>
@@ -413,7 +433,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                     }}
                     className="bg-slate-900 border-slate-700"
                   >
-                    <Upload className="w-4 h-4 mr-2" /> Re-upload Map
+                    <Upload className="w-4 h-4 mr-2" /> Tải lên lại sơ đồ
                   </Button>
                   {pendingFileName && (
                     <div className="text-indigo-300 text-xs flex items-center gap-1.5 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-500/20 max-w-[200px]">
@@ -438,12 +458,12 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
           {/* Right Side: Detected Map Zones list */}
           <div className="w-full lg:w-[450px] flex flex-col border border-slate-800 rounded-xl bg-slate-900/50 shrink-0 overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
-              <h2 className="font-semibold text-slate-200">Detected Map Zones</h2>
+              <h2 className="font-semibold text-slate-200">Các khu vực sơ đồ đã phát hiện</h2>
               <Badge
                 variant="outline"
                 className="text-[10px] text-slate-400 border-slate-700 bg-slate-950 px-2 py-0.5"
               >
-                {svgElementIds.length} PATHS LINKED
+                {svgElementIds.length} ĐƯỜNG DẪN ĐƯỢC LIÊN KẾT
               </Badge>
             </div>
 
@@ -451,8 +471,8 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
               {svgElementIds.length === 0 && (
                 <div className="text-center p-6 text-sm text-slate-400 bg-slate-950/50 rounded-lg border border-slate-800">
                   {hasPendingPreview
-                    ? 'No map elements found in the selected SVG.'
-                    : 'No map elements found.'}
+                    ? 'Không tìm thấy phần tử sơ đồ nào trong SVG đã chọn.'
+                    : 'Không tìm thấy phần tử sơ đồ nào.'}
                 </div>
               )}
 
@@ -535,7 +555,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                             setLocalZones(newZones);
                           }}
                           disabled={props.isReadOnly || hasPendingPreview}
-                          placeholder="Zone Label"
+                          placeholder="Nhãn khu vực"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
@@ -559,7 +579,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                             setLocalZones(newZones);
                           }}
                           disabled={props.isReadOnly || hasPendingPreview}
-                          placeholder="Ord"
+                          placeholder="STT"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
@@ -583,7 +603,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                   disabled={!!pendingPreview?.error}
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {pendingFile ? 'Upload & Save' : 'Save Configuration'}
+                  {pendingFile ? 'Tải lên & Lưu' : 'Lưu cấu hình'}
                 </Button>
               )}
               <Button
@@ -595,7 +615,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 }}
                 disabled={props.isReadOnly}
               >
-                Discard Changes
+                Hủy thay đổi
               </Button>
             </div>
           </div>
@@ -604,10 +624,10 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
         {/* Bottom Area: Ticket Type Assignment */}
         <div className="border border-slate-800 rounded-xl bg-slate-900/50 flex flex-col">
           <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-            <h2 className="font-semibold text-lg text-slate-200">Ticket Type Assignment</h2>
+            <h2 className="font-semibold text-lg text-slate-200">Phân loại vé</h2>
             {!props.isReadOnly && (
               <Button onClick={() => handleOpenTicketModal()}>
-                <Plus className="w-4 h-4 mr-2" /> Add Ticket Type
+                <Plus className="w-4 h-4 mr-2" /> Thêm loại vé
               </Button>
             )}
           </div>
@@ -616,21 +636,21 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
             <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow className="border-slate-800 hover:bg-transparent">
-                  <TableHead className="text-slate-400 text-xs">CODE</TableHead>
-                  <TableHead className="text-slate-400 text-xs">TICKET NAME</TableHead>
-                  <TableHead className="text-slate-400 text-xs">PRICE (VND)</TableHead>
-                  <TableHead className="text-slate-400 text-xs">QTY</TableHead>
-                  <TableHead className="text-slate-400 text-xs">SALE WINDOW</TableHead>
-                  <TableHead className="text-slate-400 text-xs">LIMITS</TableHead>
-                  <TableHead className="text-slate-400 text-xs">MAPPED ZONES</TableHead>
-                  <TableHead className="text-slate-400 text-xs text-right">ACTIONS</TableHead>
+                  <TableHead className="text-slate-400 text-xs">MÃ</TableHead>
+                  <TableHead className="text-slate-400 text-xs">TÊN VÉ</TableHead>
+                  <TableHead className="text-slate-400 text-xs">GIÁ (VND)</TableHead>
+                  <TableHead className="text-slate-400 text-xs">SỐ LƯỢNG</TableHead>
+                  <TableHead className="text-slate-400 text-xs">THỜI GIAN BÁN</TableHead>
+                  <TableHead className="text-slate-400 text-xs">GIỚI HẠN</TableHead>
+                  <TableHead className="text-slate-400 text-xs">KHU VỰC ĐÃ ÁNH XẠ</TableHead>
+                  <TableHead className="text-slate-400 text-xs text-right">THAO TÁC</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {props.ticketTypes.length === 0 ? (
                   <TableRow className="border-slate-800 hover:bg-transparent">
                     <TableCell colSpan={8} className="h-24 text-center text-slate-500">
-                      No ticket types configured.
+                      Chưa có cấu hình loại vé nào.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -663,7 +683,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                               );
                             })
                           ) : (
-                            <span className="text-slate-500 text-xs italic">Unmapped</span>
+                            <span className="text-slate-500 text-xs italic">Chưa ánh xạ</span>
                           )}
                         </div>
                       </TableCell>
@@ -676,7 +696,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                             onClick={() => handleOpenMappingModal(tt)}
                             disabled={props.isReadOnly}
                           >
-                            ASSIGN ZONES
+                            GÁN KHU VỰC
                           </Button>
                           {!props.isReadOnly && (
                             <>
@@ -713,12 +733,12 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#0F172A] border-slate-800 text-slate-200">
           <DialogHeader>
-            <DialogTitle>{editingTicketId ? 'Edit Ticket Type' : 'Create Ticket Type'}</DialogTitle>
+            <DialogTitle>{editingTicketId ? 'Chỉnh sửa loại vé' : 'Tạo loại vé'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveTicket} className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Code *</label>
+                <label className="text-xs text-slate-400">Mã *</label>
                 <Input
                   value={ticketFormData.code}
                   onChange={(e) => setTicketFormData((p) => ({ ...p, code: e.target.value }))}
@@ -727,7 +747,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Name *</label>
+                <label className="text-xs text-slate-400">Tên *</label>
                 <Input
                   value={ticketFormData.name}
                   onChange={(e) => setTicketFormData((p) => ({ ...p, name: e.target.value }))}
@@ -737,7 +757,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Description</label>
+              <label className="text-xs text-slate-400">Mô tả</label>
               <Textarea
                 value={ticketFormData.description}
                 onChange={(e) => setTicketFormData((p) => ({ ...p, description: e.target.value }))}
@@ -746,7 +766,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Price (VND) *</label>
+                <label className="text-xs text-slate-400">Giá (VND) *</label>
                 <Input
                   type="number"
                   value={ticketFormData.priceVnd}
@@ -758,7 +778,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Total Qty *</label>
+                <label className="text-xs text-slate-400">Tổng số lượng *</label>
                 <Input
                   type="number"
                   value={ticketFormData.totalQuantity}
@@ -767,12 +787,13 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                   }
                   className="bg-slate-900 border-slate-800"
                   required
+                  min={1}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Sale Starts At *</label>
+                <label className="text-xs text-slate-400">Thời gian bắt đầu bán *</label>
                 <Input
                   type="datetime-local"
                   value={ticketFormData.saleStartsAt}
@@ -784,7 +805,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs text-slate-400">Sale Ends At *</label>
+                <label className="text-xs text-slate-400">Thời gian kết thúc bán *</label>
                 <Input
                   type="datetime-local"
                   value={ticketFormData.saleEndsAt}
@@ -795,7 +816,7 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Max Per User *</label>
+              <label className="text-xs text-slate-400">Tối đa mỗi người dùng *</label>
               <Input
                 type="number"
                 value={ticketFormData.maxPerUser}
@@ -807,6 +828,11 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 min={1}
               />
             </div>
+            {ticketFormError && (
+              <p className="text-sm font-medium text-red-400" aria-live="polite">
+                {ticketFormError}
+              </p>
+            )}
             <DialogFooter className="mt-6 border-slate-800 bg-transparent sm:justify-end">
               <Button
                 type="button"
@@ -814,9 +840,9 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 onClick={() => setIsTicketModalOpen(false)}
                 className="border-slate-700"
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit">{editingTicketId ? 'Save Changes' : 'Create'}</Button>
+              <Button type="submit">{editingTicketId ? 'Lưu thay đổi' : 'Tạo'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -826,15 +852,15 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
       <Dialog open={isZoneMappingModalOpen} onOpenChange={setIsZoneMappingModalOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#0F172A] border-slate-800 text-slate-200">
           <DialogHeader>
-            <DialogTitle>Assign Zones</DialogTitle>
+            <DialogTitle>Gán khu vực</DialogTitle>
           </DialogHeader>
           <div className="mt-4 space-y-4">
             <p className="text-sm text-slate-400">
-              Select which zones this ticket grants access to.
+              Chọn các khu vực mà vé này cấp quyền truy cập.
             </p>
             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
               {props.seatingZones.length === 0 ? (
-                <div className="text-sm text-slate-500 italic">No seating zones available.</div>
+                <div className="text-sm text-slate-500 italic">Không có khu vực ghế nào.</div>
               ) : (
                 props.seatingZones.map((zone) => {
                   const isMapped = currentMapping.some((m) => m.seatingZoneId === zone.id);
@@ -885,9 +911,9 @@ export function VenueMapEditor(props: VenueMapEditorProps) {
                 onClick={() => setIsZoneMappingModalOpen(false)}
                 className="border-slate-700"
               >
-                Cancel
+                Hủy
               </Button>
-              <Button onClick={handleSaveMapping}>Save Mapping</Button>
+              <Button onClick={handleSaveMapping}>Lưu ánh xạ</Button>
             </DialogFooter>
           </div>
         </DialogContent>

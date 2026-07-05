@@ -19,6 +19,7 @@ export const AssetKindCodeSchema = z.enum([
   'ARTIST_AVATAR',
   'ARTIST_POSTER',
   'OTHER',
+  'USER_AVATAR',
 ]);
 export type AssetKindCode = z.infer<typeof AssetKindCodeSchema>;
 
@@ -138,7 +139,10 @@ export const PublicConcertDetailResponseSchema = PublicConcertSummarySchema.exte
   description: z.string().min(1).nullable(),
   publishedArtistBio: z.string().min(1).nullable(),
   venueAddress: z.string().min(1).nullable(),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
   seatingMapAsset: PublicAssetSchema.nullable(),
+  resaleEnabled: z.boolean().optional(),
   seoTitle: z.string().min(1).nullable(),
   seoDescription: z.string().min(1).nullable(),
   seoImageUrl: z.string().min(1).nullable(),

@@ -3,14 +3,6 @@ import { SeatingMapMetadata, SeatingZone } from '../venue-map-types';
 
 import { getAssetUrl } from '../../../shared/api/client';
 
-function hexToRgba(hex: string, alpha: number): string {
-  if (!/^#[0-9A-Fa-f]{6}$/i.test(hex)) return hex;
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 interface VenueMapSvgViewerProps {
   seatingMap: SeatingMapMetadata;
   seatingZones: Partial<SeatingZone>[];
@@ -72,7 +64,7 @@ export function VenueMapSvgViewer({
         }
       }
 
-      setError('Failed to load venue map SVG');
+      setError('Không thể tải SVG sơ đồ ghế');
       setIsLoading(false);
     }
     fetchSvg();
@@ -83,6 +75,21 @@ export function VenueMapSvgViewer({
 
     const svgElement = containerRef.current.querySelector('svg');
     if (!svgElement) return;
+
+    try {
+      requestAnimationFrame(() => {
+        if (!svgElement) return;
+        if (typeof svgElement.getBBox !== 'function') return;
+        const bbox = svgElement.getBBox();
+        if (bbox && bbox.width > 0 && bbox.height > 0) {
+          const padding = 10;
+          const newViewBox = `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`;
+          svgElement.setAttribute('viewBox', newViewBox);
+        }
+      });
+    } catch (e) {
+      // Ignore
+    }
 
     // Apply styles to elements based on their status
     seatingMap.svgElementIds.forEach((id) => {
@@ -95,22 +102,23 @@ export function VenueMapSvgViewer({
 
       // Base style
       element.style.cursor = 'pointer';
-      element.style.transition = 'all 0.2s ease-in-out';
+      element.style.transition = 'transform 0.2s ease-in-out, stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out';
+      element.style.transformBox = 'fill-box';
+      element.style.transformOrigin = 'center';
+      element.style.transform = isHovered ? 'scale(1.03)' : 'scale(1)';
 
       const zoneColor = zone?.color;
+      element.style.fill = zoneColor || '';
 
       if (isSelected) {
-        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.8) : 'rgba(99, 102, 241, 0.8)';
         element.style.stroke = '#ffffff';
         element.style.strokeWidth = '3px';
       } else if (isHovered) {
-        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.6) : 'rgba(148, 163, 184, 0.6)';
         element.style.stroke = '#ffffff';
         element.style.strokeWidth = '2px';
       } else {
-        element.style.fill = zoneColor ? hexToRgba(zoneColor, 0.3) : 'rgba(30, 41, 59, 0.8)';
-        element.style.stroke = zoneColor || '#475569';
-        element.style.strokeWidth = '1px';
+        element.style.stroke = '';
+        element.style.strokeWidth = '';
       }
 
       // Update text if there is a sibling or child text element
@@ -171,7 +179,7 @@ export function VenueMapSvgViewer({
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full w-full">Loading map...</div>;
+    return <div className="flex items-center justify-center h-full w-full">Đang tải sơ đồ...</div>;
   }
 
   if (error) {
