@@ -7,13 +7,10 @@ export function useExecuteResalePurchase() {
   const navigate = useNavigate();
   return useMutation({
     mutationFn: async (listingId: string) => {
-      return apiPost<any>('/resale/purchase', { listingId });
+      return apiPost<{ orderId: string }>('/resale/purchase/initiate', { listingId });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['resale-feed'] });
-      queryClient.invalidateQueries({ queryKey: ['resale-listing'] });
-      navigate('/account/tickets');
+    onSuccess: (data) => {
+      navigate(`/resale/orders/${data.orderId}`);
     }
   });
 }

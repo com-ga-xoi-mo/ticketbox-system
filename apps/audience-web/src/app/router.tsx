@@ -34,6 +34,8 @@ const ResalePlatformListingDetailPage = lazy(() => import('../features/resale/Re
 const ResaleListingDetailPage = lazy(() => import('../features/concerts/ResaleListingDetailPage').then(m => ({ default: m.ResaleListingDetailPage })));
 const SellerProfilePage = lazy(() => import('../features/account/SellerProfilePage').then(m => ({ default: m.SellerProfilePage })));
 const TransactionHistoryPage = lazy(() => import('../features/account/TransactionHistoryPage').then(m => ({ default: m.TransactionHistoryPage })));
+const BankProfilePage = lazy(() => import('../features/account/BankProfilePage').then(m => ({ default: m.BankProfilePage })));
+const P2POrderTrackingPage = lazy(() => import('../features/resale/P2POrderTrackingPage').then(m => ({ default: m.P2POrderTrackingPage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -87,6 +89,7 @@ export const router = createBrowserRouter([
         element: <ResaleListingRedirect /> 
       },
       { path: '/resale', element: <SuspenseWrapper><ResalePlatformPage /></SuspenseWrapper> },
+      { path: '/resale/orders/:id', element: <SuspenseWrapper><P2POrderTrackingPage /></SuspenseWrapper> },
       { path: '/resale/:listingId', element: <SuspenseWrapper><ResalePlatformListingDetailPage /></SuspenseWrapper> },
       { path: '/sellers/:userId', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
       { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
@@ -104,6 +107,10 @@ export const router = createBrowserRouter([
       {
         path: '/account',
         element: <SuspenseWrapper><AccountPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/bank-profile',
+        element: <SuspenseWrapper><BankProfilePage /></SuspenseWrapper>
       },
       {
         path: '/account/orders',
