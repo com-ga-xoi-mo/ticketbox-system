@@ -14,6 +14,8 @@ import { CacheModule } from './cache/cache.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
+import { ResaleModule } from '../resale/resale.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { StorageModule } from './storage/storage.module';
     RedisModule,
     CacheModule,
     RateLimitingModule,
+    QueueModule,
     AuthModule,
     AiArtistBioModule,
     ArtistDiscoveryModule,
@@ -31,6 +34,7 @@ import { StorageModule } from './storage/storage.module';
     GuestListImportModule,
     FavoritesModule,
     LocationGeocodingModule,
+    ResaleModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -39,6 +43,7 @@ import { StorageModule } from './storage/storage.module';
     RedisModule,
     CacheModule,
     RateLimitingModule,
+    QueueModule,
     AuthModule,
     AiArtistBioModule,
     ArtistDiscoveryModule,
@@ -47,6 +52,7 @@ import { StorageModule } from './storage/storage.module';
     GuestListImportModule,
     FavoritesModule,
     LocationGeocodingModule,
+    ResaleModule,
   ],
 })
 export class BackendCoreModule {}
