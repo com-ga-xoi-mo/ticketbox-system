@@ -14,6 +14,8 @@ export class CreateListingUseCase {
     const ticket = await this.ticketProvider.findTicketById(ticketId);
 
     if (!ticket) throw new errors.ListingNotFoundError(ticketId); // re-using error or create TicketNotFoundError
+    
+    console.log(`[CREATE LISTING] Check Ownership: ticket.userId=${ticket.userId} vs request userId=${userId}`);
     if (ticket.userId !== userId) throw new errors.NotTicketOwnerError();
     if (ticket.status !== 'ISSUED') throw new errors.TicketNotIssuedError();
     if (!ticket.concert.resaleEnabled) throw new errors.EventResaleDisabledError();
