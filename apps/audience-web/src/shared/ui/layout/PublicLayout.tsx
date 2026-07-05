@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, LifeBuoy, LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle } from 'lucide-react';
+import { Bell, LifeBuoy, LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { NotificationStreamListener } from '../../api/NotificationStreamListener';
+import { MessagingStreamListener } from '../../api/MessagingStreamListener';
 import { cn } from '../cn';
 import { Button } from '../../../components/ui/button';
 import {
@@ -26,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avat
 import { useMyProfile } from '../../api/profile';
 import { resolveAvatarImageUrl } from '../../api/client';
 import { useAudienceNotificationUnreadCount } from '../../api/notifications';
+import { useMyThreads } from '../../api/messaging';
 
 function Logo() {
   return (
@@ -52,6 +54,11 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
   const navigate = useNavigate();
   const { data: profile } = useMyProfile(!!session);
   const { data: unread } = useAudienceNotificationUnreadCount(!!session);
+  const { data: threads } = useMyThreads();
+
+  const unreadMessagesCount = useMemo(() => {
+    return threads?.reduce((acc: number, t: any) => acc + (t.unreadCount || 0), 0) || 0;
+  }, [threads]);
 
   const handleSignOut = () => {
     signOut();
@@ -88,6 +95,17 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       </Link>
       {session ? (
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative rounded-full" asChild onClick={onClick}>
+            <Link to="/account/messages">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[0.65rem] font-bold text-primary-foreground">
+                  {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                </span>
+              )}
+            </Link>
+          </Button>
+
           <Button variant="ghost" size="icon" className="relative rounded-full" asChild onClick={onClick}>
             <Link to="/account/notifications">
               <Bell className="h-5 w-5 text-muted-foreground" />
@@ -139,6 +157,12 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link to="/account/messages" onClick={onClick} className="cursor-pointer w-full flex items-center">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <span>Tin nhắn</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link to="/account/support" onClick={onClick} className="cursor-pointer w-full flex items-center">
                   <LifeBuoy className="mr-2 h-4 w-4" />
                   <span>Hỗ trợ</span>
@@ -174,6 +198,7 @@ export function PublicLayout() {
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
       <NotificationStreamListener />
+      <MessagingStreamListener />
       <header className="sticky top-0 z-50 border-b border-white/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />

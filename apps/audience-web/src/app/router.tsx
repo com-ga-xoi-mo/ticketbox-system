@@ -22,11 +22,17 @@ const SupportCenterPage = lazy(() => import('../features/account/SupportCenterPa
 const SupportRequestDetailPage = lazy(() => import('../features/account/SupportRequestDetailPage').then(m => ({ default: m.SupportRequestDetailPage })));
 const RefundRequestDetailPage = lazy(() => import('../features/account/RefundRequestDetailPage').then(m => ({ default: m.RefundRequestDetailPage })));
 const NotificationCenterPage = lazy(() => import('../features/account/NotificationCenterPage').then(m => ({ default: m.NotificationCenterPage })));
+const ResaleInboxPage = lazy(() => import('../features/account/ResaleInboxPage').then(m => ({ default: m.ResaleInboxPage })));
+const ResaleThreadPage = lazy(() => import('../features/account/ResaleThreadPage').then(m => ({ default: m.ResaleThreadPage })));
 const TicketDownloadPage = lazy(() => import('../features/account/TicketDownloadPage').then(m => ({ default: m.TicketDownloadPage })));
 const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
 const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
 const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
 const FavoritesPage = lazy(() => import('../features/favorites').then(m => ({ default: m.FavoritesPage })));
+const ResaleMarketplacePage = lazy(() => import('../features/concerts/ResaleMarketplacePage').then(m => ({ default: m.ResaleMarketplacePage })));
+const ResaleListingDetailPage = lazy(() => import('../features/concerts/ResaleListingDetailPage').then(m => ({ default: m.ResaleListingDetailPage })));
+const SellerProfilePage = lazy(() => import('../features/account/SellerProfilePage').then(m => ({ default: m.SellerProfilePage })));
+const TransactionHistoryPage = lazy(() => import('../features/account/TransactionHistoryPage').then(m => ({ default: m.TransactionHistoryPage })));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -66,6 +72,9 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
+      { path: '/events/:slug/resale', element: <SuspenseWrapper><ResaleMarketplacePage /></SuspenseWrapper> },
+      { path: '/events/:slug/resale/:listingId', element: <SuspenseWrapper><ResaleListingDetailPage /></SuspenseWrapper> },
+      { path: '/sellers/:userId', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
       { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
       { path: '/artists/:slug', element: <SuspenseWrapper><ArtistProfilePage /></SuspenseWrapper> },
       { path: '/checkout', element: <CheckoutPage /> },
@@ -121,6 +130,18 @@ export const router = createBrowserRouter([
       {
         path: '/account/notifications',
         element: <SuspenseWrapper><NotificationCenterPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/messages',
+        element: <SuspenseWrapper><ResaleInboxPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/messages/:threadId',
+        element: <SuspenseWrapper><ResaleThreadPage /></SuspenseWrapper>
+      },
+      {
+        path: '/account/transactions',
+        element: <SuspenseWrapper><TransactionHistoryPage /></SuspenseWrapper>
       },
       {
         path: '/me/favorites',
