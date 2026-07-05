@@ -69,8 +69,8 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
       orderByClause = 'ORDER BY l.asking_price_vnd DESC';
     }
 
-    const whereClause = `WHERE l.status = 'ACTIVE'${concertId ? ' AND l.concert_id = $1' : ''}`;
-    const userSelect = userId ? `, EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = ${concertId ? '$2' : '$1'}) as "upvotedByMe"` : '';
+    const whereClause = `WHERE l.status = 'ACTIVE'${concertId ? ' AND l.concert_id = $1::uuid' : ''}`;
+    const userSelect = userId ? `, EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = ${concertId ? '$2::uuid' : '$1::uuid'}) as "upvotedByMe"` : '';
 
     const queryParams: any[] = [];
     if (concertId) queryParams.push(concertId);
@@ -82,13 +82,26 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
 
     const query = `
       SELECT 
-        l.*,
+        l.id,
+        l.ticket_id as "ticketId",
+        l.seller_id as "sellerId",
+        l.concert_id as "concertId",
+        l.ticket_type_id as "ticketTypeId",
+        l.asking_price_vnd as "askingPriceVnd",
+        l.original_price_vnd as "originalPriceVnd",
+        l.status,
+        l.upvote_count as "upvoteCount",
+        l.comment_count as "commentCount",
+        l.created_at as "createdAt",
+        l.expires_at as "expiresAt",
         u.display_name as "sellerName",
-        tp.tier as "sellerTrustTier"
+        tp.tier as "sellerTrustTier",
+        tt.name as "ticketTypeName"
         ${userSelect}
       FROM resale_listings l
       JOIN users u ON l.seller_id = u.id
       LEFT JOIN seller_trust_profiles tp ON l.seller_id = tp.user_id
+      LEFT JOIN ticket_types tt ON l.ticket_type_id = tt.id
       ${whereClause}
       ${orderByClause}
       ${limitOffsetParams}

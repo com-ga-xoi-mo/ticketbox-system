@@ -12,7 +12,7 @@ export class PrismaResaleTransferRepository implements IResaleTransferRepository
     let sellerIdToUpdate = '';
 
     const transaction = await this.prisma.$transaction(async (tx) => {
-      const lockRes = await tx.$queryRawUnsafe<any[]>('SELECT * FROM resale_listings WHERE id = $1 FOR UPDATE', listingId);
+      const lockRes = await tx.$queryRawUnsafe<any[]>('SELECT * FROM resale_listings WHERE id = $1::uuid FOR UPDATE', listingId);
       if (!lockRes || lockRes.length === 0) throw new errors.ListingNotFoundError();
 
       const listing = lockRes[0];
