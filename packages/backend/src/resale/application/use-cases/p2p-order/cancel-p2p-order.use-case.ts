@@ -1,5 +1,6 @@
-import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
+import * as errors from '../../../domain/errors';
 
 export interface CancelP2POrderCommand {
   orderId: string;
@@ -15,19 +16,19 @@ export class CancelP2POrderUseCase {
   async execute(command: CancelP2POrderCommand) {
     const order = await this.orderRepo.findById(command.orderId);
     if (!order) {
-      throw new BadRequestException('ORDER_NOT_FOUND');
+      throw new errors.OrderNotFoundError();
     }
 
     if (order.buyerId !== command.userId && order.sellerId !== command.userId) {
-      throw new ForbiddenException('NOT_ORDER_PARTICIPANT');
+      throw new errors.NotOrderParticipantError();
     }
 
     if (order.status === 'PENDING_CONFIRM' && order.sellerId === command.userId) {
-      throw new ConflictException('CANNOT_CANCEL_AFTER_PAYMENT_CONFIRMED');
+      throw new errors.CannotCancelAfterPaymentConfirmedError();
     }
 
     if (order.status !== 'RESERVED') {
-      throw new ConflictException('CANNOT_CANCEL_IN_CURRENT_STATE');
+      throw new errors.CannotCancelInCurrentStateError();
     }
 
     const updated = await this.orderRepo.cancelWithRefund(order.id);

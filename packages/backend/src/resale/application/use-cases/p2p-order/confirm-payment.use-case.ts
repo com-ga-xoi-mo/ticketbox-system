@@ -1,7 +1,8 @@
-import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import * as errors from '../../../domain/errors';
 
 export interface ConfirmPaymentCommand {
   orderId: string;
@@ -18,20 +19,20 @@ export class ConfirmPaymentUseCase {
 
   async execute(command: ConfirmPaymentCommand) {
     if (!command.paymentProofUrl) {
-      throw new BadRequestException('PAYMENT_PROOF_REQUIRED');
+      throw new errors.PaymentProofRequiredError();
     }
 
     const order = await this.orderRepo.findById(command.orderId);
     if (!order) {
-      throw new BadRequestException('ORDER_NOT_FOUND');
+      throw new errors.OrderNotFoundError();
     }
 
     if (order.buyerId !== command.buyerId) {
-      throw new ForbiddenException('NOT_ORDER_BUYER');
+      throw new errors.NotOrderBuyerError();
     }
 
     if (order.status !== 'RESERVED') {
-      throw new ConflictException('INVALID_ORDER_STATE');
+      throw new errors.InvalidOrderStateError();
     }
 
     const updated = await this.orderRepo.updateStatus(order.id, 'PENDING_CONFIRM', {

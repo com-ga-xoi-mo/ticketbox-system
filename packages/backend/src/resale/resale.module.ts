@@ -68,6 +68,8 @@ import { RESALE_ORDER_REPOSITORY } from './domain/ports/p2p-order/resale-order-r
 
 import { ResaleOrderReservedExpiryProcessor } from './infrastructure/queue/order-reserved-expiry.processor';
 import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-confirm-expiry.processor';
+import { APP_FILTER } from '@nestjs/core';
+import { ResaleDomainErrorFilter } from './adapters/http/filters/resale-domain-error.filter';
 
 @Module({
   imports: [
@@ -116,6 +118,7 @@ import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-
     { provide: RESALE_TRUST_REPOSITORY, useClass: PrismaResaleTrustRepository },
     { provide: RESALE_TICKET_PROVIDER, useClass: PrismaResaleTicketProvider },
     { provide: RESALE_TRANSACTION_REPOSITORY, useClass: PrismaResaleTransactionRepository },
+    { provide: APP_FILTER, useClass: ResaleDomainErrorFilter },
 
     // Use Cases
     InitiateP2POrderUseCase,

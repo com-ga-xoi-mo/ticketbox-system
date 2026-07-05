@@ -1,6 +1,7 @@
-import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { ExecutePurchaseUseCase } from '../execute-purchase.use-case';
+import * as errors from '../../../domain/errors';
 
 export interface ConfirmReceiptCommand {
   orderId: string;
@@ -17,15 +18,15 @@ export class ConfirmReceiptUseCase {
   async execute(command: ConfirmReceiptCommand) {
     const order = await this.orderRepo.findById(command.orderId);
     if (!order) {
-      throw new BadRequestException('ORDER_NOT_FOUND');
+      throw new errors.OrderNotFoundError();
     }
 
     if (order.sellerId !== command.sellerId) {
-      throw new ForbiddenException('NOT_ORDER_SELLER');
+      throw new errors.NotOrderSellerError();
     }
 
     if (order.status !== 'PENDING_CONFIRM') {
-      throw new ConflictException('INVALID_ORDER_STATE');
+      throw new errors.InvalidOrderStateError();
     }
 
     // Call execute transfer logic

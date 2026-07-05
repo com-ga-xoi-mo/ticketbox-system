@@ -30,14 +30,14 @@
 
 ## 4. Group 2c — Domain Error Decoupling
 
-- [ ] 4.1 Rewrite `domain/errors.ts`: `ResaleDomainError` extends `Error`, adds `code: string` property, remove all `HttpException` and `HttpStatus` imports
-- [ ] 4.2 Create `resale/adapters/http/filters/resale-domain-error.filter.ts`: `@Catch(ResaleDomainError)` filter that maps error codes to HTTP statuses with a structured JSON response
-- [ ] 4.3 Register the exception filter on all resale HTTP controllers (or globally via `APP_FILTER` in `resale.module.ts`)
-- [ ] 4.4 Replace all `BadRequestException`, `ForbiddenException`, `ConflictException`, `UnprocessableEntityException` throws in `cancel-p2p-order.use-case.ts` with appropriate `ResaleDomainError` subclass throws
-- [ ] 4.5 Replace all HTTP exception throws in `confirm-payment.use-case.ts` with `ResaleDomainError` subclasses
-- [ ] 4.6 Replace all HTTP exception throws in `confirm-receipt.use-case.ts` with `ResaleDomainError` subclasses
-- [ ] 4.7 Replace all HTTP exception throws in `initiate-p2p-order.use-case.ts` with `ResaleDomainError` subclasses
-- [ ] 4.8 Replace `UnprocessableEntityException` in `create-listing.use-case.ts` with `ResaleDomainError` subclass
+- [x] 4.1 Rewrite `domain/errors.ts`: `ResaleDomainError` extends `Error`, adds `code: string` property, remove all `HttpException` and `HttpStatus` imports
+- [x] 4.2 Create `resale/adapters/http/filters/resale-domain-error.filter.ts`: `@Catch(ResaleDomainError)` filter that maps error codes to HTTP statuses with a structured JSON response
+- [x] 4.3 Register the exception filter on all resale HTTP controllers (or globally via `APP_FILTER` in `resale.module.ts`)
+- [x] 4.4 Replace all `BadRequestException`, `ForbiddenException`, `ConflictException`, `UnprocessableEntityException` throws in `cancel-p2p-order.use-case.ts` with appropriate `ResaleDomainError` subclass throws
+- [x] 4.5 Replace all HTTP exception throws in `confirm-payment.use-case.ts` with `ResaleDomainError` subclasses
+- [x] 4.6 Replace all HTTP exception throws in `confirm-receipt.use-case.ts` with `ResaleDomainError` subclasses
+- [x] 4.7 Replace all HTTP exception throws in `initiate-p2p-order.use-case.ts` with `ResaleDomainError` subclasses
+- [x] 4.8 Replace `UnprocessableEntityException` in `create-listing.use-case.ts` with `ResaleDomainError` subclass
 
 ## 5. Group 2d — IEventPublisher Port for BullMQ
 

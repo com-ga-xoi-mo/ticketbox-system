@@ -3,7 +3,6 @@ import { IResaleListingRepository, RESALE_LISTING_REPOSITORY } from '../../domai
 import { IResaleTicketProvider, RESALE_TICKET_PROVIDER } from '../../domain/ports/resale-ticket-provider.port';
 import * as errors from '../../domain/errors';
 import { ISellerBankProfileRepository, SELLER_BANK_PROFILE_REPOSITORY } from '../../../users/domain/ports/seller-bank-profile-repository.port';
-import { UnprocessableEntityException } from '@nestjs/common';
 
 @Injectable()
 export class CreateListingUseCase {
@@ -16,7 +15,7 @@ export class CreateListingUseCase {
   async execute(userId: string, ticketId: string, askingPriceVnd: number) {
     const bankProfile = await this.bankProfileRepo.findByUserId(userId);
     if (!bankProfile) {
-      throw new UnprocessableEntityException('BANK_PROFILE_REQUIRED', 'Vui lòng cập nhật tài khoản nhận tiền trước khi đăng bán vé.');
+      throw new errors.SellerBankInfoMissingError();
     }
 
     const ticket = await this.ticketProvider.findTicketById(ticketId);
