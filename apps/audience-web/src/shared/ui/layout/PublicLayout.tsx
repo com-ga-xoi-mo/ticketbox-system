@@ -87,6 +87,13 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
         Sự kiện
       </Link>
       <Link
+        to="/resale"
+        onClick={onClick}
+        className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        Resale
+      </Link>
+      <Link
         to="/artists"
         onClick={onClick}
         className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"

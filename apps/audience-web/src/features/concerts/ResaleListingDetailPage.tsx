@@ -26,7 +26,7 @@ import { ShieldCheck, ArrowUp, MessageSquare, ChevronLeft, Send } from 'lucide-r
 import { useAuth } from '../../shared/auth/AuthContext';
 import { CommentThread } from './components/CommentThread';
 
-export function ResaleListingDetailPage() {
+export function ResaleListingDetailPage({ backHref }: { backHref?: string }) {
   const { slug, listingId } = useParams<{ slug: string; listingId: string }>();
   const { session } = useAuth();
   const navigate = useNavigate();
@@ -132,7 +132,7 @@ export function ResaleListingDetailPage() {
   return (
     <div className="container mx-auto py-8 max-w-4xl px-4">
       <Button variant="ghost" asChild className="mb-6 -ml-4 text-muted-foreground hover:text-foreground">
-        <Link to={`/events/${slug}/resale`}>
+        <Link to={backHref || `/events/${slug}/resale`}>
           <ChevronLeft className="mr-2 h-4 w-4" />
           Quay lại danh sách
         </Link>

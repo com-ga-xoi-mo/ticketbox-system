@@ -47,13 +47,16 @@ export function useCancelResaleListing() {
   });
 }
 
-export function useResaleFeed(filters: { concertId?: string; sort?: string; limit?: number }) {
+export function useResaleFeed(filters: { concertId?: string; sort?: string; limit?: number; search?: string; priceMin?: number; priceMax?: number }) {
   return useInfiniteQuery({
     queryKey: ['resale-feed', filters],
     queryFn: async ({ pageParam = 1 }) => {
       const qs = new URLSearchParams();
       if (filters.concertId) qs.append('concertId', filters.concertId);
       if (filters.sort) qs.append('sort', filters.sort);
+      if (filters.search) qs.append('search', filters.search);
+      if (filters.priceMin !== undefined) qs.append('priceMin', String(filters.priceMin));
+      if (filters.priceMax !== undefined) qs.append('priceMax', String(filters.priceMax));
       qs.append('page', String(pageParam));
       qs.append('limit', String(filters.limit ?? 20));
       return apiGet<any[]>(`/resale/listings?${qs.toString()}`);

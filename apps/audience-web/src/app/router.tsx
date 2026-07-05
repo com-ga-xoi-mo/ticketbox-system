@@ -29,7 +29,8 @@ const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfir
 const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
 const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
 const FavoritesPage = lazy(() => import('../features/favorites').then(m => ({ default: m.FavoritesPage })));
-const ResaleMarketplacePage = lazy(() => import('../features/concerts/ResaleMarketplacePage').then(m => ({ default: m.ResaleMarketplacePage })));
+const ResalePlatformPage = lazy(() => import('../features/resale/ResalePlatformPage').then(m => ({ default: m.ResalePlatformPage })));
+const ResalePlatformListingDetailPage = lazy(() => import('../features/resale/ResalePlatformListingDetailPage').then(m => ({ default: m.ResalePlatformListingDetailPage })));
 const ResaleListingDetailPage = lazy(() => import('../features/concerts/ResaleListingDetailPage').then(m => ({ default: m.ResaleListingDetailPage })));
 const SellerProfilePage = lazy(() => import('../features/account/SellerProfilePage').then(m => ({ default: m.SellerProfilePage })));
 const TransactionHistoryPage = lazy(() => import('../features/account/TransactionHistoryPage').then(m => ({ default: m.TransactionHistoryPage })));
@@ -43,6 +44,11 @@ const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
 const OrderDetailRedirect = () => {
   const { id } = useParams();
   return <Navigate to={`/account/orders/${id}`} replace />;
+};
+
+const ResaleListingRedirect = () => {
+  const { listingId } = useParams();
+  return <Navigate to={`/resale/${listingId}`} replace />;
 };
 
 export const router = createBrowserRouter([
@@ -72,8 +78,16 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/events', element: <EventListPage /> },
       { path: '/events/:slug', element: <EventDetailPage /> },
-      { path: '/events/:slug/resale', element: <SuspenseWrapper><ResaleMarketplacePage /></SuspenseWrapper> },
-      { path: '/events/:slug/resale/:listingId', element: <SuspenseWrapper><ResaleListingDetailPage /></SuspenseWrapper> },
+      { 
+        path: '/events/:slug/resale', 
+        element: <Navigate to="/resale" replace /> 
+      },
+      { 
+        path: '/events/:slug/resale/:listingId', 
+        element: <ResaleListingRedirect /> 
+      },
+      { path: '/resale', element: <SuspenseWrapper><ResalePlatformPage /></SuspenseWrapper> },
+      { path: '/resale/:listingId', element: <SuspenseWrapper><ResalePlatformListingDetailPage /></SuspenseWrapper> },
       { path: '/sellers/:userId', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
       { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
       { path: '/artists/:slug', element: <SuspenseWrapper><ArtistProfilePage /></SuspenseWrapper> },
