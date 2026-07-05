@@ -52,12 +52,67 @@ async function setupBankProfile(baseUrl: string, token: string) {
   if (!res.ok) throw new Error(`setup bank profile failed: ${res.status} ${await res.text()}`);
 }
 
+async function seedTicketForUserDirectly(app: any, sellerEmail: string, concertId: string, ticketTypeId: string) {
+  const prisma = app.get(PrismaService, { strict: false });
+  if (!prisma) throw new Error('PrismaService not accessible for seeding ticket');
+
+  const userRecord = await prisma.user.findFirst({ where: { email: sellerEmail } });
+  if (!userRecord) throw new Error('Seller user not found in DB');
+
+  const ttRecord = await prisma.ticketType.findUnique({ where: { id: ticketTypeId } });
+  if (!ttRecord) throw new Error('Ticket type not found in DB');
+
+  const orderId = require('crypto').randomUUID();
+  const orderItemId = require('crypto').randomUUID();
+  const ticketId = require('crypto').randomUUID();
+
+  await prisma.order.create({
+    data: {
+      id: orderId,
+      orderNumber: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      userId: userRecord.id,
+      concertId,
+      status: 'PAID',
+      totalAmountVnd: ttRecord.priceVnd,
+      expiredAt: new Date(Date.now() + 1000 * 60 * 15),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  });
+
+  await prisma.orderItem.create({
+    data: {
+      id: orderItemId,
+      orderId,
+      ticketTypeId,
+      quantity: 1,
+      unitPriceVnd: ttRecord.priceVnd,
+      totalPriceVnd: ttRecord.priceVnd
+    }
+  });
+
+  await prisma.ticket.create({
+    data: {
+      id: ticketId,
+      ticketNumber: require('crypto').randomBytes(8).toString('hex').toUpperCase(),
+      orderId,
+      orderItemId,
+      userId: userRecord.id,
+      concertId,
+      ticketTypeId,
+      qrTokenHash: require('crypto').randomBytes(32).toString('hex'),
+      status: 'ISSUED',
+      issuedAt: new Date()
+    }
+  });
+}
+
 /**
  * Register a seller, create a concert with resaleEnabled=true via admin,
  * and create a ticket in ISSUED state for that seller.
  * Returns { sellerToken, buyerToken, concertId, ticketId, listingId? }.
  */
-async function bootstrapResaleScenario(baseUrl: string, adminToken: string, uniqueSuffix: string) {
+async function bootstrapResaleScenario(baseUrl: string, adminToken: string, uniqueSuffix: string, app?: any) {
   // Register seller and buyer
   const seller = await registerUser(baseUrl, `seller-${uniqueSuffix}`);
   const buyer = await registerUser(baseUrl, `buyer-${uniqueSuffix}`);
@@ -86,38 +141,63 @@ async function bootstrapResaleScenario(baseUrl: string, adminToken: string, uniq
   const ticketTypeId = concertDetail.ticketTypes?.[0]?.id;
   if (!ticketTypeId) throw new Error('No ticket types available');
 
-  // Create a ticket directly in DB via admin checkout simulation:
-  // We'll use the checkout flow to give the seller a ticket.
-  // First, create a reservation
-  const reservationRes = await fetch(`${baseUrl}/checkout/reserve`, {
-    method: 'POST',
-    headers: await authHeaders(seller.token),
-    body: JSON.stringify({ concertId, items: [{ ticketTypeId, quantity: 1 }] }),
-  });
+  // We'll use Prisma directly to give the seller a ticket, bypassing checkout HTTP endpoints
+  if (!app) throw new Error('app instance must be provided to seed ticket');
+  const prisma = app.get(PrismaService, { strict: false });
+  if (!prisma) throw new Error('PrismaService not accessible for seeding ticket');
 
-  if (!reservationRes.ok) {
-    throw new Error(`reservation failed: ${reservationRes.status} ${await reservationRes.text()}`);
-  }
+  // get user
+  const userRecord = await prisma.user.findFirst({ where: { email: seller.email } });
+  if (!userRecord) throw new Error('Seller user not found in DB');
 
-  const reservation = (await reservationRes.json()) as { orderId: string };
+  // get ticket type
+  const ttRecord = await prisma.ticketType.findUnique({ where: { id: ticketTypeId } });
+  if (!ttRecord) throw new Error('Ticket type not found in DB');
 
-  // Confirm payment (simulate payment confirmation via admin or direct)
-  const confirmRes = await fetch(`${baseUrl}/admin/orders/${reservation.orderId}/confirm-payment`, {
-    method: 'POST',
-    headers: await authHeaders(adminToken),
-  });
+  // create order, order item, and ticket
+  const orderId = require('crypto').randomUUID();
+  const orderItemId = require('crypto').randomUUID();
+  const ticketId = require('crypto').randomUUID();
 
-  if (!confirmRes.ok) {
-    // Fallback: some test environments use a simpler route
-    const altRes = await fetch(`${baseUrl}/checkout/confirm`, {
-      method: 'POST',
-      headers: await authHeaders(seller.token),
-      body: JSON.stringify({ orderId: reservation.orderId }),
-    });
-    if (!altRes.ok) {
-      throw new Error(`payment confirm failed: ${altRes.status} ${await altRes.text()}`);
+  await prisma.order.create({
+    data: {
+      id: orderId,
+      orderNumber: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      userId: userRecord.id,
+      concertId,
+      status: 'PAID',
+      totalAmountVnd: ttRecord.priceVnd,
+      expiredAt: new Date(Date.now() + 1000 * 60 * 15),
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
-  }
+  });
+
+  await prisma.orderItem.create({
+    data: {
+      id: orderItemId,
+      orderId,
+      ticketTypeId,
+      quantity: 1,
+      unitPriceVnd: ttRecord.priceVnd,
+      totalPriceVnd: ttRecord.priceVnd
+    }
+  });
+
+  await prisma.ticket.create({
+    data: {
+      id: ticketId,
+      ticketNumber: require('crypto').randomBytes(8).toString('hex').toUpperCase(),
+      orderId,
+      orderItemId,
+      userId: userRecord.id,
+      concertId,
+      ticketTypeId,
+      qrTokenHash: require('crypto').randomBytes(32).toString('hex'),
+      status: 'ISSUED',
+      issuedAt: new Date()
+    }
+  });
 
   // Get the seller's tickets
   const ticketsRes = await fetch(`${baseUrl}/me/tickets`, {
@@ -194,11 +274,12 @@ describe('Resale E2E — Section 18', () => {
         if (!resaleConcert) {
           console.log('⚠️  No resale-enabled concert in seed; enabling one via admin');
           // Enable resale on first concert
-          await fetch(`${baseUrl}/admin/concerts/${concerts[0].id}`, {
+          const patchRes = await fetch(`${baseUrl}/admin/concerts/${concerts[0].id}`, {
             method: 'PATCH',
             headers: await authHeaders(adminToken),
             body: JSON.stringify({ resaleEnabled: true, resaleMaxPricePercent: 110 }),
           });
+          if (!patchRes.ok) console.log('PATCH FAILED', await patchRes.text());
         }
 
         const targetConcert = resaleConcert ?? concerts[0];
@@ -210,30 +291,7 @@ describe('Resale E2E — Section 18', () => {
         expect(ticketType).toBeDefined();
 
         // Reserve
-        const reserveRes = await fetch(`${baseUrl}/checkout/reserve`, {
-          method: 'POST',
-          headers: await authHeaders(seller.token),
-          body: JSON.stringify({
-            concertId: targetConcert.id,
-            items: [{ ticketTypeId: ticketType.id, quantity: 1 }],
-          }),
-        });
-        if (!reserveRes.ok) {
-          // Skip if checkout is unavailable in test environment
-          console.log('Skipping: checkout unavailable', await reserveRes.text());
-          return;
-        }
-        const { orderId } = (await reserveRes.json()) as { orderId: string };
-
-        // Confirm payment via admin
-        const payRes = await fetch(`${baseUrl}/admin/orders/${orderId}/confirm-payment`, {
-          method: 'POST',
-          headers: await authHeaders(adminToken),
-        });
-        if (!payRes.ok) {
-          console.log('Skipping: admin confirm-payment unavailable', await payRes.text());
-          return;
-        }
+        await seedTicketForUserDirectly(app, seller.email, targetConcert.id, ticketType.id);
 
         // Get seller's ISSUED ticket
         const myTicketsRes = await fetch(`${baseUrl}/me/tickets`, {
@@ -250,11 +308,13 @@ describe('Resale E2E — Section 18', () => {
           headers: await authHeaders(seller.token),
           body: JSON.stringify({
             ticketId: issuedTicket!.id,
-            askingPriceVnd: 1100000,
+            askingPriceVnd: Math.floor(ticketType.priceVnd * 1.1),
           }),
         });
+        const text181 = await listRes.text();
+        if (listRes.status !== 201) console.log('18.1 LIST FAILED:', text181);
         expect(listRes.status).toBe(201);
-        const listing = (await listRes.json()) as { id: string; status: string };
+        const listing = JSON.parse(text181) as { id: string; status: string };
         expect(listing.status).toBe('ACTIVE');
 
         // ── 2. Buyer opens SSE stream, upvotes, asserts SSE event ──────────
@@ -354,6 +414,7 @@ describe('Resale E2E — Section 18', () => {
           method: 'POST',
           headers: await authHeaders(seller.token),
         });
+        if (receiptRes.status !== 200) console.log(await receiptRes.text());
         expect(receiptRes.status).toBe(200);
 
         // ── 5. Verify DB state via APIs ─────────────────────────────────────
@@ -594,19 +655,7 @@ describe('Resale E2E — Section 18', () => {
         if (!tt) { console.log('No ticket types; skipping'); return; }
 
         // Reserve + confirm
-        const reserveRes = await fetch(`${baseUrl}/checkout/reserve`, {
-          method: 'POST',
-          headers: await authHeaders(seller.token),
-          body: JSON.stringify({ concertId: concert.id, items: [{ ticketTypeId: tt.id, quantity: 1 }] }),
-        });
-        if (!reserveRes.ok) { console.log('Reserve failed; skipping'); return; }
-        const { orderId } = (await reserveRes.json()) as { orderId: string };
-
-        const payRes = await fetch(`${baseUrl}/admin/orders/${orderId}/confirm-payment`, {
-          method: 'POST',
-          headers: await authHeaders(adminToken),
-        });
-        if (!payRes.ok) { console.log('Confirm payment failed; skipping'); return; }
+        await seedTicketForUserDirectly(app, seller.email, concert.id, tt.id);
 
         // Get ticket
         const ticketsRes = await fetch(`${baseUrl}/me/tickets`, {
@@ -623,8 +672,10 @@ describe('Resale E2E — Section 18', () => {
           headers: await authHeaders(seller.token),
           body: JSON.stringify({ ticketId: ticket.id, askingPriceVnd: tt.priceVnd }),
         });
+        const text = await listRes.text();
+        if (listRes.status !== 201) console.log('18.1 LIST RES FAILED:', text);
         expect(listRes.status).toBe(201);
-        const listing = (await listRes.json()) as { id: string };
+        const listing = JSON.parse(text) as { id: string };
 
         // Add a comment and DM before cancellation
         const buyer = await registerUser(baseUrl, `cancel-buyer-${Date.now()}`);
@@ -987,18 +1038,7 @@ describe('Resale E2E — Section 18', () => {
         if (!tt) { console.log('No ticket types; skipping'); return; }
 
         // Give seller a ticket
-        const reserveRes = await fetch(`${baseUrl}/checkout/reserve`, {
-          method: 'POST',
-          headers: await authHeaders(seller.token),
-          body: JSON.stringify({ concertId: concert.id, items: [{ ticketTypeId: tt.id, quantity: 1 }] }),
-        });
-        if (!reserveRes.ok) { console.log('Reserve failed; skipping'); return; }
-        const { orderId } = (await reserveRes.json()) as { orderId: string };
-        const payRes = await fetch(`${baseUrl}/admin/orders/${orderId}/confirm-payment`, {
-          method: 'POST',
-          headers: await authHeaders(adminToken),
-        });
-        if (!payRes.ok) { console.log('Pay confirm failed; skipping'); return; }
+        await seedTicketForUserDirectly(app, seller.email, concert.id, tt.id);
 
         const ticketsRes = await fetch(`${baseUrl}/me/tickets`, {
           headers: { Authorization: `Bearer ${seller.token}` },
