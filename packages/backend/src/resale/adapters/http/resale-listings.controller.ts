@@ -48,12 +48,27 @@ export class ResaleListingsController {
     @Query('concertId') concertId?: string,
     @Query('sort') sort?: 'trending' | 'newest' | 'price_asc' | 'price_desc',
     @Query('page') page?: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('priceMin') priceMin?: string,
+    @Query('priceMax') priceMax?: string
   ) {
     const userId = req.user?.id;
     const p = page ? parseInt(page, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 20;
-    return this.getFeed.execute({ concertId, sort: sort || 'trending', page: p, limit: l, userId });
+    const parsedPriceMin = priceMin ? parseInt(priceMin, 10) : undefined;
+    const parsedPriceMax = priceMax ? parseInt(priceMax, 10) : undefined;
+    
+    return this.getFeed.execute({ 
+      concertId, 
+      sort: sort || 'trending', 
+      page: p, 
+      limit: l, 
+      userId,
+      search,
+      priceMin: parsedPriceMin,
+      priceMax: parsedPriceMax
+    });
   }
 
   @Get('resale/listings/:id')

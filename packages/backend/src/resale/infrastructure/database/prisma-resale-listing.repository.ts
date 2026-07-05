@@ -55,7 +55,7 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
   }
 
   async getFeed(params: any) {
-    const { concertId, sort, page, limit, userId } = params;
+    const { concertId, sort, page, limit, userId, search, priceMin, priceMax } = params;
     const offset = (page - 1) * limit;
 
     let orderByClause = '';
@@ -69,16 +69,50 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
       orderByClause = 'ORDER BY l.asking_price_vnd DESC';
     }
 
-    const whereClause = `WHERE l.status = 'ACTIVE'${concertId ? ' AND l.concert_id = $1::uuid' : ''}`;
-    const userSelect = userId ? `, EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = ${concertId ? '$2::uuid' : '$1::uuid'}) as "upvotedByMe"` : '';
-
     const queryParams: any[] = [];
-    if (concertId) queryParams.push(concertId);
-    if (userId) queryParams.push(userId);
+    let paramIndex = 1;
+
+    let whereClause = `WHERE l.status = 'ACTIVE'`;
+
+    if (concertId) {
+      whereClause += ` AND l.concert_id = $${paramIndex}::uuid`;
+      queryParams.push(concertId);
+      paramIndex++;
+    }
+
+    if (search) {
+      whereClause += ` AND c.title ILIKE $${paramIndex}`;
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    if (priceMin !== undefined) {
+      whereClause += ` AND l.asking_price_vnd >= $${paramIndex}`;
+      queryParams.push(priceMin);
+      paramIndex++;
+    }
+
+    if (priceMax !== undefined) {
+      whereClause += ` AND l.asking_price_vnd <= $${paramIndex}`;
+      queryParams.push(priceMax);
+      paramIndex++;
+    }
+
+    const userParamIndex = paramIndex;
+    if (userId) {
+      queryParams.push(userId);
+      paramIndex++;
+    }
+
+    const limitParamIndex = paramIndex;
     queryParams.push(limit);
-    queryParams.push(offset);
+    paramIndex++;
     
-    const limitOffsetParams = concertId && userId ? 'LIMIT $3 OFFSET $4' : (concertId || userId ? 'LIMIT $2 OFFSET $3' : 'LIMIT $1 OFFSET $2');
+    const offsetParamIndex = paramIndex;
+    queryParams.push(offset);
+    paramIndex++;
+
+    const userSelect = userId ? `, EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = $${userParamIndex}::uuid) as "upvotedByMe"` : '';
 
     const query = `
       SELECT 
@@ -96,15 +130,19 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
         l.expires_at as "expiresAt",
         u.display_name as "sellerName",
         tp.tier as "sellerTrustTier",
-        tt.name as "ticketTypeName"
+        tt.name as "ticketTypeName",
+        c.title as "concertTitle",
+        c.slug as "concertSlug",
+        c.starts_at as "concertStartsAt"
         ${userSelect}
       FROM resale_listings l
       JOIN users u ON l.seller_id = u.id
+      JOIN concerts c ON l.concert_id = c.id
       LEFT JOIN seller_trust_profiles tp ON l.seller_id = tp.user_id
       LEFT JOIN ticket_types tt ON l.ticket_type_id = tt.id
       ${whereClause}
       ${orderByClause}
-      ${limitOffsetParams}
+      LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
     `;
 
     const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
