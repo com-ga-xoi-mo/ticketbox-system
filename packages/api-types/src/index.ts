@@ -43,6 +43,8 @@ export type {
 export {
   LoginRequestSchema,
   GoogleLoginRequestSchema,
+  ForgotPasswordRequestSchema,
+  ResetPasswordRequestSchema,
   AccountLinkRequiredErrorSchema,
   LoginResponseSchema,
   RegisterRequestSchema,
@@ -60,6 +62,8 @@ export {
 export type {
   LoginRequest,
   GoogleLoginRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   AccountLinkRequiredError,
   LoginResponse,
   RegisterRequest,
