@@ -1,13 +1,15 @@
-export class ResaleDomainError extends Error {
-  constructor(message: string) {
-    super(message);
+import { HttpException, HttpStatus } from '@nestjs/common';
+
+export class ResaleDomainError extends HttpException {
+  constructor(message: string, status: HttpStatus = HttpStatus.BAD_REQUEST) {
+    super(message, status);
     this.name = this.constructor.name;
   }
 }
 
 export class ListingNotFoundError extends ResaleDomainError {
   constructor(listingId?: string) {
-    super(`Listing ${listingId || ''} not found.`);
+    super(`Listing ${listingId || ''} not found.`, HttpStatus.NOT_FOUND);
   }
 }
 
@@ -19,7 +21,7 @@ export class TicketNotIssuedError extends ResaleDomainError {
 
 export class NotTicketOwnerError extends ResaleDomainError {
   constructor() {
-    super('You are not the owner of this ticket.');
+    super('You are not the owner of this ticket.', HttpStatus.FORBIDDEN);
   }
 }
 
@@ -67,19 +69,19 @@ export class ListingExpiredError extends ResaleDomainError {
 
 export class CommentNotFoundError extends ResaleDomainError {
   constructor() {
-    super('Comment not found.');
+    super('Comment not found.', HttpStatus.NOT_FOUND);
   }
 }
 
 export class ThreadNotFoundError extends ResaleDomainError {
   constructor() {
-    super('Thread not found.');
+    super('Thread not found.', HttpStatus.NOT_FOUND);
   }
 }
 
 export class NotParticipantError extends ResaleDomainError {
   constructor() {
-    super('You are not a participant in this thread.');
+    super('You are not a participant in this thread.', HttpStatus.FORBIDDEN);
   }
 }
 
@@ -100,3 +102,4 @@ export class SellerCannotInitiateThreadError extends ResaleDomainError {
     super('Seller cannot initiate thread.');
   }
 }
+
