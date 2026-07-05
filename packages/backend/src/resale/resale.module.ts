@@ -46,7 +46,7 @@ import { RESALE_TRANSFER_REPOSITORY } from './domain/ports/resale-transfer-repos
 import { RESALE_TRUST_REPOSITORY } from './domain/ports/resale-trust-repository.port';
 import { RESALE_TICKET_PROVIDER } from './domain/ports/resale-ticket-provider.port';
 import { RESALE_TRANSACTION_REPOSITORY } from './domain/ports/resale-transaction-repository.port';
-import { PrismaSellerBankProfileRepository } from '../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { UsersModule } from '../users/users.module';
 
 // Queue
 import { ResaleListingExpiryProcessor } from './infrastructure/queue/listing-expiry.processor';
@@ -74,6 +74,7 @@ import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-
     DatabaseModule,
     PlatformConfigModule,
     RedisModule,
+    UsersModule,
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
       inject: [PlatformConfigService],
@@ -115,7 +116,6 @@ import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-
     { provide: RESALE_TRUST_REPOSITORY, useClass: PrismaResaleTrustRepository },
     { provide: RESALE_TICKET_PROVIDER, useClass: PrismaResaleTicketProvider },
     { provide: RESALE_TRANSACTION_REPOSITORY, useClass: PrismaResaleTransactionRepository },
-    PrismaSellerBankProfileRepository,
 
     // Use Cases
     InitiateP2POrderUseCase,

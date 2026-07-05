@@ -86,6 +86,8 @@ import { PrismaSellerBankProfileRepository } from '../users/infrastructure/datab
 import { GetBankProfileQuery } from '../users/application/queries/get-bank-profile.query';
 import { SaveBankProfileUseCase } from '../users/application/use-cases/save-bank-profile.use-case';
 
+import { UsersModule } from '../users/users.module';
+
 @Module({
   imports: [
     ThrottlerModule.forRoot([{
@@ -95,6 +97,7 @@ import { SaveBankProfileUseCase } from '../users/application/use-cases/save-bank
     PlatformConfigModule,
     DatabaseModule,
     StorageModule,
+    UsersModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
@@ -115,17 +118,6 @@ import { SaveBankProfileUseCase } from '../users/application/use-cases/save-bank
     SellerBankProfileController,
   ],
   providers: [
-    PrismaSellerBankProfileRepository,
-    {
-      provide: GetBankProfileQuery,
-      inject: [PrismaSellerBankProfileRepository],
-      useFactory: (repo: PrismaSellerBankProfileRepository) => new GetBankProfileQuery(repo),
-    },
-    {
-      provide: SaveBankProfileUseCase,
-      inject: [PrismaSellerBankProfileRepository],
-      useFactory: (repo: PrismaSellerBankProfileRepository) => new SaveBankProfileUseCase(repo),
-    },
     {
       provide: AvatarImageValidator,
       useClass: AvatarImageValidator,

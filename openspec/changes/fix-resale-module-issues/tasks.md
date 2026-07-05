@@ -11,13 +11,13 @@
 
 ## 2. Group 2a — Users Module Encapsulation
 
-- [ ] 2.1 Define `ISellerBankProfileRepository` interface in `users/domain/ports/seller-bank-profile-repository.port.ts` with `findByUserId` method returning a typed domain record
-- [ ] 2.2 Define `SELLER_BANK_PROFILE_REPOSITORY` injection token in the same port file
-- [ ] 2.3 Create `users/users.module.ts` that provides `PrismaSellerBankProfileRepository` under `SELLER_BANK_PROFILE_REPOSITORY` token and exports that token
-- [ ] 2.4 Update `resale.module.ts` to import `UsersModule` and remove the direct `PrismaSellerBankProfileRepository` provider registration
-- [ ] 2.5 Update `create-listing.use-case.ts` to inject `ISellerBankProfileRepository` via `SELLER_BANK_PROFILE_REPOSITORY` token instead of the concrete Prisma class
-- [ ] 2.6 Update `initiate-p2p-order.use-case.ts` to inject `ISellerBankProfileRepository` via token instead of the concrete Prisma class
-- [ ] 2.7 Verify no file under `resale/application/` imports from `../users/infrastructure/`
+- [x] 2.1 Define `ISellerBankProfileRepository` interface in `users/domain/ports/seller-bank-profile-repository.port.ts` with `findByUserId` method returning a typed domain record
+- [x] 2.2 Define `SELLER_BANK_PROFILE_REPOSITORY` injection token in the same port file
+- [x] 2.3 Create `users/users.module.ts` that provides `PrismaSellerBankProfileRepository` under `SELLER_BANK_PROFILE_REPOSITORY` token and exports that token
+- [x] 2.4 Update `resale.module.ts` to import `UsersModule` and remove the direct `PrismaSellerBankProfileRepository` provider registration
+- [x] 2.5 Update `create-listing.use-case.ts` to inject `ISellerBankProfileRepository` via `SELLER_BANK_PROFILE_REPOSITORY` token instead of the concrete Prisma class
+- [x] 2.6 Update `initiate-p2p-order.use-case.ts` to inject `ISellerBankProfileRepository` via token instead of the concrete Prisma class
+- [x] 2.7 Verify no file under `resale/application/` imports from `../users/infrastructure/`
 
 ## 3. Group 2b — Extract Prisma and Raw SQL from Use-Cases
 

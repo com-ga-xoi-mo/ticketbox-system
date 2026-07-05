@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { IResaleListingRepository, RESALE_LISTING_REPOSITORY } from '../../domain/ports/resale-listing-repository.port';
 import { IResaleTicketProvider, RESALE_TICKET_PROVIDER } from '../../domain/ports/resale-ticket-provider.port';
 import * as errors from '../../domain/errors';
-import { PrismaSellerBankProfileRepository } from '../../../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { ISellerBankProfileRepository, SELLER_BANK_PROFILE_REPOSITORY } from '../../../users/domain/ports/seller-bank-profile-repository.port';
 import { UnprocessableEntityException } from '@nestjs/common';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class CreateListingUseCase {
   constructor(
     @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
     @Inject(RESALE_TICKET_PROVIDER) private readonly ticketProvider: IResaleTicketProvider,
-    private readonly bankProfileRepo: PrismaSellerBankProfileRepository,
+    @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly bankProfileRepo: ISellerBankProfileRepository,
   ) {}
 
   async execute(userId: string, ticketId: string, askingPriceVnd: number) {

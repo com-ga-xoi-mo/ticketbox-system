@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaSellerBankProfileRepository } from '../../infrastructure/database/prisma-seller-bank-profile.repository';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { ISellerBankProfileRepository, SELLER_BANK_PROFILE_REPOSITORY } from '../../domain/ports/seller-bank-profile-repository.port';
 
 export interface SaveBankProfileCommand {
   userId: string;
@@ -32,15 +32,17 @@ const ALLOWED_BANKS = [
 
 @Injectable()
 export class SaveBankProfileUseCase {
-  constructor(private readonly repository: PrismaSellerBankProfileRepository) {}
+  constructor(
+    @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly repository: ISellerBankProfileRepository
+  ) {}
 
   async execute(command: SaveBankProfileCommand) {
     if (!ALLOWED_BANKS.includes(command.bankName)) {
-      throw new BadRequestException('INVALID_BANK_NAME', 'Ngân hàng không hợp lệ');
+      throw new BadRequestException('Ngân hàng không hợp lệ', { cause: new Error(), description: 'INVALID_BANK_NAME' });
     }
 
     if (!command.bankAccountName || !command.bankAccountNumber) {
-      throw new BadRequestException('INVALID_BANK_INFO', 'Thông tin ngân hàng không được để trống');
+      throw new BadRequestException('Thông tin ngân hàng không được để trống', { cause: new Error(), description: 'INVALID_BANK_INFO' });
     }
 
     return this.repository.upsert(command.userId, {

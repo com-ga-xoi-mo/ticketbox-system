@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaSellerBankProfileRepository, SellerBankProfileRecord } from '../../infrastructure/database/prisma-seller-bank-profile.repository';
+import { Injectable, Inject } from '@nestjs/common';
+import { ISellerBankProfileRepository, SellerBankProfile, SELLER_BANK_PROFILE_REPOSITORY } from '../../domain/ports/seller-bank-profile-repository.port';
 
 @Injectable()
 export class GetBankProfileQuery {
-  constructor(private readonly repository: PrismaSellerBankProfileRepository) {}
+  constructor(
+    @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly repository: ISellerBankProfileRepository
+  ) {}
 
-  async execute(userId: string): Promise<SellerBankProfileRecord | null> {
+  async execute(userId: string): Promise<SellerBankProfile | null> {
     return this.repository.findByUserId(userId);
   }
 }

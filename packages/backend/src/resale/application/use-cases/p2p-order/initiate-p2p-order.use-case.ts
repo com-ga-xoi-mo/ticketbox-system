@@ -1,7 +1,7 @@
 import { Injectable, Inject, ConflictException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { IResaleListingRepository, RESALE_LISTING_REPOSITORY } from '../../../domain/ports/resale-listing-repository.port';
-import { PrismaSellerBankProfileRepository } from '../../../../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { ISellerBankProfileRepository, SELLER_BANK_PROFILE_REPOSITORY } from '../../../../users/domain/ports/seller-bank-profile-repository.port';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../../../../platform/database/prisma.service';
@@ -16,7 +16,7 @@ export class InitiateP2POrderUseCase {
   constructor(
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
     @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
-    private readonly bankProfileRepo: PrismaSellerBankProfileRepository,
+    @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly bankProfileRepo: ISellerBankProfileRepository,
     @InjectQueue('resale.order.reserved.expiry') private readonly expiryQueue: Queue,
     private readonly prisma: PrismaService, // For checking suspended user and atomic update
   ) {}
