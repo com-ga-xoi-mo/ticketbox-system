@@ -21,12 +21,12 @@
 
 ## 3. Group 2b — Extract Prisma and Raw SQL from Use-Cases
 
-- [ ] 3.1 Add `cancelWithRefund(orderId: string): Promise<void>` to `IResaleOrderRepository` port and implement it in `PrismaResaleOrderRepository`, moving the `$transaction` logic from `cancel-p2p-order.use-case.ts`
-- [ ] 3.2 Update `CancelP2POrderUseCase` to call `orderRepo.cancelWithRefund()` and remove all direct `PrismaService` injection and transaction code
-- [ ] 3.3 Add `resolveDispute(orderId: string, outcome: 'complete' | 'cancel', note: string): Promise<void>` to `IResaleOrderRepository` and implement in `PrismaResaleOrderRepository`, moving `$transaction` logic from `resolve-dispute.use-case.ts`
-- [ ] 3.4 Update `ResolveDisputeUseCase` to call `orderRepo.resolveDispute()` and remove all direct Prisma injection
-- [ ] 3.5 Add `reserveForOrder(listingId: string): Promise<ReservedOrderData>` to `IResaleOrderRepository` (or a dedicated method) encapsulating the `$queryRaw` in `initiate-p2p-order.use-case.ts`
-- [ ] 3.6 Update `InitiateP2POrderUseCase` to use the new repository method and remove `PrismaService` and `$queryRaw` injection
+- [x] 3.1 Add `cancelWithRefund(orderId: string): Promise<void>` to `IResaleOrderRepository` port and implement it in `PrismaResaleOrderRepository`, moving the `$transaction` logic from `cancel-p2p-order.use-case.ts`
+- [x] 3.2 Update `CancelP2POrderUseCase` to call `orderRepo.cancelWithRefund()` and remove all direct `PrismaService` injection and transaction code
+- [x] 3.3 Add `resolveDispute(orderId: string, outcome: 'complete' | 'cancel', note: string): Promise<void>` to `IResaleOrderRepository` and implement in `PrismaResaleOrderRepository`, moving `$transaction` logic from `resolve-dispute.use-case.ts`
+- [x] 3.4 Update `ResolveDisputeUseCase` to call `orderRepo.resolveDispute()` and remove all direct Prisma injection
+- [x] 3.5 Add `reserveForOrder(listingId: string): Promise<ReservedOrderData>` to `IResaleOrderRepository` (or a dedicated method) encapsulating the `$queryRaw` in `initiate-p2p-order.use-case.ts`
+- [x] 3.6 Update `InitiateP2POrderUseCase` to use the new repository method and remove `PrismaService` and `$queryRaw` injection
 
 ## 4. Group 2c — Domain Error Decoupling
 

@@ -1,7 +1,6 @@
 import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
 import { ExecutePurchaseUseCase } from '../execute-purchase.use-case';
-import { PrismaService } from '../../../../platform/database/prisma.service';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 
@@ -17,7 +16,6 @@ export class ResolveDisputeUseCase {
   constructor(
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
     private readonly executePurchaseUseCase: ExecutePurchaseUseCase,
-    private readonly prisma: PrismaService,
     @InjectQueue('compute-seller-trust') private trustQueue: Queue
   ) {}
 
@@ -35,12 +33,7 @@ export class ResolveDisputeUseCase {
       // Buyer wins - execute transfer
       await this.executePurchaseUseCase.execute(order.buyerId, order.listingId);
 
-      const updated = await this.orderRepo.updateStatus(order.id, 'COMPLETED', {
-        resolvedBy: command.adminId,
-        resolutionNote: command.resolutionNote,
-        resolvedAt: new Date(),
-        completedAt: new Date()
-      });
+      const updated = await this.orderRepo.resolveDispute(order.id, 'complete', command.resolutionNote);
 
       // Penalize seller
       await this.trustQueue.add('compute-trust', { 
@@ -52,38 +45,8 @@ export class ResolveDisputeUseCase {
 
     } else {
       // Seller wins - cancel order
-      return this.prisma.$transaction(async (tx: any) => {
-        const updated = await tx.resaleOrder.update({
-          where: { id: order.id },
-          data: {
-            status: 'CANCELLED',
-            resolvedBy: command.adminId,
-            resolutionNote: command.resolutionNote,
-            resolvedAt: new Date(),
-            cancelledAt: new Date()
-          }
-        });
-
-        await tx.resaleListing.update({
-          where: { id: order.listingId },
-          data: { status: 'ACTIVE' }
-        });
-
-        // Increment buyer violations
-        const buyer = await tx.user.update({
-          where: { id: order.buyerId },
-          data: { buyerViolationCount: { increment: 1 } }
-        });
-
-        if (buyer.buyerViolationCount >= 3) {
-          await tx.user.update({
-            where: { id: order.buyerId },
-            data: { resaleMarketSuspendedAt: new Date() }
-          });
-        }
-
-        return updated;
-      });
+      const updated = await this.orderRepo.resolveDispute(order.id, 'cancel', command.resolutionNote);
+      return updated;
     }
   }
 }

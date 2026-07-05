@@ -18,7 +18,7 @@ export class InitiateP2POrderUseCase {
     @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
     @Inject(SELLER_BANK_PROFILE_REPOSITORY) private readonly bankProfileRepo: ISellerBankProfileRepository,
     @InjectQueue('resale.order.reserved.expiry') private readonly expiryQueue: Queue,
-    private readonly prisma: PrismaService, // For checking suspended user and atomic update
+    private readonly prisma: PrismaService, // For checking suspended user
   ) {}
 
   async execute(command: InitiateP2POrderCommand) {
@@ -28,60 +28,48 @@ export class InitiateP2POrderUseCase {
       throw new ForbiddenException('BUYER_SUSPENDED', 'Tài khoản của bạn đã bị khóa tính năng mua lại vé.');
     }
 
-    // Use transaction to atomically lock listing and create order
-    return this.prisma.$transaction(async (tx: any) => {
-      // 1. Fetch and lock listing
-      const listingRows = await tx.$queryRaw<any[]>`SELECT * FROM resale_listings WHERE id = ${command.listingId}::uuid FOR UPDATE`;
-      if (!listingRows.length) {
-        throw new UnprocessableEntityException('LISTING_NOT_FOUND', 'Listing không tồn tại');
-      }
-      const listing = listingRows[0];
+    const listing = await this.listingRepo.findListingById(command.listingId);
+    if (!listing) {
+      throw new UnprocessableEntityException('LISTING_NOT_FOUND', 'Listing không tồn tại');
+    }
 
-      if (listing.status !== 'ACTIVE') {
+    if (listing.sellerId === command.buyerId) {
+      throw new ForbiddenException('SELF_PURCHASE_NOT_ALLOWED', 'Bạn không thể mua vé của chính mình.');
+    }
+
+    const bankProfile = await this.bankProfileRepo.findByUserId(listing.sellerId);
+    if (!bankProfile) {
+      throw new UnprocessableEntityException('SELLER_BANK_INFO_MISSING', 'Người bán chưa cung cấp thông tin tài khoản nhận tiền.');
+    }
+
+    // Call atomic repo method
+    let order;
+    try {
+      order = await this.orderRepo.reserveForOrder(command.listingId, command.buyerId, listing.sellerId);
+    } catch (e: any) {
+      if (e.message === 'LISTING_NOT_AVAILABLE') {
         throw new ConflictException('LISTING_NOT_AVAILABLE', 'Vé này đã được mua hoặc đang có người giữ chỗ.');
       }
+      throw e;
+    }
 
-      if (listing.seller_id === command.buyerId) {
-        throw new ForbiddenException('SELF_PURCHASE_NOT_ALLOWED', 'Bạn không thể mua vé của chính mình.');
+    // Enqueue expiry job (15 minutes)
+    await this.expiryQueue.add(
+      'expire-reserved-order',
+      { orderId: order.id },
+      { delay: 15 * 60 * 1000 }
+    );
+
+    // Return order and bank info
+    return {
+      orderId: order.id,
+      status: order.status,
+      amountVnd: listing.askingPriceVnd,
+      bankInfo: {
+        bankAccountName: bankProfile.bankAccountName,
+        bankAccountNumber: bankProfile.bankAccountNumber,
+        bankName: bankProfile.bankName,
       }
-
-      const bankProfile = await this.bankProfileRepo.findByUserId(listing.seller_id);
-      if (!bankProfile) {
-        // Technically this shouldn't happen because we gated listing creation, but just in case
-        throw new UnprocessableEntityException('SELLER_BANK_INFO_MISSING', 'Người bán chưa cung cấp thông tin tài khoản nhận tiền.');
-      }
-
-      // Update listing to RESERVED
-      await tx.$queryRaw`UPDATE resale_listings SET status = 'RESERVED' WHERE id = ${command.listingId}::uuid`;
-
-      // Create ResaleOrder
-      const order = await tx.resaleOrder.create({
-        data: {
-          listingId: command.listingId,
-          buyerId: command.buyerId,
-          sellerId: listing.seller_id,
-          status: 'RESERVED',
-        }
-      });
-
-      // Enqueue expiry job (15 minutes)
-      await this.expiryQueue.add(
-        'expire-reserved-order',
-        { orderId: order.id },
-        { delay: 15 * 60 * 1000 }
-      );
-
-      // Return order and bank info
-      return {
-        orderId: order.id,
-        status: order.status,
-        amountVnd: listing.asking_price_vnd,
-        bankInfo: {
-          bankAccountName: bankProfile.bankAccountName,
-          bankAccountNumber: bankProfile.bankAccountNumber,
-          bankName: bankProfile.bankName,
-        }
-      };
-    });
+    };
   }
 }
