@@ -34,21 +34,21 @@ export class ResaleSocialController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async toggleUpvote(@Req() req: any, @Param('id') listingId: string) {
-    return this.toggleUpvoteUseCase.execute(req.user.userId, listingId, this.listingEvents$);
+    return this.toggleUpvoteUseCase.execute(req.user.id, listingId, this.listingEvents$);
   }
 
   @Post(':id/comments')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async addComment(@Req() req: any, @Param('id') listingId: string, @Body('body') body: string) {
-    return this.addCommentUseCase.execute(req.user.userId, listingId, body, this.listingEvents$);
+    return this.addCommentUseCase.execute(req.user.id, listingId, body, this.listingEvents$);
   }
 
   @Post(':id/comments/:commentId/replies')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async addReply(@Req() req: any, @Param('id') listingId: string, @Param('commentId') commentId: string, @Body('body') body: string) {
-    return this.addReplyUseCase.execute(req.user.userId, listingId, commentId, body, this.listingEvents$);
+    return this.addReplyUseCase.execute(req.user.id, listingId, commentId, body, this.listingEvents$);
   }
 
   @Get(':id/comments')
@@ -60,6 +60,6 @@ export class ResaleSocialController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async flagComment(@Req() req: any, @Param('commentId') commentId: string) {
-    return this.flagCommentUseCase.execute(req.user.userId, commentId);
+    return this.flagCommentUseCase.execute(req.user.id, commentId);
   }
 }

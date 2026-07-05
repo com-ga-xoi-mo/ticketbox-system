@@ -17,24 +17,30 @@ export class ResaleMessagingController {
   @Post('resale/listings/:id/messages')
   @Roles(Role.AUDIENCE)
   async initiateThread(@Req() req: any, @Param('id') listingId: string, @Body('body') body: string) {
-    return this.sendMessageUseCase.execute(req.user.userId, listingId, body);
+    return this.sendMessageUseCase.execute(req.user.id, listingId, body);
   }
 
   @Post('resale/listings/:id/messages/:threadId')
   @Roles(Role.AUDIENCE)
   async replyThread(@Req() req: any, @Param('id') listingId: string, @Param('threadId') threadId: string, @Body('body') body: string) {
-    return this.sendMessageUseCase.execute(req.user.userId, listingId, body, threadId);
+    return this.sendMessageUseCase.execute(req.user.id, listingId, body, threadId);
   }
 
   @Get('me/messages/threads')
   @Roles(Role.AUDIENCE)
   async getMyThreads(@Req() req: any) {
-    return this.getMyThreadsUseCase.execute(req.user.userId);
+    return this.getMyThreadsUseCase.execute(req.user.id);
+  }
+
+  @Get('me/messages/threads/:threadId')
+  @Roles(Role.AUDIENCE)
+  async getThreadMessagesDirect(@Req() req: any, @Param('threadId') threadId: string) {
+    return this.getThreadMessagesUseCase.execute(req.user.id, threadId);
   }
 
   @Get('resale/listings/:id/messages/:threadId')
   @Roles(Role.AUDIENCE)
   async getThreadMessages(@Req() req: any, @Param('threadId') threadId: string) {
-    return this.getThreadMessagesUseCase.execute(req.user.userId, threadId);
+    return this.getThreadMessagesUseCase.execute(req.user.id, threadId);
   }
 }

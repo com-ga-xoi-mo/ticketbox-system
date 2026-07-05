@@ -14,6 +14,7 @@ import { ResaleSocialController } from './adapters/http/resale-social.controller
 import { ResaleTransferController } from './adapters/http/resale-transfer.controller';
 import { ResaleTrustController } from './adapters/http/resale-trust.controller';
 import { ResaleMessagingController } from './adapters/http/resale-messaging.controller';
+import { ResaleTransactionController } from './adapters/http/resale-transaction.controller';
 import { ResaleMessagingGateway } from './adapters/websocket/resale-messaging.gateway';
 
 // Use Cases
@@ -26,6 +27,7 @@ import { ExecutePurchaseUseCase } from './application/use-cases/execute-purchase
 import { ToggleUpvoteUseCase, AddCommentUseCase, AddReplyUseCase, GetCommentsUseCase, FlagCommentUseCase } from './application/use-cases/social.use-cases';
 import { SendMessageUseCase, GetMyThreadsUseCase, GetThreadMessagesUseCase } from './application/use-cases/messaging.use-cases';
 import { GetSellerProfileUseCase, ComputeTrustScoreUseCase } from './application/use-cases/trust.use-cases';
+import { GetMyTransactionsUseCase, ProcessPayoutUseCase } from './application/use-cases/transaction.use-cases';
 
 // Infrastructure / Repositories
 import { PrismaResaleListingRepository } from './infrastructure/database/prisma-resale-listing.repository';
@@ -34,6 +36,7 @@ import { PrismaResaleMessagingRepository } from './infrastructure/database/prism
 import { PrismaResaleTransferRepository } from './infrastructure/database/prisma-resale-transfer.repository';
 import { PrismaResaleTrustRepository } from './infrastructure/database/prisma-resale-trust.repository';
 import { PrismaResaleTicketProvider } from './infrastructure/database/prisma-resale-ticket-provider';
+import { PrismaResaleTransactionRepository } from './infrastructure/database/prisma-resale-transaction.repository';
 
 // Ports
 import { RESALE_LISTING_REPOSITORY } from './domain/ports/resale-listing-repository.port';
@@ -42,6 +45,7 @@ import { RESALE_MESSAGING_REPOSITORY } from './domain/ports/resale-messaging-rep
 import { RESALE_TRANSFER_REPOSITORY } from './domain/ports/resale-transfer-repository.port';
 import { RESALE_TRUST_REPOSITORY } from './domain/ports/resale-trust-repository.port';
 import { RESALE_TICKET_PROVIDER } from './domain/ports/resale-ticket-provider.port';
+import { RESALE_TRANSACTION_REPOSITORY } from './domain/ports/resale-transaction-repository.port';
 
 // Queue
 import { ResaleListingExpiryProcessor } from './infrastructure/queue/listing-expiry.processor';
@@ -68,7 +72,8 @@ import { ResaleTrustProcessor } from './infrastructure/queue/compute-trust.proce
     ResaleSocialController,
     ResaleTransferController,
     ResaleTrustController,
-    ResaleMessagingController
+    ResaleMessagingController,
+    ResaleTransactionController
   ],
   providers: [
     // Gateways & Subject singletons
@@ -87,6 +92,7 @@ import { ResaleTrustProcessor } from './infrastructure/queue/compute-trust.proce
     { provide: RESALE_TRANSFER_REPOSITORY, useClass: PrismaResaleTransferRepository },
     { provide: RESALE_TRUST_REPOSITORY, useClass: PrismaResaleTrustRepository },
     { provide: RESALE_TICKET_PROVIDER, useClass: PrismaResaleTicketProvider },
+    { provide: RESALE_TRANSACTION_REPOSITORY, useClass: PrismaResaleTransactionRepository },
 
     // Use Cases
     CreateListingUseCase, CancelListingUseCase, GetFeedUseCase, GetListingDetailUseCase, GetMyListingsUseCase,
@@ -94,6 +100,7 @@ import { ResaleTrustProcessor } from './infrastructure/queue/compute-trust.proce
     ToggleUpvoteUseCase, AddCommentUseCase, AddReplyUseCase, GetCommentsUseCase, FlagCommentUseCase,
     SendMessageUseCase, GetMyThreadsUseCase, GetThreadMessagesUseCase,
     GetSellerProfileUseCase, ComputeTrustScoreUseCase,
+    GetMyTransactionsUseCase, ProcessPayoutUseCase,
 
     // Queue / Processors
     ResaleListingExpiryProcessor, ResaleListingExpiryScheduler, ResaleTrustProcessor

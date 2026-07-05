@@ -13,6 +13,6 @@ export class ResaleTransferController {
   @Post()
   @Roles(Role.AUDIENCE)
   async executePurchase(@Req() req: any, @Body() body: { listingId: string }) {
-    return this.executePurchaseUseCase.execute(req.user.userId, body.listingId);
+    return this.executePurchaseUseCase.execute(req.user.id, body.listingId);
   }
 }

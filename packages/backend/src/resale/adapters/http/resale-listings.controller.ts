@@ -24,21 +24,21 @@ export class ResaleListingsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async createListingAction(@Req() req: any, @Body() body: { ticketId: string; askingPriceVnd: number }) {
-    return this.createListing.execute(req.user.userId, body.ticketId, body.askingPriceVnd);
+    return this.createListing.execute(req.user.id, body.ticketId, body.askingPriceVnd);
   }
 
   @Delete('resale/listings/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async cancelListingAction(@Req() req: any, @Param('id') id: string) {
-    return this.cancelListing.execute(req.user.userId, id);
+    return this.cancelListing.execute(req.user.id, id);
   }
 
   @Get('me/resale/listings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AUDIENCE)
   async getMyListingsAction(@Req() req: any) {
-    return this.getMyListings.execute(req.user.userId);
+    return this.getMyListings.execute(req.user.id);
   }
 
   @Get('resale/listings')
@@ -50,7 +50,7 @@ export class ResaleListingsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const p = page ? parseInt(page, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 20;
     return this.getFeed.execute({ concertId, sort: sort || 'trending', page: p, limit: l, userId });
@@ -59,6 +59,6 @@ export class ResaleListingsController {
   @Get('resale/listings/:id')
   @UseGuards(OptionalJwtAuthGuard)
   async getListingAction(@Req() req: any, @Param('id') id: string) {
-    return this.getListingDetail.execute(id, req.user?.userId);
+    return this.getListingDetail.execute(id, req.user?.id);
   }
 }

@@ -7,7 +7,7 @@ import Redis from 'ioredis';
 
 import { REDIS_CLIENT } from '../../../platform/redis/redis.tokens';
 
-@WebSocketGateway({ namespace: '/resale' })
+@WebSocketGateway({ namespace: '/resale', cors: { origin: '*' } })
 export class ResaleMessagingGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
@@ -24,6 +24,7 @@ export class ResaleMessagingGateway implements OnGatewayInit, OnGatewayConnectio
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token;
+      console.log('WS Connection attempt. Token present?', !!token);
       if (!token) throw new WsException('Missing token');
       const payload = this.jwtService.verify(token);
       if (!payload || !payload.sub) throw new WsException('Invalid token');
@@ -32,6 +33,7 @@ export class ResaleMessagingGateway implements OnGatewayInit, OnGatewayConnectio
       client.join(`user:${userId}`);
       console.log(`User ${userId} joined room user:${userId}`);
     } catch (e) {
+      console.error('WS Connection rejected:', (e as any).message);
       client.disconnect();
     }
   }
