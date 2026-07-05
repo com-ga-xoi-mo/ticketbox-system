@@ -1,8 +1,5 @@
-# resale-transfer
+## MODIFIED Requirements
 
-## Purpose
-TBD - Add purpose here.
-## Requirements
 ### Requirement: Ticket transfer creates new ticket for buyer
 The system SHALL execute the ticket transfer (revoke seller ticket, mint buyer ticket) only when the seller explicitly confirms receipt of payment via `POST /resale/orders/:id/confirm-receipt`, or when an admin resolves a dispute in the buyer's favor via `POST /admin/resale/orders/:id/resolve` with `action: "complete"`. Direct execution of transfer upon the buyer's purchase action is no longer permitted. The new ticket SHALL have status `ISSUED` and a new unique `ticketNumber`. The system SHALL transition the seller's original ticket to status `TRANSFERRED`.
 
@@ -48,35 +45,7 @@ The system SHALL execute the entire resale transfer (listing status update, sell
 - **WHEN** all steps of the resale transfer complete within the transaction
 - **THEN** the listing status, seller ticket status, buyer ticket record, and transaction record SHALL all be committed together
 
-### Requirement: QR token regeneration on delist or expiry
-The system SHALL generate a new cryptographically secure QR token and store its hash when restoring a ticket from `LISTED_FOR_RESALE` back to `ISSUED` (due to seller cancellation or listing expiry). The new token SHALL be different from the original voided token.
-
-#### Scenario: New QR token on listing cancellation
-- **WHEN** a seller cancels their resale listing
-- **THEN** the system SHALL generate a new QR token, store its hash as the ticket's `qrTokenHash`, and the ticket SHALL be usable at check-in with the new QR code
-
-#### Scenario: New QR token on listing expiry
-- **WHEN** a listing auto-expires before the event
-- **THEN** the system SHALL generate a new QR token for the restored ticket and notify the seller with their updated ticket details
-
-#### Scenario: Old voided QR token remains invalid
-- **WHEN** a ticket's QR has been regenerated after delist or expiry
-- **THEN** the original voided `qrTokenHash` SHALL NOT be accepted at check-in
-
-### Requirement: Seller payout ledger tracking
-The system SHALL track seller payouts as ledger entries in the `ResaleTransaction` record. The payout status SHALL follow: `PENDING` (transaction completed, payout not yet processed) → `PROCESSED` (payout disbursed to seller). V1 does not automate disbursement; payout processing is a manual admin action.
-
-#### Scenario: Payout starts as pending
-- **WHEN** a resale transaction completes
-- **THEN** the seller payout status SHALL be set to `PENDING`
-
-#### Scenario: Admin marks payout as processed
-- **WHEN** an admin marks a payout as processed after manual disbursement
-- **THEN** the payout status SHALL transition to `PROCESSED` with a `processedAt` timestamp
-
-#### Scenario: Seller can view payout status
-- **WHEN** a seller views their resale transaction history via `GET /me/resale/transactions`
-- **THEN** each transaction SHALL include the payout amount and current payout status
+## ADDED Requirements
 
 ### Requirement: Platform fee is only collected on COMPLETED orders
 The system SHALL only create a `ResaleTransaction` (and thus collect the 5% platform fee) when a `ResaleOrder` reaches `COMPLETED` status. If a `ResaleOrder` ends in `CANCELLED` — whether by timeout, manual cancellation, or admin dispute resolution in the seller's favor — no `ResaleTransaction` record SHALL be created and no platform fee SHALL be charged.
@@ -88,4 +57,3 @@ The system SHALL only create a `ResaleTransaction` (and thus collect the 5% plat
 #### Scenario: Fee collected only on COMPLETED
 - **WHEN** a `ResaleOrder` transitions to `COMPLETED` (via seller confirm-receipt or admin resolves dispute in buyer's favor)
 - **THEN** the system SHALL create a `ResaleTransaction` record with the 5% platform fee (floored) and `payoutStatus: PENDING`
-
