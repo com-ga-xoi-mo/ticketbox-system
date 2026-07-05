@@ -54,7 +54,7 @@ export function AvatarUploader({ profile }: { profile: MyProfileResponse }) {
     <div className="flex flex-col sm:flex-row items-start gap-6">
       <div className="relative size-24 shrink-0 overflow-hidden rounded-full border bg-muted flex items-center justify-center">
         {avatarImageUrl ? (
-          <img src={avatarImageUrl} alt={profile.displayName || 'Avatar'} className="h-full w-full object-cover" />
+          <img src={avatarImageUrl} alt={profile.displayName || 'Avatar'} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
         ) : (
           <User className="h-10 w-10 text-muted-foreground" />
         )}

@@ -128,7 +128,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full focus-visible:ring-0 px-0">
                 <Avatar className="h-9 w-9 border border-border/50 hover:opacity-80 transition-opacity">
-                  <AvatarImage src={avatarImageUrl || ''} alt={profile?.displayName || 'User'} />
+                  <AvatarImage src={avatarImageUrl || ''} alt={profile?.displayName || 'User'} referrerPolicy="no-referrer" />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(profile?.displayName)}
                   </AvatarFallback>
