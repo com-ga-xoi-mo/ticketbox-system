@@ -1,0 +1,53 @@
+import { Injectable, Inject, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+
+export interface ConfirmPaymentCommand {
+  orderId: string;
+  buyerId: string;
+  paymentProofUrl: string;
+}
+
+@Injectable()
+export class ConfirmPaymentUseCase {
+  constructor(
+    @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
+    @InjectQueue('resale.order.confirm.expiry') private readonly expiryQueue: Queue,
+  ) {}
+
+  async execute(command: ConfirmPaymentCommand) {
+    if (!command.paymentProofUrl) {
+      throw new BadRequestException('PAYMENT_PROOF_REQUIRED');
+    }
+
+    const order = await this.orderRepo.findById(command.orderId);
+    if (!order) {
+      throw new BadRequestException('ORDER_NOT_FOUND');
+    }
+
+    if (order.buyerId !== command.buyerId) {
+      throw new ForbiddenException('NOT_ORDER_BUYER');
+    }
+
+    if (order.status !== 'RESERVED') {
+      throw new ConflictException('INVALID_ORDER_STATE');
+    }
+
+    const updated = await this.orderRepo.updateStatus(order.id, 'PENDING_CONFIRM', {
+      paymentProofUrl: command.paymentProofUrl,
+      paymentConfirmedAt: new Date()
+    });
+
+    // Enqueue expiry job (2 hours)
+    await this.expiryQueue.add(
+      'expire-confirm-order',
+      { orderId: order.id },
+      { delay: 2 * 60 * 60 * 1000 }
+    );
+
+    // TODO: Notify seller
+
+    return updated;
+  }
+}
