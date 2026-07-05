@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTicketDetail } from '../../shared/api/tickets';
@@ -6,20 +7,43 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { AlertCircle, ChevronLeft, MapPin, Calendar, CheckCircle2, Download, LifeBuoy, Mail, RefreshCw } from 'lucide-react';
+import { AlertCircle, ChevronLeft, MapPin, Calendar, CheckCircle2, Download, LifeBuoy, Mail, RefreshCw, XCircle, ArrowUp, MessageSquare, TrendingUp } from 'lucide-react';
 import { TicketStatusBadge } from './components/TicketStatusBadge';
-import { useRefundEligibility, parseSupportError } from '../../shared/api/support';
+import { useRefundEligibility } from '../../shared/api/support';
 import { useResendTicket } from '../../shared/api/downloads';
+import { ResaleListingForm } from './components/ResaleListingForm';
+import { useCancelResaleListing, useResaleListingDetail } from '../../shared/api/resale';
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: ticket, isLoading, isError, refetch } = useTicketDetail(id as string);
   const refundEligibility = useRefundEligibility({ ticketId: id });
   const resendTicket = useResendTicket();
+  const cancelListing = useCancelResaleListing();
+
+  const [showResaleForm, setShowResaleForm] = useState(false);
+
+  // Fetch active listing detail for stats (upvote, comment count, asking price)
+  const { data: listingDetail } = useResaleListingDetail(ticket?.resaleListingId as string);
 
   const handleResendTicket = () => {
     if (id) resendTicket.mutate(id);
   };
+
+  const handleCancelResale = () => {
+    if (ticket?.resaleListingId) {
+      cancelListing.mutate(ticket.resaleListingId, {
+        onSuccess: () => refetch(),
+      });
+    }
+  };
+
+  // Resale button logic
+  const canResale = 
+    ticket?.status === 'ISSUED' && 
+    ticket.resaleEnabled && 
+    ticket.concertStartsAt && 
+    new Date(ticket.concertStartsAt).getTime() - Date.now() > 2 * 60 * 60 * 1000;
 
   return (
     <AudienceProtectedRoute>
@@ -68,7 +92,13 @@ export function TicketDetailPage() {
             
             <CardContent className="p-0">
               <div className="flex flex-col items-center justify-center bg-white p-8 dark:bg-zinc-100">
-                {ticket.qrPayload ? (
+                {ticket.status === 'LISTED_FOR_RESALE' || ticket.status === 'TRANSFERRED' ? (
+                   <div className="flex h-[280px] w-[280px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-zinc-500">
+                     <AlertCircle className="mb-2 h-8 w-8" />
+                     <p className="text-sm font-medium">Mã QR bị ẩn</p>
+                     <p className="mt-1 text-xs">Vé đang được bán lại hoặc đã chuyển nhượng</p>
+                   </div>
+                ) : ticket.qrPayload ? (
                   <div className="relative">
                     <QRCodeSVG
                       value={ticket.qrPayload}
@@ -94,7 +124,7 @@ export function TicketDetailPage() {
                 )}
                 
                 <p className="mt-6 text-center text-xs font-medium text-zinc-500">
-                  Tăng độ sáng màn hình để quét dễ hơn
+                  {ticket.status === 'LISTED_FOR_RESALE' ? 'Đang chờ người mua' : 'Tăng độ sáng màn hình để quét dễ hơn'}
                 </p>
               </div>
 
@@ -156,6 +186,65 @@ export function TicketDetailPage() {
                     </div>
                   )}
 
+                  {canResale && !showResaleForm && (
+                    <Button className="w-full mt-4" onClick={() => setShowResaleForm(true)}>Bán lại vé</Button>
+                  )}
+
+                  {showResaleForm && ticket.originalPriceVnd && ticket.resaleMaxPricePercent && (
+                     <ResaleListingForm
+                       ticketId={ticket.id}
+                       originalPriceVnd={ticket.originalPriceVnd}
+                       maxPricePercent={ticket.resaleMaxPricePercent}
+                       onCancel={() => setShowResaleForm(false)}
+                       onSuccess={() => {
+                         setShowResaleForm(false);
+                         refetch();
+                       }}
+                     />
+                  )}
+
+                   {ticket.status === 'LISTED_FOR_RESALE' && (
+                     <div className="mt-4 space-y-3">
+                       {/* Listing stats */}
+                       {listingDetail && (
+                         <div className="rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 p-4 space-y-3">
+                           <div className="flex items-center justify-between">
+                             <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Đang rao bán</span>
+                             <span className="text-lg font-bold text-orange-600">{Number(listingDetail.askingPriceVnd ?? 0).toLocaleString('vi-VN')} đ</span>
+                           </div>
+                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                             <span className="flex items-center gap-1"><ArrowUp className="h-3.5 w-3.5" />{listingDetail.upvoteCount ?? 0} upvote</span>
+                             <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{listingDetail.commentCount ?? 0} bình luận</span>
+                           </div>
+                         </div>
+                       )}
+                       <Button variant="destructive" className="w-full" onClick={handleCancelResale} disabled={cancelListing.isPending}>
+                         <XCircle className="mr-2 h-4 w-4" /> {cancelListing.isPending ? 'Đang huỷ...' : 'Hủy bán'}
+                       </Button>
+                     </div>
+                   )}
+
+                   {ticket.status === 'TRANSFERRED' && (
+                     <div className="mt-4 rounded-lg bg-muted p-4 space-y-2">
+                       <div className="flex items-center gap-2 text-sm font-medium">
+                         <TrendingUp className="h-4 w-4 text-primary" /> Thông tin chuyển nhượng
+                       </div>
+                       <div className="grid grid-cols-2 gap-3 text-sm">
+                         <div>
+                           <div className="text-muted-foreground text-xs">Ngày bán</div>
+                           <div className="font-medium">{ticket.checkedInAt ? new Date(ticket.checkedInAt).toLocaleDateString('vi-VN') : '—'}</div>
+                         </div>
+                         <div>
+                           <div className="text-muted-foreground text-xs">Trạng thái thanh toán</div>
+                           <div className="font-medium">Xem lịch sử bán</div>
+                         </div>
+                       </div>
+                       <Button variant="outline" size="sm" asChild className="w-full mt-2">
+                         <Link to="/account/transactions">Xem lịch sử bán vé</Link>
+                       </Button>
+                     </div>
+                   )}
+
                   <div className="mt-6 rounded-lg border bg-background p-4 print:hidden">
                     <h3 className="mb-3 flex items-center gap-2 font-semibold">
                       <LifeBuoy className="h-4 w-4 text-primary" />
@@ -168,17 +257,17 @@ export function TicketDetailPage() {
                           Liên hệ hỗ trợ
                         </Link>
                       </Button>
-                      <Button variant="outline" asChild>
+                      <Button variant="outline" asChild disabled={ticket.status === 'LISTED_FOR_RESALE' || ticket.status === 'TRANSFERRED'}>
                         <Link to={`/account/tickets/${ticket.id}/download`}>
                           <Download className="mr-2 h-4 w-4" />
                           Tải vé
                         </Link>
                       </Button>
-                      <Button variant="outline" onClick={handleResendTicket} disabled={resendTicket.isPending}>
+                      <Button variant="outline" onClick={handleResendTicket} disabled={resendTicket.isPending || ticket.status === 'LISTED_FOR_RESALE' || ticket.status === 'TRANSFERRED'}>
                         <Mail className="mr-2 h-4 w-4" />
                         {resendTicket.isPending ? 'Đang gửi...' : 'Gửi lại email'}
                       </Button>
-                      <Button variant="outline" asChild disabled={!refundEligibility.data?.eligible}>
+                      <Button variant="outline" asChild disabled={!refundEligibility.data?.eligible || ticket.status === 'LISTED_FOR_RESALE' || ticket.status === 'TRANSFERRED'}>
                         <Link to={`/account/support?ticketId=${ticket.id}&tab=refund`}>
                           <RefreshCw className="mr-2 h-4 w-4" />
                           Yêu cầu hoàn tiền
@@ -190,16 +279,6 @@ export function TicketDetailPage() {
                         {refundEligibility.data.eligible
                           ? refundEligibility.data.message
                           : `Hoàn tiền chưa khả dụng: ${refundEligibility.data.message}`}
-                      </p>
-                    )}
-                    {resendTicket.isSuccess && (
-                      <p className="mt-3 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-700">
-                        {resendTicket.data.message}
-                      </p>
-                    )}
-                    {resendTicket.isError && (
-                      <p className="mt-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                        {parseSupportError(resendTicket.error)}
                       </p>
                     )}
                   </div>
