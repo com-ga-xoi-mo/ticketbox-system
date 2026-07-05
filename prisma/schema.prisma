@@ -300,8 +300,19 @@ enum OrderSourceType {
   @@map("order_source_type")
 }
 
+enum ResaleOrderStatus {
+  RESERVED
+  PENDING_CONFIRM
+  COMPLETED
+  CANCELLED
+  IN_DISPUTE
+
+  @@map("resale_order_status")
+}
+
 enum ResaleListingStatus {
   ACTIVE
+  RESERVED
   SOLD
   CANCELLED
   EXPIRED
@@ -393,21 +404,23 @@ model ArtistFavorite {
 }
 
 model User {
-  id              String     @id @default(uuid()) @db.Uuid
-  email           String     @unique @db.VarChar(320)
-  normalizedEmail String     @unique @map("normalized_email") @db.VarChar(320)
-  passwordHash    String?    @map("password_hash")
-  displayName     String     @map("display_name") @db.VarChar(160)
-  status          UserStatus @default(ACTIVE)
-  phone           String?    @db.VarChar(40)
-  dateOfBirth     DateTime?  @map("date_of_birth") @db.Timestamptz(6)
-  gender          Gender?
-  addressLine     String?    @map("address_line") @db.VarChar(255)
-  city            String?    @db.VarChar(120)
-  district        String?    @db.VarChar(120)
-  avatarAssetId   String?    @map("avatar_asset_id") @db.Uuid
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                      String     @id @default(uuid()) @db.Uuid
+  email                   String     @unique @db.VarChar(320)
+  normalizedEmail         String     @unique @map("normalized_email") @db.VarChar(320)
+  passwordHash            String?    @map("password_hash")
+  displayName             String     @map("display_name") @db.VarChar(160)
+  status                  UserStatus @default(ACTIVE)
+  phone                   String?    @db.VarChar(40)
+  dateOfBirth             DateTime?  @map("date_of_birth") @db.Timestamptz(6)
+  gender                  Gender?
+  addressLine             String?    @map("address_line") @db.VarChar(255)
+  city                    String?    @db.VarChar(120)
+  district                String?    @db.VarChar(120)
+  avatarAssetId           String?    @map("avatar_asset_id") @db.Uuid
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  buyerViolationCount     Int        @default(0) @map("buyer_violation_count")
+  resaleMarketSuspendedAt DateTime?  @map("resale_market_suspended_at") @db.Timestamptz(6)
 
   roles                 UserRole[]
   authIdentities        AuthIdentity[]
@@ -438,6 +451,9 @@ model User {
   directMessagesSent    DirectMessage[]
   dmThreadsAsBuyer      DirectMessageThread[]    @relation("DirectMessageBuyer")
   dmThreadsAsSeller     DirectMessageThread[]    @relation("DirectMessageSeller")
+  bankProfile           SellerBankProfile?
+  resaleOrdersAsBuyer   ResaleOrder[]            @relation("ResaleOrderBuyer")
+  resaleOrdersAsSeller  ResaleOrder[]            @relation("ResaleOrderSeller")
 
   @@map("users")
 }
@@ -1143,6 +1159,49 @@ model FavoriteConcert {
   @@map("favorite_concerts")
 }
 
+model SellerBankProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  bankAccountName   String   @map("bank_account_name") @db.VarChar(120)
+  bankAccountNumber String   @map("bank_account_number") @db.VarChar(40)
+  bankName          String   @map("bank_name") @db.VarChar(120)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("seller_bank_profiles")
+}
+
+model ResaleOrder {
+  id                 String            @id @default(uuid()) @db.Uuid
+  listingId          String            @map("listing_id") @db.Uuid
+  buyerId            String            @map("buyer_id") @db.Uuid
+  sellerId           String            @map("seller_id") @db.Uuid
+  status             ResaleOrderStatus @default(RESERVED)
+  paymentProofUrl    String?           @map("payment_proof_url")
+  disputeReason      String?           @map("dispute_reason")
+  disputeRaisedBy    String?           @map("dispute_raised_by") @db.Uuid
+  resolvedBy         String?           @map("resolved_by") @db.Uuid
+  resolutionNote     String?           @map("resolution_note")
+  reservedAt         DateTime          @default(now()) @map("reserved_at") @db.Timestamptz(6)
+  paymentConfirmedAt DateTime?         @map("payment_confirmed_at") @db.Timestamptz(6)
+  completedAt        DateTime?         @map("completed_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  disputedAt         DateTime?         @map("disputed_at") @db.Timestamptz(6)
+  resolvedAt         DateTime?         @map("resolved_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing ResaleListing @relation(fields: [listingId], references: [id])
+  buyer   User          @relation("ResaleOrderBuyer", fields: [buyerId], references: [id])
+  seller  User          @relation("ResaleOrderSeller", fields: [sellerId], references: [id])
+
+  @@index([listingId])
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@map("resale_orders")
+}
+
 model ResaleListing {
   id               String              @id @default(uuid()) @db.Uuid
   ticketId         String              @map("ticket_id") @db.Uuid
@@ -1167,6 +1226,7 @@ model ResaleListing {
   listingComments      ListingComment[]
   directMessageThreads DirectMessageThread[]
   transactions         ResaleTransaction[]
+  resaleOrders         ResaleOrder[]
 
   @@map("resale_listings")
 }
