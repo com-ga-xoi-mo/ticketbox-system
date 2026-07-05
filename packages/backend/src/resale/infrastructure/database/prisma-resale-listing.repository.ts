@@ -178,14 +178,17 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
     });
   }
 
-  async expireListingAndCloseThreads(listing: any, newQrHash: string) {
+  async expireListingsBatchAndCloseThreads(listings: any[]) {
     await this.prisma.$transaction(async (tx) => {
-      const current = await tx.resaleListing.findUnique({ where: { id: listing.id } });
-      if (current?.status !== 'ACTIVE') return;
+      for (const listing of listings) {
+        const current = await tx.resaleListing.findUnique({ where: { id: listing.id } });
+        if (current?.status !== 'ACTIVE') continue;
 
-      await tx.resaleListing.update({ where: { id: listing.id }, data: { status: 'EXPIRED' } });
-      await tx.ticket.update({ where: { id: listing.ticketId }, data: { status: 'ISSUED', qrTokenHash: newQrHash } });
-      await tx.directMessageThread.updateMany({ where: { listingId: listing.id }, data: { isClosed: true } });
+        const newQrHash = require('crypto').randomBytes(32).toString('hex');
+        await tx.resaleListing.update({ where: { id: listing.id }, data: { status: 'EXPIRED' } });
+        await tx.ticket.update({ where: { id: listing.ticketId }, data: { status: 'ISSUED', qrTokenHash: newQrHash } });
+        await tx.directMessageThread.updateMany({ where: { listingId: listing.id }, data: { isClosed: true } });
+      }
     });
   }
 }

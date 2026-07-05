@@ -8,5 +8,5 @@ export interface IResaleListingRepository {
   getFeed(params: any): Promise<any[]>;
   getListingDetail(listingId: string, userId?: string): Promise<any>;
   findActiveExpiredListings(now: Date): Promise<any[]>;
-  expireListingAndCloseThreads(listing: any, newQrHash: string): Promise<void>;
+  expireListingsBatchAndCloseThreads(listings: any[]): Promise<void>;
 }
