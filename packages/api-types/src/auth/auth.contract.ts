@@ -31,6 +31,21 @@ export const GoogleLoginRequestSchema = z
   .strict();
 export type GoogleLoginRequest = z.infer<typeof GoogleLoginRequestSchema>;
 
+export const ForgotPasswordRequestSchema = z
+  .object({
+    email: z.string().email(),
+  })
+  .strict();
+export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
+
+export const ResetPasswordRequestSchema = z
+  .object({
+    token: z.string().min(1),
+    newPassword: z.string().min(8),
+  })
+  .strict();
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
+
 export const AccountLinkRequiredErrorSchema = z
   .object({
     code: z.literal('ACCOUNT_LINK_REQUIRED'),

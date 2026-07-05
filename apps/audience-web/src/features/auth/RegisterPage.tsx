@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Ticket } from 'lucide-react';
 import { useAuth } from '../../shared/auth/AuthContext';
-import { registerRequest } from '../../shared/api/auth';
+import { registerRequest, googleLoginRequest } from '../../shared/api/auth';
 import type { RegisterRequest } from '@ticketbox/api-types';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 export function RegisterPage() {
   const { signIn } = useAuth();
@@ -16,6 +17,8 @@ export function RegisterPage() {
   const searchParams = new URLSearchParams(location.search);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(true);
 
   const returnTo = searchParams.get('returnTo');
   const stateFrom = (location.state as { from?: { pathname: string } })?.from?.pathname;
@@ -58,6 +61,28 @@ export function RegisterPage() {
     }
   }
 
+  async function handleGoogleCredential(credential: string) {
+    if (googleLoading) return;
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      const token = await googleLoginRequest(credential);
+      signIn(token);
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      if (err.data?.code === 'ACCOUNT_LINK_REQUIRED') {
+        setError('Tài khoản email đã tồn tại. Vui lòng đăng nhập bằng mật khẩu.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } else {
+        setError('Đăng nhập bằng Google thất bại.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_25%_20%,oklch(0.83_0.17_20/0.45),transparent_24rem),radial-gradient(circle_at_78%_10%,oklch(0.88_0.17_70/0.35),transparent_24rem)]" />
@@ -76,6 +101,27 @@ export function RegisterPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+          <div className="flex flex-col space-y-4 mb-4">
+            <GoogleSignInButton
+              onCredential={handleGoogleCredential}
+              onUnavailable={() => setGoogleAvailable(false)}
+            />
+            {!googleAvailable && (
+              <p className="text-xs text-center text-muted-foreground">
+                Đăng ký qua Google hiện không khả dụng.
+              </p>
+            )}
+          </div>
+
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">hoặc</span>
+            </div>
+          </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">

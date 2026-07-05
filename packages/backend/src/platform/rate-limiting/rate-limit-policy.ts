@@ -5,6 +5,7 @@ export enum RateLimitPolicy {
   ADMIN_WRITE = 'ADMIN_WRITE',
   CHECKIN_SYNC = 'CHECKIN_SYNC',
   GEOCODING_SEARCH = 'GEOCODING_SEARCH',
+  AUTH_PASSWORD_RESET = 'AUTH_PASSWORD_RESET',
 }
 
 export interface RateLimitPolicyConfig {
@@ -65,6 +66,14 @@ export const RATE_LIMIT_POLICIES: Record<RateLimitPolicy, RateLimitPolicyConfig>
     refillTokens: 1,
     refillIntervalMs: 1000,
     ttlMs: 5000,
+    failOpen: false,
+  },
+  [RateLimitPolicy.AUTH_PASSWORD_RESET]: {
+    policy: RateLimitPolicy.AUTH_PASSWORD_RESET,
+    capacity: 15,
+    refillTokens: 15,
+    refillIntervalMs: 15 * MINUTE_MS,
+    ttlMs: 20 * MINUTE_MS,
     failOpen: false,
   },
 };

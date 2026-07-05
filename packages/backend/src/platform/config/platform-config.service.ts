@@ -194,6 +194,10 @@ export class PlatformConfigService {
     return this.configService.get('EMAIL_SMTP_SECURE');
   }
 
+  get frontendUrl(): string {
+    return this.configService.get('FRONTEND_URL');
+  }
+
   get maildevWebUrl(): string | undefined {
     return this.configService.get('MAILDEV_WEB_URL', { infer: true });
   }

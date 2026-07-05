@@ -124,3 +124,31 @@ export class CheckinAssignmentNotFoundError extends Error {
     this.name = 'CheckinAssignmentNotFoundError';
   }
 }
+
+export class ForgotPasswordError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ForgotPasswordError';
+  }
+}
+
+export class InvalidResetTokenError extends Error {
+  constructor() {
+    super('Reset token is invalid');
+    this.name = 'InvalidResetTokenError';
+  }
+}
+
+export class ResetTokenExpiredError extends Error {
+  constructor() {
+    super('Reset token has expired');
+    this.name = 'ResetTokenExpiredError';
+  }
+}
+
+export class ResetTokenAlreadyUsedError extends Error {
+  constructor() {
+    super('Reset token has already been used');
+    this.name = 'ResetTokenAlreadyUsedError';
+  }
+}

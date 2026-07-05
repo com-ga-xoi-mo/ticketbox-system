@@ -94,7 +94,10 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">Quên mật khẩu?</Link>
+              </div>
               <Input id="password" name="password" type="password" placeholder="••••••••" autoComplete="current-password" required />
             </div>
 

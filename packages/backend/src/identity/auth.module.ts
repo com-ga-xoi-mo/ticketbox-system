@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { DatabaseModule } from '../platform/database/database.module';
 import { StorageModule } from '../platform/storage/storage.module';
@@ -11,6 +12,8 @@ import { PlatformConfigService } from '../platform/config/platform-config.servic
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { GoogleSignInUseCase } from './application/use-cases/google-sign-in.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-admin-action.use-case';
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
@@ -70,6 +73,8 @@ import { PrismaBulkCheckinStaffProvisioningRepository } from './infrastructure/d
 import { PrismaCheckinStaffAssignmentRepository } from './infrastructure/database/prisma-checkin-staff-assignment.repository';
 import { PrismaConcertOwnershipRepository } from './infrastructure/database/prisma-concert-ownership.repository';
 import { PrismaUserRepository } from './infrastructure/database/prisma-user.repository';
+import { PrismaPasswordResetTokenRepository } from './infrastructure/database/prisma-password-reset-token.repository';
+import { NodemailerEmailSender } from './infrastructure/email/nodemailer-email-sender';
 import { PrismaGoogleIdentityRepository } from './infrastructure/database/prisma-google-identity.repository';
 import { GoogleIdentityVerifierAdapter } from './infrastructure/google/google-identity-verifier.adapter';
 import { PrismaProfileQueryAdapter } from './infrastructure/database/prisma-profile-query.adapter';
@@ -79,6 +84,10 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
     PlatformConfigModule,
     DatabaseModule,
     StorageModule,
@@ -174,6 +183,24 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       ) => new GoogleSignInUseCase(verifier, identities, tokenIssuer),
     },
     {
+      provide: ForgotPasswordUseCase,
+      inject: [USER_REPOSITORY, 'PasswordResetTokenRepository', 'EmailSenderPort'],
+      useFactory: (
+        userRepository: IUserRepository,
+        tokenRepo: any,
+        emailSender: any,
+      ) => new ForgotPasswordUseCase(userRepository, tokenRepo, emailSender),
+    },
+    {
+      provide: ResetPasswordUseCase,
+      inject: [USER_REPOSITORY, 'PasswordResetTokenRepository', PASSWORD_HASHER],
+      useFactory: (
+        userRepository: IUserRepository,
+        tokenRepo: any,
+        passwordHasher: PasswordHasherPort,
+      ) => new ResetPasswordUseCase(userRepository, tokenRepo, passwordHasher),
+    },
+    {
       provide: UpdateMyProfileUseCase,
       inject: [USER_REPOSITORY],
       useFactory: (userRepository: IUserRepository) => new UpdateMyProfileUseCase(userRepository),
@@ -246,6 +273,14 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     {
       provide: BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
       useClass: PrismaBulkCheckinStaffProvisioningRepository,
+    },
+    {
+      provide: 'PasswordResetTokenRepository',
+      useClass: PrismaPasswordResetTokenRepository,
+    },
+    {
+      provide: 'EmailSenderPort',
+      useClass: NodemailerEmailSender,
     },
     {
       provide: PROFILE_QUERY,
