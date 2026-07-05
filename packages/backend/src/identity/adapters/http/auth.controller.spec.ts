@@ -15,7 +15,7 @@ function makeController(googleResult: unknown) {
         ? vi.fn().mockRejectedValue(googleResult)
         : vi.fn().mockResolvedValue(googleResult),
   };
-  return { controller: new AuthController({} as any, {} as any, google as any), google };
+  return { controller: new AuthController({} as any, {} as any, google as any, {} as any, {} as any), google };
 }
 
 describe('AuthController Google login', () => {
