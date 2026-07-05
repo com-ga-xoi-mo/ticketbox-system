@@ -23,6 +23,8 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
     endsAt: Date;
     description?: string;
     eventType?: string;
+    resaleEnabled?: boolean;
+    resaleMaxPricePercent?: number;
     isFeatured?: boolean;
     displayOrder?: number;
     seoTitle?: string | null;
@@ -43,8 +45,9 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         startsAt: data.startsAt,
         endsAt: data.endsAt,
         description: data.description ?? null,
-        status: ConcertStatus.DRAFT,
         eventType: (data.eventType as any) ?? 'CONCERT',
+        resaleEnabled: data.resaleEnabled ?? false,
+        resaleMaxPricePercent: data.resaleMaxPricePercent ?? 110,
         isFeatured: data.isFeatured ?? false,
         displayOrder: data.displayOrder ?? 0,
         seoTitle: data.seoTitle ?? null,
@@ -89,6 +92,8 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       cancelledAt?: Date | null;
       slug?: string;
       eventType?: string;
+      resaleEnabled?: boolean;
+      resaleMaxPricePercent?: number;
       isFeatured?: boolean;
       displayOrder?: number;
       seoTitle?: string | null;
@@ -109,11 +114,13 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         startsAt: data.startsAt,
         endsAt: data.endsAt,
         description: data.description,
-        status: data.status as ConcertStatus | undefined,
+        status: data.status as any,
         publishedAt: data.publishedAt,
         cancelledAt: data.cancelledAt,
         slug: data.slug,
         eventType: data.eventType as any,
+        resaleEnabled: data.resaleEnabled,
+        resaleMaxPricePercent: data.resaleMaxPricePercent,
         isFeatured: data.isFeatured,
         displayOrder: data.displayOrder,
         seoTitle: data.seoTitle,
@@ -337,6 +344,8 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
           }
         : null,
       eventType: record.eventType,
+      resaleEnabled: (record as any).resaleEnabled,
+      resaleMaxPricePercent: (record as any).resaleMaxPricePercent,
       isFeatured: record.isFeatured,
       displayOrder: record.displayOrder,
       seoTitle: record.seoTitle,

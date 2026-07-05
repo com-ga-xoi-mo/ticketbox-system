@@ -15,7 +15,7 @@ export type PersistedCheckinResult =
 
 export type PersistedBatchCheckinResult = PersistedCheckinResult | 'CONFLICT';
 
-export type TicketCheckinStatus = 'ISSUED' | 'CHECKED_IN' | 'VOIDED' | 'REFUNDED';
+export type TicketCheckinStatus = 'ISSUED' | 'CHECKED_IN' | 'VOIDED' | 'REFUNDED' | 'LISTED_FOR_RESALE' | 'TRANSFERRED';
 
 export interface OnlineScanActor {
   userId: string;

@@ -44,6 +44,8 @@ export class CreateConcertUseCase {
         endsAt: cmd.endsAt,
         description: cmd.description,
         eventType: cmd.eventType,
+        resaleEnabled: (cmd as any).resaleEnabled,
+        resaleMaxPricePercent: (cmd as any).resaleMaxPricePercent,
         isFeatured: cmd.isFeatured,
         displayOrder: cmd.displayOrder,
         seoTitle: cmd.seoTitle,

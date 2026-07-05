@@ -22,8 +22,10 @@ export interface Concert {
   city: string;
   startsAt: Date;
   endsAt: Date;
-  status: string; // DRAFT, PUBLISHED, CANCELLED, ENDED
+  status: string;
   eventType: string;
+  resaleEnabled?: boolean;
+  resaleMaxPricePercent?: number;
   isFeatured: boolean;
   displayOrder: number;
   seoTitle: string | null;

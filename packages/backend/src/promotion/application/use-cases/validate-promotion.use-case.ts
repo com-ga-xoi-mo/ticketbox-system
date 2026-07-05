@@ -15,6 +15,7 @@ export interface ValidatePromotionCommand {
   userId: string;
   concertId: string;
   ticketTypeIds: string[];
+  orderSourceType?: 'DIRECT' | 'RESALE';
   now?: Date;
 }
 
@@ -22,6 +23,10 @@ export class ValidatePromotionUseCase {
   constructor(private readonly promotionRepository: IPromotionRepository) {}
 
   async execute(command: ValidatePromotionCommand): Promise<Promotion> {
+    if (command.orderSourceType === 'RESALE') {
+      throw new PromoNotApplicableError();
+    }
+
     const promotion = await this.promotionRepository.findByCode(command.code);
 
     if (!promotion) {

@@ -19,6 +19,8 @@ export function mapToManagementConcertResponse(concert: Concert): ManagementConc
     eventType: concert.eventType as any,
     isFeatured: concert.isFeatured,
     displayOrder: concert.displayOrder,
+    resaleEnabled: (concert as any).resaleEnabled ?? false,
+    resaleMaxPricePercent: (concert as any).resaleMaxPricePercent ?? 110,
     seoTitle: concert.seoTitle,
     seoDescription: concert.seoDescription,
     seoImageUrl: concert.seoImageUrl,
