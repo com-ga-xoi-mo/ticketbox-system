@@ -115,74 +115,74 @@
 
 ## 12. API Types & Contracts
 
-- [ ] 12.1 Add resale listing types: `ResaleListingFeedItem`, `ResaleListingDetail`, `CreateResaleListingRequest`, `ResalePurchaseRequest`, `ResaleTransactionResponse`
-- [ ] 12.2 Add social types: `ListingCommentResponse`, `ListingCommentReplyResponse`, `UpvoteResponse`
-- [ ] 12.3 Add SSE event payload types: `UpvoteUpdatedEvent`, `CommentAddedEvent` — document that these are SSE payloads, not REST responses
-- [ ] 12.4 Add WebSocket event payload type: `MessageNewEvent` — document that this is a Socket.io event payload emitted to `user:<userId>` room
-- [ ] 12.5 Add messaging types: `DirectMessageThreadResponse`, `DirectMessageResponse`, `SendMessageRequest`
-- [ ] 12.6 Add trust types: `SellerProfileResponse`, `SellerTrustTier` enum (`NEW`, `TRUSTED`, `HIGHLY_TRUSTED`, `TOP_SELLER`)
-- [ ] 12.7 Add `LISTED_FOR_RESALE` and `TRANSFERRED` to `TicketStatus` type definitions
-- [ ] 12.8 Add `orderSourceType` (`DIRECT` | `RESALE`) to order type definitions
-- [ ] 12.9 **Verify**: `npm run build` in `packages/api-types` — no TypeScript errors. Import types in a backend service file and confirm IDE resolves without errors.
+- [x] 12.1 Add resale listing types: `ResaleListingFeedItem`, `ResaleListingDetail`, `CreateResaleListingRequest`, `ResalePurchaseRequest`, `ResaleTransactionResponse`
+- [x] 12.2 Add social types: `ListingCommentResponse`, `ListingCommentReplyResponse`, `UpvoteResponse`
+- [x] 12.3 Add SSE event payload types: `UpvoteUpdatedEvent`, `CommentAddedEvent` — document that these are SSE payloads, not REST responses
+- [x] 12.4 Add WebSocket event payload type: `MessageNewEvent` — document that this is a Socket.io event payload emitted to `user:<userId>` room
+- [x] 12.5 Add messaging types: `DirectMessageThreadResponse`, `DirectMessageResponse`, `SendMessageRequest`
+- [x] 12.6 Add trust types: `SellerProfileResponse`, `SellerTrustTier` enum (`NEW`, `TRUSTED`, `HIGHLY_TRUSTED`, `TOP_SELLER`)
+- [x] 12.7 Add `LISTED_FOR_RESALE` and `TRANSFERRED` to `TicketStatus` type definitions
+- [x] 12.8 Add `orderSourceType` (`DIRECT` | `RESALE`) to order type definitions
+- [x] 12.9 **Verify**: `npm run build` in `packages/api-types` — no TypeScript errors. Import types in a backend service file and confirm IDE resolves without errors.
 
 ## 13. Audience Web — Ticket Wallet Updates
 
-- [ ] 13.1 Add `LISTED_FOR_RESALE` (orange "Đang bán lại") and `TRANSFERRED` (gray "Đã chuyển nhượng") status badges to the ticket status badge component
-- [ ] 13.2 Implement "Bán lại vé" button on ticket detail — visible only when ticket is `ISSUED`, event has `resaleEnabled=true`, and event starts more than 2 hours from now
-- [ ] 13.3 Implement resale listing form: display face value, computed max allowed price, price input with validation, submit calling `POST /resale/listings`
-- [ ] 13.4 Update ticket detail for `LISTED_FOR_RESALE` status: hide QR, show asking price, listing date, upvote count, comment count, and "Hủy bán" button calling `DELETE /resale/listings/:id`
-- [ ] 13.5 Update ticket detail for `TRANSFERRED` status: hide QR, show transfer date, sale price, payout amount, payout status
-- [ ] 13.6 Add resale API client `shared/api/resale.ts`: `createResaleListing`, `cancelResaleListing`, `fetchMyResaleListings`, hooks `useMyResaleListings`
-- [ ] 13.7 **Verify**: With a seeded ISSUED ticket for a resale-enabled event, confirm "Bán lại vé" button appears. Submit listing form — confirm button disappears, status badge changes to orange "Đang bán lại", QR hidden. Cancel the listing — confirm ticket restores to green "Hợp lệ" badge with QR visible.
+- [x] 13.1 Add `LISTED_FOR_RESALE` (orange "Đang bán lại") and `TRANSFERRED` (gray "Đã chuyển nhượng") status badges to the ticket status badge component
+- [x] 13.2 Implement "Bán lại vé" button on ticket detail — visible only when ticket is `ISSUED`, event has `resaleEnabled=true`, and event starts more than 2 hours from now
+- [x] 13.3 Implement resale listing form: display face value, computed max allowed price, price input with validation, submit calling `POST /resale/listings`
+- [x] 13.4 Update ticket detail for `LISTED_FOR_RESALE` status: hide QR, show asking price, listing date, upvote count, comment count, and "Hủy bán" button calling `DELETE /resale/listings/:id`
+- [x] 13.5 Update ticket detail for `TRANSFERRED` status: hide QR, show transfer date, sale price, payout amount, payout status
+- [x] 13.6 Add resale API client `shared/api/resale.ts`: `createResaleListing`, `cancelResaleListing`, `fetchMyResaleListings`, hooks `useMyResaleListings`
+- [x] 13.7 **Verify**: With a seeded ISSUED ticket for a resale-enabled event, confirm "Bán lại vé" button appears. Submit listing form — confirm button disappears, status badge changes to orange "Đang bán lại", QR hidden. Cancel the listing — confirm ticket restores to green "Hợp lệ" badge with QR visible.
 
 ## 14. Audience Web — Community Marketplace Page
 
-- [ ] 14.1 Create `/events/:slug/resale` page — fetch listings via `GET /resale/listings?concertId=<id>` with infinite scroll (20 per page, load more on scroll-to-bottom)
-- [ ] 14.2 Implement listing card: seller display name + trust badge, ticket type, asking price, original face value, "Verified by TicketBox" badge, upvote button with count, comment count chip, "Message" button, "Buy" button
-- [ ] 14.3 Implement sort tabs: Trending, Newest, Price ↑, Price ↓ — switching tab re-fetches with new `sort` param
-- [ ] 14.4 Implement upvote button — on click calls `POST /resale/listings/:id/upvote`; subscribes to SSE stream `GET /resale/listings/:id/events` to receive `upvote.updated` events and update count in real time without page refresh; falls back to polling if `EventSource` fails
-- [ ] 14.5 Implement listing detail page `/events/:slug/resale/:listingId` — show full detail, upvote toggle (SSE-connected), "Message Seller" button, seller profile link, comment thread with reply/flag, purchase flow (confirmation modal → payment → success state with link to new ticket in wallet)
-- [ ] 14.6 Implement comment thread component: paginated top-level comments + nested replies; "Reply" and "Flag" actions per comment; new comment input; subscribe to SSE `comment.added` events and prepend new comments in real time
-- [ ] 14.7 Handle unauthenticated state: social action buttons (Upvote, Comment, Message, Buy) redirect to login with return URL
-- [ ] 14.8 Handle resale-disabled event: show "Resale not available" message and hide listing feed
-- [ ] 14.9 **Verify**: Open marketplace page in browser. Confirm listings render in trending order. Switch to Newest sort — confirm re-fetch. Scroll to bottom — confirm next page loads and appends. Open a listing detail, connect DevTools Network tab and confirm `GET /resale/listings/:id/events` shows a persistent SSE connection. Upvote from another browser tab — confirm upvote count updates in the first tab via SSE without refresh.
+- [x] 14.1 Create `/events/:slug/resale` page — fetch listings via `GET /resale/listings?concertId=<id>` with infinite scroll (20 per page, load more on scroll-to-bottom)
+- [x] 14.2 Implement listing card: seller display name + trust badge, ticket type, asking price, original face value, "Verified by TicketBox" badge, upvote button with count, comment count chip, "Message" button, "Buy" button
+- [x] 14.3 Implement sort tabs: Trending, Newest, Price ↑, Price ↓ — switching tab re-fetches with new `sort` param
+- [x] 14.4 Implement upvote button — on click calls `POST /resale/listings/:id/upvote`; subscribes to SSE stream `GET /resale/listings/:id/events` to receive `upvote.updated` events and update count in real time without page refresh; falls back to polling if `EventSource` fails
+- [x] 14.5 Implement listing detail page `/events/:slug/resale/:listingId` — show full detail, upvote toggle (SSE-connected), "Message Seller" button, seller profile link, comment thread with reply/flag, purchase flow (confirmation modal → payment → success state with link to new ticket in wallet)
+- [x] 14.6 Implement comment thread component: paginated top-level comments + nested replies; "Reply" and "Flag" actions per comment; new comment input; subscribe to SSE `comment.added` events and prepend new comments in real time
+- [x] 14.7 Handle unauthenticated state: social action buttons (Upvote, Comment, Message, Buy) redirect to login with return URL
+- [x] 14.8 Handle resale-disabled event: show "Resale not available" message and hide listing feed
+- [x] 14.9 **Verify**: Open marketplace page in browser. Confirm listings render in trending order. Switch to Newest sort — confirm re-fetch. Scroll to bottom — confirm next page loads and appends. Open a listing detail, connect DevTools Network tab and confirm `GET /resale/listings/:id/events` shows a persistent SSE connection. Upvote from another browser tab — confirm upvote count updates in the first tab via SSE without refresh.
 
 ## 15. Audience Web — DM Inbox
 
-- [ ] 15.1 Create DM inbox page `/account/messages` — list all threads via `GET /me/messages/threads`, ordered by `lastMessageAt`, with unread count badge per thread
-- [ ] 15.2 Implement thread conversation view `/account/messages/:threadId` — display messages chronologically, message input at bottom, send calls `POST /resale/listings/:id/messages/:threadId`
-- [ ] 15.3 Implement Socket.io client: connect on user login with JWT auth token; subscribe to `message.new` event on personal room; on event received, update unread count in inbox and append message to open thread if viewing it — **WebSocket only, not SSE**
-- [ ] 15.4 Show global unread DM badge in navigation bar (derived from total `unreadCount` across all threads)
-- [ ] 15.5 Implement polling fallback: if Socket.io connection fails, poll `GET /me/messages/threads` every 30 seconds for unread count updates
-- [ ] 15.6 Add messaging API client `shared/api/messaging.ts`: `fetchMyThreads`, `fetchThreadMessages`, `sendMessage`, hooks `useMyThreads`, `useThreadMessages`
-- [ ] 15.7 **Verify**: Open inbox in browser tab A (buyer) and tab B (seller). From tab A, send a message via `POST`. Confirm: tab B's Socket.io client receives `message.new` event and the new message appears in the conversation view without refresh. Confirm unread badge appears in tab B's nav. Open the thread in tab B — confirm badge clears. Disconnect tab B's socket (disable network briefly) — confirm polling fallback activates and the message eventually appears within 30 seconds.
+- [x] 15.1 Create DM inbox page `/account/messages` — list all threads via `GET /me/messages/threads`, ordered by `lastMessageAt`, with unread count badge per thread
+- [x] 15.2 Implement thread conversation view `/account/messages/:threadId` — display messages chronologically, message input at bottom, send calls `POST /resale/listings/:id/messages/:threadId`
+- [x] 15.3 Implement Socket.io client: connect on user login with JWT auth token; subscribe to `message.new` event on personal room; on event received, update unread count in inbox and append message to open thread if viewing it — **WebSocket only, not SSE**
+- [x] 15.4 Show global unread DM badge in navigation bar (derived from total `unreadCount` across all threads)
+- [x] 15.5 Implement polling fallback: if Socket.io connection fails, poll `GET /me/messages/threads` every 30 seconds for unread count updates
+- [x] 15.6 Add messaging API client `shared/api/messaging.ts`: `fetchMyThreads`, `fetchThreadMessages`, `sendMessage`, hooks `useMyThreads`, `useThreadMessages`
+- [x] 15.7 **Verify**: Open inbox in browser tab A (buyer) and tab B (seller). From tab A, send a message via `POST`. Confirm: tab B's Socket.io client receives `message.new` event and the new message appears in the conversation view without refresh. Confirm unread badge appears in tab B's nav. Open the thread in tab B — confirm badge clears. Disconnect tab B's socket (disable network briefly) — confirm polling fallback activates and the message eventually appears within 30 seconds.
 
 ## 16. Audience Web — Seller Profile Page
 
-- [ ] 16.1 Create public seller profile page `/sellers/:userId` — fetch via `GET /sellers/:userId/profile`; display trust badge, completed sales count, member since, active listings grid
-- [ ] 16.2 Link seller display name on listing cards and detail pages to `/sellers/:userId`
-- [ ] 16.3 Add seller profile API client: `fetchSellerProfile`, hook `useSellerProfile`
-- [ ] 16.4 **Verify**: Navigate to a seller's profile page. Confirm trust tier badge matches the `tier` from the API. Confirm no PII visible (no email, phone). Confirm active listings grid matches `GET /resale/listings?sellerId=<id>`.
+- [x] 16.1 Create public seller profile page `/sellers/:userId` — fetch via `GET /sellers/:userId/profile`; display trust badge, completed sales count, member since, active listings grid
+- [x] 16.2 Link seller display name on listing cards and detail pages to `/sellers/:userId`
+- [x] 16.3 Add seller profile API client: `fetchSellerProfile`, hook `useSellerProfile`
+- [x] 16.4 **Verify**: Navigate to a seller's profile page. Confirm trust tier badge matches the `tier` from the API. Confirm no PII visible (no email, phone). Confirm active listings grid matches `GET /resale/listings?sellerId=<id>`.
 
 ## 17. Seller Payout & Transaction History
 
-- [ ] 17.1 Implement `GET /me/resale/transactions` — return seller's completed transactions with sale price, platform fee, payout amount, payout status
-- [ ] 17.2 Add admin endpoint `PATCH /admin/resale/transactions/:id/payout` — transition payout status `PENDING` → `PROCESSED` with `payoutProcessedAt` timestamp; restrict to ADMIN role
-- [ ] 17.3 Add transaction history UI in audience web account section
-- [ ] 17.4 **Verify**: Complete a resale transaction. Call `GET /me/resale/transactions` as the seller — confirm transaction appears with correct amounts and `payoutStatus: PENDING`. Call admin payout endpoint — confirm status transitions to `PROCESSED` and `payoutProcessedAt` is set.
+- [x] 17.1 Implement `GET /me/resale/transactions` — return seller's completed transactions with sale price, platform fee, payout amount, payout status
+- [x] 17.2 Add admin endpoint `PATCH /admin/resale/transactions/:id/payout` — transition payout status `PENDING` → `PROCESSED` with `payoutProcessedAt` timestamp; restrict to ADMIN role
+- [x] 17.3 Add transaction history UI in audience web account section
+- [x] 17.4 **Verify**: Complete a resale transaction. Call `GET /me/resale/transactions` as the seller — confirm transaction appears with correct amounts and `payoutStatus: PENDING`. Call admin payout endpoint — confirm status transitions to `PROCESSED` and `payoutProcessedAt` is set.
 
 ## 18. End-to-End Verification
 
-- [ ] 18.1 E2E test — full resale lifecycle: seller lists ticket → buyer opens SSE stream → buyer upvotes (assert SSE `upvote.updated` received) → buyer comments (assert SSE `comment.added` received) → buyer sends DM (assert seller receives `message.new` via WebSocket) → buyer purchases → assert: listing `SOLD`, seller ticket `TRANSFERRED`, buyer ticket `ISSUED` with new QR, `ResaleTransaction` created with correct fee split
-- [ ] 18.2 E2E test — SSE reconnect: open SSE stream, force disconnect (close connection), reconnect with `Last-Event-ID`, trigger upvote, assert event received after reconnect
-- [ ] 18.3 E2E test — WebSocket Redis multi-instance: two server instances with shared Redis; buyer on instance A, seller on instance B; buyer sends DM; assert seller receives `message.new` via Redis pub/sub routing
-- [ ] 18.4 E2E test — listing cancellation: seller lists → cancels → assert ticket `ISSUED` with new `qrTokenHash` (different from voided one), all existing comments still readable, DM threads not auto-closed (listing cancelled before sale, not sold/expired)
-- [ ] 18.5 E2E test — auto-expiry: set listing `expiresAt` to past → run expiry job → assert listing `EXPIRED`, ticket `ISSUED` with new QR, DM threads closed, trust score job enqueued
-- [ ] 18.6 E2E test — comment flagging: 3 different users flag same comment → assert `isHidden=true` after 3rd flag, comment absent from `GET /resale/listings/:id/comments` response
-- [ ] 18.7 E2E test — concurrent purchase: two parallel `POST /resale/purchase` on same listing → assert exactly one succeeds, one fails with listing-no-longer-available error, no duplicate `ResaleTransaction` created
-- [ ] 18.8 Verify: resale orders excluded from reservation expiry worker scan (run worker, confirm RESALE orders untouched)
-- [ ] 18.9 Verify: price cap across default (110%) and custom event cap configurations — 3 scenarios: at cap, above cap, custom cap
-- [ ] 18.10 Verify: seller trust profile tiers computed correctly — seed scenarios for each tier boundary and confirm `compute-seller-trust` job produces expected tier
+- [x] 18.1 E2E test — full resale lifecycle: seller lists ticket → buyer opens SSE stream → buyer upvotes (assert SSE `upvote.updated` received) → buyer comments (assert SSE `comment.added` received) → buyer sends DM (assert seller receives `message.new` via WebSocket) → buyer purchases → assert: listing `SOLD`, seller ticket `TRANSFERRED`, buyer ticket `ISSUED` with new QR, `ResaleTransaction` created with correct fee split
+- [x] 18.2 E2E test — SSE reconnect: open SSE stream, force disconnect (close connection), reconnect with `Last-Event-ID`, trigger upvote, assert event received after reconnect
+- [x] 18.3 E2E test — WebSocket Redis multi-instance: two server instances with shared Redis; buyer on instance A, seller on instance B; buyer sends DM; assert seller receives `message.new` via Redis pub/sub routing
+- [x] 18.4 E2E test — listing cancellation: seller lists → cancels → assert ticket `ISSUED` with new `qrTokenHash` (different from voided one), all existing comments still readable, DM threads not auto-closed (listing cancelled before sale, not sold/expired)
+- [x] 18.5 E2E test — auto-expiry: set listing `expiresAt` to past → run expiry job → assert listing `EXPIRED`, ticket `ISSUED` with new QR, DM threads closed, trust score job enqueued
+- [x] 18.6 E2E test — comment flagging: 3 different users flag same comment → assert `isHidden=true` after 3rd flag, comment absent from `GET /resale/listings/:id/comments` response
+- [x] 18.7 E2E test — concurrent purchase: two parallel `POST /resale/purchase` on same listing → assert exactly one succeeds, one fails with listing-no-longer-available error, no duplicate `ResaleTransaction` created
+- [x] 18.8 Verify: resale orders excluded from reservation expiry worker scan (run worker, confirm RESALE orders untouched)
+- [x] 18.9 Verify: price cap across default (110%) and custom event cap configurations — 3 scenarios: at cap, above cap, custom cap
+- [x] 18.10 Verify: seller trust profile tiers computed correctly — seed scenarios for each tier boundary and confirm `compute-seller-trust` job produces expected tier
 
 ## 19. Refactor Resale Module to Clean Architecture (Tech Debt)
 
