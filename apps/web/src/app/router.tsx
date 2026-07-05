@@ -21,6 +21,8 @@ import { ShellLayout } from '../shared/ui/ShellLayout';
 import { useAuth } from '../shared/auth/AuthContext';
 import { redirectFor } from '../shared/auth/role-access';
 
+import { AdminResaleDisputesPage } from '../features/admin/resale-disputes/AdminResaleDisputesPage';
+
 function RootRedirect() {
   const { session } = useAuth();
   if (!session) return <Navigate to="/login" replace />;
@@ -136,6 +138,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminAssignmentsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/resale-disputes',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminResaleDisputesPage />
           </ProtectedRoute>
         ),
       },

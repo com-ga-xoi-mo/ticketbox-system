@@ -15,8 +15,13 @@ export interface TicketSummary {
   status: TicketStatus;
   issuedAt: Date;
   checkedInAt: Date | null;
+  resaleEnabled?: boolean;
+  resaleMaxPricePercent?: number;
+  originalPriceVnd?: number;
+  resaleListingId?: string | null;
 }
 
 export interface TicketDetail extends TicketSummary {
-  qrPayload: string;
+  qrPayload: string | null;
 }
+

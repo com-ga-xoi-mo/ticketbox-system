@@ -57,6 +57,8 @@ export class UpdateConcertUseCase {
         description: cmd.description,
         slug: cmd.slug,
         eventType: cmd.eventType,
+        resaleEnabled: cmd.resaleEnabled,
+        resaleMaxPricePercent: cmd.resaleMaxPricePercent,
         isFeatured: cmd.isFeatured,
         displayOrder: cmd.displayOrder,
         seoTitle: cmd.seoTitle,

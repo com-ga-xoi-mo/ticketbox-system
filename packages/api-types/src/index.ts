@@ -350,3 +350,5 @@ export type {
   LocationSearchResult,
   LocationSearchResponse,
 } from './location/location-search.contract';
+
+export * from './resale';

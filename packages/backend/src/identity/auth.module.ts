@@ -41,6 +41,7 @@ import { AdminUsersController } from './adapters/http/admin-users.controller';
 import { AuthController } from './adapters/http/auth.controller';
 import { RolesGuard } from './adapters/http/guards/roles.guard';
 import { ProfileController } from './adapters/http/profile.controller';
+import { SellerBankProfileController } from './adapters/http/seller-bank-profile.controller';
 
 // Domain — DI tokens
 import { PASSWORD_HASHER, type PasswordHasherPort } from './domain/ports/password-hasher.port';
@@ -81,6 +82,11 @@ import { PrismaProfileQueryAdapter } from './infrastructure/database/prisma-prof
 import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
+import { PrismaSellerBankProfileRepository } from '../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { GetBankProfileQuery } from '../users/application/queries/get-bank-profile.query';
+import { SaveBankProfileUseCase } from '../users/application/use-cases/save-bank-profile.use-case';
+
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -91,6 +97,7 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
     PlatformConfigModule,
     DatabaseModule,
     StorageModule,
+    UsersModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
@@ -103,7 +110,13 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
         }) as any,
     }),
   ],
-  controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController, AdminUsersController],
+  controllers: [
+    AuthController,
+    ProfileController,
+    AdminCheckinStaffAssignmentsController,
+    AdminUsersController,
+    SellerBankProfileController,
+  ],
   providers: [
     {
       provide: AvatarImageValidator,

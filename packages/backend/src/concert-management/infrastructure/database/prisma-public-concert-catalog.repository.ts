@@ -397,6 +397,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       longitude: concert.longitude !== null && concert.longitude !== undefined
         ? Number(concert.longitude)
         : null,
+      resaleEnabled: (concert as any).resaleEnabled ?? false,
       seoTitle: concert.seoTitle,
       seoDescription: concert.seoDescription,
       seoImageUrl: concert.seoImageUrl,

@@ -38,6 +38,8 @@ export interface UpdateConcertCommand {
   description?: string | null;
   slug?: string;
   eventType?: string;
+  resaleEnabled?: boolean;
+  resaleMaxPricePercent?: number;
   isFeatured?: boolean;
   displayOrder?: number;
   seoTitle?: string | null;

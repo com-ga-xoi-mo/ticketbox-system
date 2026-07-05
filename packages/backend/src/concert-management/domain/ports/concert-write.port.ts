@@ -17,6 +17,8 @@ export interface ConcertWriteRepositoryPort {
     endsAt: Date;
     description?: string;
     eventType?: string;
+    resaleEnabled?: boolean;
+    resaleMaxPricePercent?: number;
     isFeatured?: boolean;
     displayOrder?: number;
     seoTitle?: string | null;
@@ -42,6 +44,8 @@ export interface ConcertWriteRepositoryPort {
       cancelledAt?: Date | null;
       slug?: string;
       eventType?: string;
+      resaleEnabled?: boolean;
+      resaleMaxPricePercent?: number;
       isFeatured?: boolean;
       displayOrder?: number;
       seoTitle?: string | null;

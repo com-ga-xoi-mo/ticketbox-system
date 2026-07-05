@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const TICKET_STATUSES = ['ISSUED', 'CHECKED_IN', 'VOIDED', 'REFUNDED'] as const;
+export const TICKET_STATUSES = ['ISSUED', 'CHECKED_IN', 'VOIDED', 'REFUNDED', 'LISTED_FOR_RESALE', 'TRANSFERRED'] as const;
 
 export const TicketStatusSchema = z.enum(TICKET_STATUSES);
 export type TicketStatus = z.infer<typeof TicketStatusSchema>;
@@ -25,6 +25,10 @@ export type TicketSummaryResponse = z.infer<typeof TicketSummaryResponseSchema>;
 
 export const TicketDetailResponseSchema = TicketSummaryResponseSchema.extend({
   qrPayload: z.string().nullable().optional(),
+  resaleEnabled: z.boolean().optional(),
+  resaleMaxPricePercent: z.number().optional(),
+  originalPriceVnd: z.number().optional(),
+  resaleListingId: z.string().nullable().optional(),
 });
 export type TicketDetailResponse = z.infer<typeof TicketDetailResponseSchema>;
 

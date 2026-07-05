@@ -100,6 +100,7 @@ export type ConcertDetail = {
   startsAt: Date;
   endsAt: Date;
   eventType: string;
+  resaleEnabled?: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   seoImageUrl: string | null;

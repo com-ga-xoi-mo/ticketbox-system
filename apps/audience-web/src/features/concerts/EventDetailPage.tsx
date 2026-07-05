@@ -306,6 +306,25 @@ export function EventDetailPage() {
             </Card>
           )}
 
+          {(data as any).resaleEnabled && (
+            <Card className="border-blue-500/30 bg-blue-50/50 shadow-sm overflow-hidden">
+              <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-blue-600" />
+                    Thị trường vé bán lại (Resale)
+                  </h3>
+                  <p className="text-sm text-blue-800/80 mt-1">
+                    Tìm mua vé từ người khác hoặc bán lại vé của bạn một cách an toàn.
+                  </p>
+                </div>
+                <Button asChild className="shrink-0 rounded-full shadow-sm bg-blue-600 hover:bg-blue-700">
+                  <a href={`/resale?concertId=${data.id}`}>Xem vé resale</a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {isAllSoldOut && <PageSoldOut />}
 
           {data.ticketTypes.length > 0 && (
