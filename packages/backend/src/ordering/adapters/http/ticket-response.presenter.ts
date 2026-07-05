@@ -23,5 +23,9 @@ export function serializeTicketDetail(ticket: TicketDetail) {
   return {
     ...serializeTicketSummary(ticket),
     qrPayload: ticket.qrPayload,
+    resaleEnabled: ticket.resaleEnabled,
+    resaleMaxPricePercent: ticket.resaleMaxPricePercent,
+    originalPriceVnd: ticket.originalPriceVnd,
+    resaleListingId: ticket.resaleListingId ?? null,
   };
 }
