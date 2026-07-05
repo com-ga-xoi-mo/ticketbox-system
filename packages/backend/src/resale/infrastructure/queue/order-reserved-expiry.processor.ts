@@ -32,6 +32,7 @@ export class ResaleOrderReservedExpiryProcessor extends WorkerHost {
         });
       } catch (err) {
         this.logger.error(`Failed to cancel expired order ${orderId}`, err);
+        throw err;
       }
     }
   }

@@ -32,6 +32,7 @@ export class ResaleOrderConfirmExpiryProcessor extends WorkerHost {
         });
       } catch (err) {
         this.logger.error(`Failed to escalate order ${orderId} to dispute`, err);
+        throw err;
       }
     }
   }

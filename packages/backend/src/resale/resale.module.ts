@@ -80,10 +80,10 @@ import { ResaleOrderConfirmExpiryProcessor } from './infrastructure/queue/order-
       useFactory: (config: PlatformConfigService) => ({ secret: config.jwtSecret }),
     }),
     BullModule.registerQueue(
-      { name: 'compute-seller-trust' },
-      { name: 'resale-listing-expiry' },
-      { name: 'resale.order.reserved.expiry' },
-      { name: 'resale.order.confirm.expiry' }
+      { name: 'compute-seller-trust', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
+      { name: 'resale-listing-expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
+      { name: 'resale.order.reserved.expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
+      { name: 'resale.order.confirm.expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } }
     ),
   ],
   controllers: [
