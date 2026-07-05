@@ -349,4 +349,6 @@ export type {
   LocationSearchQuery,
   LocationSearchResult,
   LocationSearchResponse,
-} from './location/location-search.contract';export * from './resale';
+} from './location/location-search.contract';
+
+export * from './resale';
