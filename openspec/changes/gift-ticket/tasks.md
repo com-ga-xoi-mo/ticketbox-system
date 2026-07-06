@@ -44,16 +44,16 @@
 
 ## 6. Email Notifications
 
-- [ ] 6.1 Create email template `gift-invitation` (to recipient): includes sender name, concert name, ticket type, accept/decline links with embedded token, 48-hour expiry notice
-- [ ] 6.2 Create email template `gift-accepted` (to sender): includes recipient name, concert name, confirmation message
-- [ ] 6.3 Create email template `gift-declined` (to sender): includes recipient name, concert name, reassurance that ticket has been returned
-- [ ] 6.4 Wire notification sends: call gift-invitation from `InitiateTransferUseCase`; call gift-accepted/gift-declined from `AcceptTransferUseCase`/`DeclineTransferUseCase`
-- [ ] 6.5 Verify emails render correctly in Maildev (`http://localhost:1080`) using a manual test
+- [x] 6.1 Create email template `gift-invitation` (to recipient): includes sender name, concert name, ticket type, accept/decline links with embedded token, 48-hour expiry notice
+- [x] 6.2 Create email template `gift-accepted` (to sender): includes recipient name, concert name, confirmation message
+- [x] 6.3 Create email template `gift-declined` (to sender): includes recipient name, concert name, reassurance that ticket has been returned
+- [x] 6.4 Wire notification sends: call gift-invitation from `InitiateTransferUseCase`; call gift-accepted/gift-declined from `AcceptTransferUseCase`/`DeclineTransferUseCase`
+- [x] 6.5 Verify emails render correctly in Maildev (`http://localhost:1080`) using a manual test
 
 ## 7. In-App Notifications
 
-- [ ] 7.1 Add notification creation to `AcceptTransferUseCase`: create a notification for the sender with message "[Recipient name] accepted your gift ticket for [Concert name]"
-- [ ] 7.2 Add notification creation to `DeclineTransferUseCase`: create a notification for the sender with message "[Recipient name] declined your gift ticket for [Concert name]"
+- [x] 7.1 Add notification creation to `AcceptTransferUseCase`: create a notification for the sender with message "[Recipient name] accepted your gift ticket for [Concert name]"
+- [x] 7.2 Add notification creation to `DeclineTransferUseCase`: create a notification for the sender with message "[Recipient name] declined your gift ticket for [Concert name]"
 
 ## 8. Frontend: Gift Initiation Flow
 
