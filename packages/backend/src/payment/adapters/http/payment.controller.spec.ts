@@ -65,6 +65,7 @@ describe('PaymentController', () => {
       momoIpnUseCase as never,
       vnpayIpnUseCase as never,
       vnpayReturnUseCase as never,
+      { frontendUrl: 'http://localhost:5173' } as never,
     );
   });
 
@@ -103,12 +104,13 @@ describe('PaymentController', () => {
     });
   });
 
-  it('verifies VNPay return without invoking authoritative IPN processing', () => {
-    vnpayReturnUseCase.execute.mockReturnValue({
+  it('verifies VNPay return and redirects to the frontend result page', async () => {
+    vnpayReturnUseCase.execute.mockResolvedValue({
       payload: {},
       providerTransactionId: 'payment-1',
       providerEventId: 'vnpay:payment-1:123:00:00:20260624100000',
       providerPaymentId: '123',
+      orderId: 'order-1',
       amountVnd: 2400000,
       responseCode: '00',
       transactionStatus: '00',
@@ -116,19 +118,22 @@ describe('PaymentController', () => {
       failureCode: null,
       failureMessage: null,
     });
+    const response = { redirect: vi.fn() };
 
-    const result = controller.vnpayReturn({
-      vnp_TxnRef: 'payment-1',
-      vnp_SecureHash: 'signature',
-    });
+    await controller.vnpayReturn(
+      {
+        vnp_TxnRef: 'payment-1',
+        vnp_SecureHash: 'signature',
+      },
+      response as never,
+    );
 
     expect(vnpayReturnUseCase.execute).toHaveBeenCalled();
     expect(vnpayIpnUseCase.execute).not.toHaveBeenCalled();
-    expect(result).toMatchObject({
-      verified: true,
-      authoritative: false,
-      transactionReference: 'payment-1',
-    });
+    expect(response.redirect).toHaveBeenCalledWith(
+      302,
+      'http://localhost:5173/orders/order-1/result?provider=VNPAY&status=success',
+    );
   });
 
   it('returns VNPay-compatible acknowledgement for processed and duplicate IPNs', async () => {

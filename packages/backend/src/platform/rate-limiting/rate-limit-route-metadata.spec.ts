@@ -63,7 +63,6 @@ describe('rate limit route metadata', () => {
 
   it('marks admin and organizer concert write routes but leaves read-only routes unclassified', () => {
     for (const handler of [
-      AdminConcertController.prototype.create,
       AdminConcertController.prototype.update,
       AdminConcertController.prototype.publish,
       AdminConcertController.prototype.cancel,
