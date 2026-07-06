@@ -57,25 +57,25 @@
 
 ## 8. Frontend: Gift Initiation Flow
 
-- [ ] 8.1 Update `TicketDetailResponseSchema` in `api-types` to include `isGiftable: boolean` field (computed by API based on status + event date)
-- [ ] 8.2 Add "Gift this ticket" button to the ticket detail page, rendered only when `isGiftable === true`
-- [ ] 8.3 Implement gift initiation modal component: recipient email input with validation, ticket summary display, 48h notice, confirm/cancel actions
-- [ ] 8.4 Wire modal to `POST /me/tickets/:id/transfer`; handle success (close modal, refetch ticket), handle errors (`TICKET_NOT_GIFTABLE`, `TRANSFER_WINDOW_CLOSED`, `TRANSFER_ALREADY_PENDING`) with user-friendly messages
+- [x] 8.1 Update `TicketDetailResponseSchema` in `api-types` to include `isGiftable: boolean` field (computed by API based on status + event date)
+- [x] 8.2 Add "Gift this ticket" button to the ticket detail page, rendered only when `isGiftable === true`
+- [x] 8.3 Implement gift initiation modal component: recipient email input with validation, ticket summary display, 48h notice, confirm/cancel actions
+- [x] 8.4 Wire modal to `POST /me/tickets/:id/transfer`; handle success (close modal, refetch ticket), handle errors (`TICKET_NOT_GIFTABLE`, `TRANSFER_WINDOW_CLOSED`, `TRANSFER_ALREADY_PENDING`) with user-friendly messages
 
 ## 9. Frontend: TRANSFER_PENDING Ticket State
 
-- [ ] 9.1 Add `TRANSFER_PENDING` to the ticket status badge mapping in the ticket wallet: amber badge with text "Đang tặng"
-- [ ] 9.2 Update ticket detail page to display transfer details (recipient email, expiry time) and hide QR code when status is `TRANSFER_PENDING`
-- [ ] 9.3 Add "Cancel Transfer" button to ticket detail page for `TRANSFER_PENDING` tickets; wire to `DELETE /me/tickets/:id/transfer` with confirmation dialog
+- [x] 9.1 Add `TRANSFER_PENDING` to the ticket status badge mapping in the ticket wallet: amber badge with text "Đang tặng"
+- [x] 9.2 Update ticket detail page to display transfer details (recipient email, expiry time) and hide QR code when status is `TRANSFER_PENDING`
+- [x] 9.3 Add "Cancel Transfer" button to ticket detail page for `TRANSFER_PENDING` tickets; wire to `DELETE /me/tickets/:id/transfer` with confirmation dialog
 
 ## 10. Frontend: Gift Landing Page
 
-- [ ] 10.1 Create public route `/transfers/:token` in the web app
-- [ ] 10.2 Implement landing page: fetch transfer detail from `GET /transfers/:token`, display sender name, concert name, ticket type, and Accept/Decline actions
-- [ ] 10.3 Handle expired token state: display "This gift link has expired" message
-- [ ] 10.4 Handle already-resolved token states (`ACCEPTED`, `DECLINED`, `CANCELLED`): display appropriate informative message
-- [ ] 10.5 On acceptance success: show confirmation and link to `/account/tickets`; if user is new (stub account created), prompt account setup flow
-- [ ] 10.6 On decline success: show confirmation message
+- [x] 10.1 Create public route `/transfers/:token` in the web app
+- [x] 10.2 Implement landing page: fetch transfer detail from `GET /transfers/:token`, display sender name, concert name, ticket type, and Accept/Decline actions
+- [x] 10.3 Handle expired token state: display "This gift link has expired" message
+- [x] 10.4 Handle already-resolved token states (`ACCEPTED`, `DECLINED`, `CANCELLED`): display appropriate informative message
+- [x] 10.5 On acceptance success: show confirmation and link to `/account/tickets`; if user is new (stub account created), prompt account setup flow
+- [x] 10.6 On decline success: show confirmation message
 
 ## 11. Backend API Smoke Tests (curl)
 
@@ -95,22 +95,22 @@ Run after sections 3–7 are complete and `npm run dev:api` is running. Use a se
 
 Run after sections 8–10 are complete and both `npm run dev:api` and the web app dev server are running. Use the DevTools MCP to drive the browser directly.
 
-- [ ] 12.1 Navigate to `/account/tickets`, pick an `ISSUED` ticket detail page — verify "Gift this ticket" button is visible and a `CHECKED_IN` or `LISTED_FOR_RESALE` ticket does NOT show it
-- [ ] 12.2 Click "Gift this ticket" — verify the gift modal opens with an email input field, ticket summary, and 48h notice text
-- [ ] 12.3 Submit the modal with a malformed email (e.g., `notanemail`) — verify inline validation error appears and no API call is made (check Network panel)
-- [ ] 12.4 Submit the modal with a valid email — verify the API call `POST /me/tickets/:id/transfer` returns 201 in the Network panel, modal closes, and the ticket card updates to show the amber "Đang tặng" badge
-- [ ] 12.5 On the ticket detail page in `TRANSFER_PENDING` state — verify: QR code is hidden/dimmed, recipient email and expiry time are displayed, "Cancel Transfer" button is present, "Gift this ticket" button is absent
-- [ ] 12.6 Click "Cancel Transfer" — verify confirmation dialog appears; confirm it — verify API call `DELETE /me/tickets/:id/transfer` returns 200 in the Network panel and the ticket detail page reverts to `ISSUED` state with the green "Hợp lệ" badge and "Gift this ticket" button reappears
-- [ ] 12.7 Navigate to `/transfers/<PLAINTEXT_TOKEN>` — verify landing page shows sender name, concert name, ticket type, and both "Accept Gift" and "Decline" buttons
-- [ ] 12.8 Click "Accept Gift" on the landing page — verify `POST /transfers/:token/accept` returns 200 in the Network panel, confirmation message is shown, and the "View in wallet" link navigates to `/account/tickets`
-- [ ] 12.9 Navigate back to `/transfers/<SAME_TOKEN>` after acceptance — verify the page shows an "already resolved" informative message (not an error crash)
-- [ ] 12.10 Open a new gift token URL for a declined scenario — click "Decline" — verify `POST /transfers/:token/decline` returns 200, decline confirmation message is shown; navigate to `/account/tickets` as sender to confirm ticket status is back to `ISSUED`
-- [ ] 12.11 Open `/transfers/<EXPIRED_TOKEN>` — verify the page displays "This gift link has expired" message with no Accept/Decline actions
-- [ ] 12.12 On the `/account/tickets` list page — verify a `TRANSFER_PENDING` ticket shows the amber "Đang tặng" badge in the list (not the green "Hợp lệ" badge)
+- [x] 12.1 Navigate to `/account/tickets`, pick an `ISSUED` ticket detail page — verify "Gift this ticket" button is visible and a `CHECKED_IN` or `LISTED_FOR_RESALE` ticket does NOT show it
+- [x] 12.2 Click "Gift this ticket" — verify the gift modal opens with an email input field, ticket summary, and 48h notice text
+- [x] 12.3 Submit the modal with a malformed email (e.g., `notanemail`) — verify inline validation error appears and no API call is made (check Network panel)
+- [x] 12.4 Submit the modal with a valid email — verify the API call `POST /me/tickets/:id/transfer` returns 201 in the Network panel, modal closes, and the ticket card updates to show the amber "Đang tặng" badge
+- [x] 12.5 On the ticket detail page in `TRANSFER_PENDING` state — verify: QR code is hidden/dimmed, recipient email and expiry time are displayed, "Cancel Transfer" button is present, "Gift this ticket" button is absent
+- [x] 12.6 Click "Cancel Transfer" — verify confirmation dialog appears; confirm it — verify API call `DELETE /me/tickets/:id/transfer` returns 200 in the Network panel and the ticket detail page reverts to `ISSUED` state with the green "Hợp lệ" badge and "Gift this ticket" button reappears
+- [x] 12.7 Navigate to `/transfers/<PLAINTEXT_TOKEN>` — verify landing page shows sender name, concert name, ticket type, and both "Accept Gift" and "Decline" buttons
+- [x] 12.8 Click "Accept Gift" on the landing page — verify `POST /transfers/:token/accept` returns 200 in the Network panel, confirmation message is shown, and the "View in wallet" link navigates to `/account/tickets`
+- [x] 12.9 Navigate back to `/transfers/<SAME_TOKEN>` after acceptance — verify the page shows an "already resolved" informative message (not an error crash)
+- [x] 12.10 Open a new gift token URL for a declined scenario — click "Decline" — verify `POST /transfers/:token/decline` returns 200, decline confirmation message is shown; navigate to `/account/tickets` as sender to confirm ticket status is back to `ISSUED`
+- [x] 12.11 Open `/transfers/<EXPIRED_TOKEN>` — verify the page displays "This gift link has expired" message with no Accept/Decline actions
+- [x] 12.12 On the `/account/tickets` list page — verify a `TRANSFER_PENDING` ticket shows the amber "Đang tặng" badge in the list (not the green "Hợp lệ" badge)
 
 ## 13. Unit Tests & Final Verification
 
-- [ ] 13.1 Write unit tests for `InitiateTransferUseCase`, `AcceptTransferUseCase`, `DeclineTransferUseCase`, `CancelTransferUseCase` covering happy path and all error conditions
-- [ ] 13.2 Write unit tests for `ticket_transfer.expire` job processor (idempotency, status transition)
-- [ ] 13.3 Run `npm test` and confirm all tests pass
-- [ ] 13.4 Run `npm run lint` and `npm run format:check` with no violations
+- [x] 13.1 Write unit tests for `InitiateTransferUseCase`, `AcceptTransferUseCase`, `DeclineTransferUseCase`, `CancelTransferUseCase` covering happy path and all error conditions
+- [x] 13.2 Write unit tests for `ticket_transfer.expire` job processor (idempotency, status transition)
+- [x] 13.3 Run `npm test` and confirm all tests pass
+- [x] 13.4 Run `npm run lint` and `npm run format:check` with no violations
