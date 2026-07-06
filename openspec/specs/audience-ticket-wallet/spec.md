@@ -21,7 +21,7 @@ The system SHALL display a list of all tickets belonging to the authenticated us
 - **THEN** the system displays skeleton card placeholders
 
 ### Requirement: Ticket status displayed with visual indicators
-The system SHALL display ticket status using color-coded badges. The status values are: `ISSUED` (green/active), `CHECKED_IN` (blue/info), `VOIDED` (gray/muted), `REFUNDED` (gray/muted), `LISTED_FOR_RESALE` (orange/warning), `TRANSFERRED` (gray/muted).
+The system SHALL display ticket status using color-coded badges. The status values are: `ISSUED` (green/active), `CHECKED_IN` (blue/info), `VOIDED` (gray/muted), `REFUNDED` (gray/muted), `LISTED_FOR_RESALE` (orange/warning), `TRANSFERRED` (gray/muted), `TRANSFER_PENDING` (amber/warning).
 
 #### Scenario: Issued ticket shows active badge
 - **WHEN** a ticket has status `ISSUED`
@@ -38,6 +38,10 @@ The system SHALL display ticket status using color-coded badges. The status valu
 #### Scenario: Transferred ticket shows muted badge
 - **WHEN** a ticket has status `TRANSFERRED`
 - **THEN** the system displays a gray badge with text "Đã chuyển nhượng"
+
+#### Scenario: Transfer-pending ticket shows amber badge
+- **WHEN** a ticket has status `TRANSFER_PENDING`
+- **THEN** the system displays an amber badge with text "Đang tặng" (Pending Gift)
 
 ### Requirement: Ticket detail page shows full ticket information with QR
 The system SHALL display a detailed ticket view at `/account/tickets/:id`. The detail page SHALL fetch the ticket from `GET /me/tickets/:id` (which dynamically generates the `qrPayload`) and display: concert name, venue, event date/time, ticket type, seat/zone information, ticket number, status badge, and the QR code rendered from `qrPayload`.
