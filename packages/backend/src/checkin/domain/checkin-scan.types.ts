@@ -7,15 +7,18 @@ export type UnassignedScanReasonCode = 'REVOKED_ASSIGNMENT' | 'ASSIGNMENT_MISMAT
 export type OnlineScanReasonCode = InvalidScanReasonCode | UnassignedScanReasonCode;
 
 export type PersistedCheckinResult =
-  | 'ACCEPTED'
-  | 'DUPLICATE'
-  | 'INVALID'
-  | 'WRONG_CONCERT'
-  | 'UNASSIGNED_STAFF';
+  'ACCEPTED' | 'DUPLICATE' | 'INVALID' | 'WRONG_CONCERT' | 'UNASSIGNED_STAFF';
 
 export type PersistedBatchCheckinResult = PersistedCheckinResult | 'CONFLICT';
 
-export type TicketCheckinStatus = 'ISSUED' | 'CHECKED_IN' | 'VOIDED' | 'REFUNDED' | 'LISTED_FOR_RESALE' | 'TRANSFERRED';
+export type TicketCheckinStatus =
+  | 'ISSUED'
+  | 'CHECKED_IN'
+  | 'VOIDED'
+  | 'REFUNDED'
+  | 'LISTED_FOR_RESALE'
+  | 'TRANSFERRED'
+  | 'TRANSFER_PENDING';
 
 export interface OnlineScanActor {
   userId: string;
