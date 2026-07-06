@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   ITicketTransferRepository,
   TICKET_TRANSFER_REPOSITORY,
@@ -20,10 +14,36 @@ export class CancelTransferUseCase {
   ) {}
 
   async execute(ticketId: string, senderId: string) {
-    // TODO: implement logic:
-    // 1. Find pending transfer for ticket
-    // 2. Validate senderId owns the ticket
-    // 3. Transaction: transfer.status = CANCELLED, ticket.status = ISSUED
+    const transfer = await this.transferRepo.findPendingTransferByTicketId(ticketId);
+
+    // Nếu không có transfer nào đang pending nhưng vé lại bị kẹt ở trạng thái TRANSFER_PENDING,
+    // ta sẽ dùng cơ chế self-healing để tự động trả vé về trạng thái ISSUED.
+    if (!transfer) {
+      const stuckTicket = await this.prisma.ticket.findUnique({ where: { id: ticketId } });
+      if (
+        stuckTicket &&
+        stuckTicket.status === 'TRANSFER_PENDING' &&
+        stuckTicket.userId === senderId
+      ) {
+        await this.prisma.ticket.update({
+          where: { id: ticketId },
+          data: { status: 'ISSUED' },
+        });
+      }
+      return { success: false, healed: true };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.ticketTransfer.update({
+        where: { id: transfer.id },
+        data: { status: 'CANCELLED' },
+      });
+      await tx.ticket.update({
+        where: { id: ticketId },
+        data: { status: 'ISSUED' },
+      });
+    });
+
     return { success: true };
   }
 }

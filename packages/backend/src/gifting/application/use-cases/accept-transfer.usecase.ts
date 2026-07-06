@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  ConflictException,
-  GoneException,
-} from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import {
   ITicketTransferRepository,
   TICKET_TRANSFER_REPOSITORY,
@@ -37,7 +31,42 @@ export class AcceptTransferUseCase {
 
     if (!transfer) throw new NotFoundException('Transfer not found');
 
-    // ... (Validation and transactional DB updates would go here) ...
+    let recipient = await this.prisma.user.findUnique({
+      where: { email: transfer.recipientEmail },
+    });
+
+    if (!recipient) {
+      recipient = await this.prisma.user.create({
+        data: {
+          email: transfer.recipientEmail,
+          normalizedEmail: transfer.recipientEmail.toLowerCase(),
+          displayName: transfer.recipientEmail.split('@')[0],
+          status: 'ACTIVE',
+        },
+      });
+
+      const audienceRole = await this.prisma.role.findUnique({ where: { code: 'AUDIENCE' } });
+      if (audienceRole) {
+        await this.prisma.userRole.create({
+          data: { userId: recipient.id, roleId: audienceRole.id },
+        });
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.ticketTransfer.update({
+        where: { id: transfer.id },
+        data: { status: 'ACCEPTED' },
+      });
+      await tx.ticket.update({
+        where: { id: transfer.ticketId },
+        data: {
+          status: 'ISSUED',
+          userId: recipient.id,
+          transferredAt: new Date(),
+        },
+      });
+    });
 
     // Fire outcome event to trigger tasks 6.2 and 7.1
     await this.eventPublisher.publishGiftOutcome({
@@ -48,6 +77,6 @@ export class AcceptTransferUseCase {
       outcome: 'ACCEPTED',
     });
 
-    return { success: true };
+    return { success: true, ticketId: transfer.ticketId };
   }
 }

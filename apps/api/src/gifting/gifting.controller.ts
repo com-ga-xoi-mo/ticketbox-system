@@ -8,11 +8,17 @@ import {
   UseGuards,
   Request,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { InitiateTransferUseCase } from '@ticketbox/backend/gifting/application/use-cases/initiate-transfer.usecase';
 import { CancelTransferUseCase } from '@ticketbox/backend/gifting/application/use-cases/cancel-transfer.usecase';
 import { JwtAuthGuard } from '@ticketbox/backend/identity/infrastructure/passport/jwt-auth.guard';
-// Note: Assuming ZodValidationPipe exists in the project; leaving @Body() as is for now until pipe is wired
+import { IsEmail } from 'class-validator';
+
+class InitiateTransferDto {
+  @IsEmail()
+  recipientEmail!: string;
+}
 
 @Controller('me')
 @UseGuards(JwtAuthGuard)
@@ -24,7 +30,11 @@ export class GiftingController {
 
   @Post('tickets/:id/transfer')
   @HttpCode(201)
-  async initiateTransfer(@Param('id') ticketId: string, @Body() body: any, @Request() req: any) {
+  async initiateTransfer(
+    @Param('id') ticketId: string,
+    @Body() body: InitiateTransferDto,
+    @Request() req: any,
+  ) {
     return this.initiateTransferUseCase.execute({
       ticketId,
       senderId: req.user.id,
