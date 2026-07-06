@@ -5,7 +5,7 @@ import { formatCurrency } from '../../../shared/utils/currency';
 import { mapStatus } from '../../concerts-shared/status';
 import { Badge } from '../../../shared/ui/badge';
 import { ChevronRight, Search, Download, ChevronDown, ChevronLeft } from 'lucide-react';
-import { getAssetUrl } from '../../../shared/api/client';
+import { getAssetUrl, resolveImageUrl } from '../../../shared/api/client';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../shared/ui/button';
 
@@ -57,7 +57,7 @@ export function AdminReportsPage() {
         'Organizer',
         'Tickets Sold',
         'Total Capacity',
-        'Checked In',
+        'Đã check-in',
         'Eligible Tickets',
         'Revenue (VND)'
       ];
@@ -114,7 +114,7 @@ export function AdminReportsPage() {
           </div>
           <Button variant="outline" onClick={handleExportCsv} loading={isExporting} className="rounded-xl px-6 font-semibold shadow-none bg-white/5 border-[#494454]">
             <Download className="w-4 h-4 mr-2" />
-            {isExporting ? 'Exporting...' : 'Export CSV'}
+            {isExporting ? 'Exporting...' : 'Xuất CSV'}
           </Button>
         </div>
 
@@ -124,7 +124,7 @@ export function AdminReportsPage() {
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#cbc3d7]" />
             <input 
               type="text" 
-              placeholder="Search concerts..." 
+              placeholder="Tìm kiếm sự kiện..." 
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full bg-[#131b2e] border border-[#494454] rounded-full py-2 pl-10 pr-4 text-sm text-[#dae2fd] focus:ring-1 focus:ring-[#4cd7f6] focus:border-[#4cd7f6] outline-none transition-all"
@@ -204,7 +204,11 @@ export function AdminReportsPage() {
                     else if (rank === 2) rankClass = 'bg-slate-300/20 text-slate-200 border border-slate-300/30 shadow-[0_0_10px_rgba(203,213,225,0.2)]';
                     else if (rank === 3) rankClass = 'bg-orange-500/20 text-orange-400 border border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.2)]';
 
-                    const posterUrl = row.posterAssetId ? getAssetUrl(row.posterAssetId) : null;
+                    const posterUrl = row.posterPublicUrl
+                      ? resolveImageUrl(row.posterPublicUrl)
+                      : row.posterAssetId
+                        ? getAssetUrl(row.posterAssetId)
+                        : null;
 
                     return (
                       <tr key={row.id} className="hover:bg-white/5 transition-colors group">

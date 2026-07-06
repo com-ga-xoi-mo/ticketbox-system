@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useConcert, useUpdateConcertMutation, useUploadPosterMutation } from './hooks';
+import { useConcert, useUpdateConcertMutation, useUploadPosterMutation, useUploadBannerMutation, useReplaceArtistsMutation } from './hooks';
 import {
   validateConcertForm,
   toUpdatePayload,
@@ -8,12 +8,16 @@ import {
   type ConcertFormErrors,
 } from '../../concerts-shared/concert-form';
 import { mapStatus } from '../../concerts-shared/status';
+import { resolveConcertPosterUrl } from '../../concerts-shared/concert-image';
 import { Badge } from '../../../shared/ui/badge';
 import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Textarea } from '../../../shared/ui/textarea';
 import { cn } from '../../../shared/ui/cn';
+import { ArtistSelector } from '../../concerts-shared/ui/ArtistSelector';
 import { toast } from 'sonner';
+
+import { VenueLocationPicker } from '../../concerts-shared/components/VenueLocationPicker';
 
 import { getAssetUrl } from '../../../shared/api/client';
 
@@ -67,6 +71,8 @@ export function ConcertEditPage() {
   const { data: concert, isLoading, isError, error } = useConcert(id);
   const updateMutation = useUpdateConcertMutation();
   const uploadPosterMutation = useUploadPosterMutation();
+  const uploadBannerMutation = useUploadBannerMutation();
+  const replaceArtistsMutation = useReplaceArtistsMutation();
 
   const [values, setValues] = useState<ConcertFormValues>({
     slug: '',
@@ -74,16 +80,26 @@ export function ConcertEditPage() {
     artistName: '',
     venueName: '',
     venueAddress: '',
+    latitude: null,
+    longitude: null,
     city: '',
     startsAt: '',
     endsAt: '',
     description: '',
+    eventType: 'CONCERT',
+    isFeatured: false,
+    displayOrder: 0,
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: '',
   });
+  const [selectedArtists, setSelectedArtists] = useState<{ artistId: string; displayName: string; avatarUrl: string | null; status: string }[]>([]);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [errors, setErrors] = useState<ConcertFormErrors>({});
   const [submitError, setSubmitError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (concert) {
@@ -93,11 +109,27 @@ export function ConcertEditPage() {
         artistName: concert.artistName,
         venueName: concert.venueName,
         venueAddress: concert.venueAddress || '',
+        latitude: concert.latitude ?? null,
+        longitude: concert.longitude ?? null,
         city: concert.city,
         startsAt: formatDateForInput(concert.startsAt),
         endsAt: formatDateForInput(concert.endsAt),
         description: concert.description || '',
+        eventType: concert.eventType,
+        isFeatured: concert.isFeatured,
+        displayOrder: concert.displayOrder,
+        seoTitle: concert.seoTitle || '',
+        seoDescription: concert.seoDescription || '',
+        seoImageUrl: concert.seoImageUrl || '',
       });
+      setSelectedArtists(
+        concert.artists?.map((a: any) => ({
+          artistId: a.id,
+          displayName: a.displayName,
+          avatarUrl: a.avatarAsset?.publicUrl || null,
+          status: a.status,
+        })) || []
+      );
       setSlugManuallyEdited(true);
     }
   }, [concert]);
@@ -108,7 +140,7 @@ export function ConcertEditPage() {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center" role="status">
         <div className="size-10 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
-        <p className="mt-4 font-mono text-sm text-on-surface-variant">Loading concert…</p>
+        <p className="mt-4 font-mono text-sm text-on-surface-variant">Đang tải sự kiện…</p>
       </div>
     );
   }
@@ -117,9 +149,9 @@ export function ConcertEditPage() {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center p-6 text-center">
         <span className="material-symbols-outlined mb-4 text-4xl text-error">error</span>
-        <h3 className="font-display text-lg font-bold text-on-surface">Failed to load concert</h3>
+        <h3 className="font-display text-lg font-bold text-on-surface">Tải sự kiện thất bại</h3>
         <p className="mt-2 max-w-sm text-sm text-on-surface-variant">
-          {error?.message || 'The concert could not be loaded.'}
+          {error?.message || 'Không thể tải sự kiện.'}
         </p>
         <Button onClick={() => navigate(-1)} className="mt-6">
           Go back
@@ -132,9 +164,7 @@ export function ConcertEditPage() {
   if (!canEdit) return <Navigate to={`/admin/concerts/${id}`} replace />;
 
   const { label, variant, dotClass } = mapStatus(concert.status);
-  const posterUrl = concert.posterAssetId
-    ? getAssetUrl(concert.posterAssetId)
-    : null;
+  const posterUrl = resolveConcertPosterUrl(concert);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const titleValue = e.target.value;
@@ -171,23 +201,54 @@ export function ConcertEditPage() {
     }
   };
 
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && concert) {
+      uploadBannerMutation.mutate(
+        { id: concert.id, file },
+        {
+          onError: (err) => setSubmitError(err.message || 'Failed to upload banner.'),
+        }
+      );
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
-    const validationErrors = validateConcertForm(values);
+    const validationErrors = validateConcertForm({ ...values, linkedArtistIds: selectedArtists.map(a => a.artistId) });
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
     setErrors({});
 
+    const primaryArtist = selectedArtists[0];
+    const basePayload = toUpdatePayload({
+      ...values,
+      artistName: primaryArtist ? primaryArtist.displayName : values.artistName,
+    });
+
     updateMutation.mutate(
-      { id: concert.id, payload: toUpdatePayload(values) },
+      { id: concert.id, payload: basePayload },
       {
         onSuccess: () => {
-          toast.success('Lưu thông tin sự kiện thành công');
-          navigate('/admin/concerts');
+          replaceArtistsMutation.mutate(
+            {
+              id: concert.id,
+              payload: {
+                artists: selectedArtists.map((a, i) => ({ artistId: a.artistId, displayOrder: i })),
+              },
+            },
+            {
+              onSuccess: () => {
+                toast.success('Lưu thông tin sự kiện thành công');
+                navigate('/admin/concerts');
+              },
+              onError: (err) => setSubmitError(err.message || 'Failed to update linked artists.'),
+            }
+          );
         },
         onError: (err) => setSubmitError(err.message || 'Failed to save changes.'),
       },
@@ -211,7 +272,7 @@ export function ConcertEditPage() {
             </Link>
             <div>
               <p className="font-mono text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant">
-                Admin — Editing Concert
+                Quản trị viên — Chỉnh sửa sự kiện
               </p>
               <h2 className="font-display text-xl font-bold text-on-surface">{concert.title}</h2>
             </div>
@@ -223,29 +284,59 @@ export function ConcertEditPage() {
           {/* ── LEFT: Form sections ── */}
           <div className="flex flex-col gap-6">
             {/* Event Details */}
-            <FormSection icon="music_note" title="Event Details">
+            <FormSection icon="music_note" title="Chi tiết sự kiện">
               <Input
                 id="edit-title"
                 name="title"
-                label="Concert Title *"
+                label="Tiêu đề sự kiện *"
                 value={values.title}
                 onChange={handleTitleChange}
                 error={errors.title}
-                placeholder="e.g. Midnight Echo Live"
+                placeholder="VD: Đêm nhạc Mùa xuân"
                 required
               />
 
-              <Input
-                id="edit-artist"
-                name="artistName"
-                label="Artist / Band *"
-                value={values.artistName}
-                onChange={handleChange}
-                error={errors.artistName}
-                placeholder="e.g. The Midnight Trio"
-                icon="person"
-                required
-              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
+                    Loại sự kiện
+                  </label>
+                  <select
+                    name="eventType"
+                    value={values.eventType}
+                    onChange={(e) => setValues(prev => ({ ...prev, eventType: e.target.value }))}
+                    className="w-full h-10 rounded-lg border border-white/10 bg-surface-container px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="CONCERT">Hoà nhạc</option>
+                    <option value="WORKSHOP">Hội thảo</option>
+                    <option value="SPORT">Thể thao</option>
+                    <option value="MOVIE">Điện ảnh</option>
+                    <option value="THEATRE">Kịch</option>
+                    <option value="VOUCHER">Khuyến mãi</option>
+                  </select>
+                </div>
+              </div>
+
+              {selectedArtists.length === 0 && (
+                <Input
+                  id="edit-artist"
+                  name="artistName"
+                  label="Nghệ sĩ / Ban nhạc *"
+                  value={values.artistName}
+                  onChange={handleChange}
+                  error={errors.artistName}
+                  placeholder="VD: Ban nhạc Bức Tường"
+                  icon="person"
+                  required
+                />
+              )}
+
+              <div>
+                <label className="block font-label text-label-sm uppercase tracking-wider text-on-surface-variant mb-1">
+                  Nghệ sĩ liên kết
+                </label>
+                <ArtistSelector selectedArtists={selectedArtists} onChange={setSelectedArtists} />
+              </div>
 
               {/* Slug with prefix */}
               <div className="flex flex-col gap-1">
@@ -282,25 +373,25 @@ export function ConcertEditPage() {
               <Textarea
                 id="edit-description"
                 name="description"
-                label="Description"
+                label="Mô tả"
                 value={values.description}
                 onChange={handleChange}
                 error={errors.description}
                 rows={4}
-                placeholder="Describe the concert experience, setlist highlights, special guests…"
+                placeholder="Mô tả trải nghiệm sự kiện, các tiết mục nổi bật, khách mời đặc biệt…"
               />
             </FormSection>
 
             {/* Venue & Location */}
-            <FormSection icon="location_on" title="Venue & Location">
+            <FormSection icon="location_on" title="Địa điểm & Vị trí">
               <Input
                 id="edit-venue"
                 name="venueName"
-                label="Venue Name *"
+                label="Tên địa điểm *"
                 value={values.venueName}
                 onChange={handleChange}
                 error={errors.venueName}
-                placeholder="e.g. Grand Arena"
+                placeholder="VD: Sân vận động Quân khu 7"
                 icon="apartment"
                 required
               />
@@ -315,6 +406,23 @@ export function ConcertEditPage() {
                 placeholder="e.g. 123 Music Ave, Ward 1"
                 icon="map"
               />
+
+              <div>
+                <p className="mb-1 text-sm font-medium">Vị trí trên bản đồ</p>
+                <VenueLocationPicker
+                  latitude={values.latitude}
+                  longitude={values.longitude}
+                  venueAddress={values.venueAddress}
+                  onChange={({ latitude, longitude, venueAddress }) =>
+                    setValues((v) => ({
+                      ...v,
+                      latitude,
+                      longitude,
+                      venueAddress: venueAddress ?? v.venueAddress,
+                    }))
+                  }
+                />
+              </div>
 
               <Input
                 id="edit-city"
@@ -336,7 +444,7 @@ export function ConcertEditPage() {
                   id="edit-starts-at"
                   type="datetime-local"
                   name="startsAt"
-                  label="Event Start *"
+                  label="Thời gian bắt đầu *"
                   value={values.startsAt}
                   onChange={handleChange}
                   error={errors.startsAt}
@@ -348,7 +456,7 @@ export function ConcertEditPage() {
                   id="edit-ends-at"
                   type="datetime-local"
                   name="endsAt"
-                  label="Event End *"
+                  label="Thời gian kết thúc *"
                   value={values.endsAt}
                   onChange={handleChange}
                   error={errors.endsAt}
@@ -357,6 +465,63 @@ export function ConcertEditPage() {
                   required
                 />
               </div>
+            </FormSection>
+
+            {/* SEO Metadata */}
+            <FormSection icon="search" title="Tối ưu tìm kiếm (SEO)">
+              <p className="-mt-1 text-xs text-on-surface-variant">
+                Bạn có thể bỏ qua phần này. Hệ thống sẽ tự động dùng tiêu đề, mô tả và poster của sự kiện để hiển thị khi link được chia sẻ lên mạng xã hội (Facebook, Zalo...) hoặc trên Google.
+              </p>
+              <Input
+                id="edit-seo-title"
+                name="seoTitle"
+                label="Tiêu đề (khi chia sẻ link)"
+                value={values.seoTitle}
+                onChange={handleChange}
+                placeholder={values.title ? `Tự động: "${values.title} | Ticketbox"` : 'Tự động lấy theo tên sự kiện'}
+              />
+              <Textarea
+                id="edit-seo-desc"
+                name="seoDescription"
+                label="Mô tả ngắn"
+                value={values.seoDescription}
+                onChange={handleChange}
+                rows={2}
+                placeholder={values.description ? `Tự động: "${values.description.substring(0, 80)}…"` : 'Tự động trích xuất từ phần Mô tả sự kiện'}
+              />
+              <Input
+                id="edit-seo-image"
+                name="seoImageUrl"
+                label="Ảnh Thumbnail (URL)"
+                value={values.seoImageUrl}
+                onChange={handleChange}
+                error={errors.seoImageUrl}
+                placeholder="Link ảnh (https://...). Để trống sẽ tự dùng Poster."
+              />
+            </FormSection>
+
+            {/* Admin Moderation */}
+            <FormSection icon="admin_panel_settings" title="Kiểm duyệt của Quản trị viên">
+              <div className="flex items-center gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={values.isFeatured}
+                    onChange={(e) => setValues(prev => ({ ...prev, isFeatured: e.target.checked }))}
+                    className="w-4 h-4 rounded border-white/10 bg-surface-container text-primary focus:ring-primary focus:ring-offset-surface"
+                  />
+                  <span className="text-sm font-medium text-on-surface">Nổi bật</span>
+                </label>
+              </div>
+              <Input
+                id="edit-display-order"
+                name="displayOrder"
+                type="number"
+                min="0"
+                label="Thứ tự hiển thị (0 là ưu tiên cao nhất)"
+                value={values.displayOrder?.toString()}
+                onChange={(e) => setValues(prev => ({ ...prev, displayOrder: parseInt(e.target.value, 10) || 0 }))}
+              />
             </FormSection>
 
             {submitError && (
@@ -383,7 +548,7 @@ export function ConcertEditPage() {
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-on-surface-variant/30">
                     <span className="material-symbols-outlined text-5xl">image</span>
-                    <span className="font-mono text-[11px] uppercase tracking-wider">No poster</span>
+                    <span className="font-mono text-[11px] uppercase tracking-wider">Không có poster</span>
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/40 to-transparent" />
@@ -446,9 +611,7 @@ export function ConcertEditPage() {
                       schedule
                     </span>
                     <div className="min-w-0">
-                      <p className="font-mono text-xs font-semibold text-on-surface">
-                        Duration
-                      </p>
+                      <p className="font-mono text-xs font-semibold text-on-surface">Thời lượng</p>
                       <p className="text-[11px] text-on-surface-variant">
                         {(() => {
                           if (!values.startsAt || !values.endsAt) return '—';
@@ -476,28 +639,28 @@ export function ConcertEditPage() {
               <div className="flex flex-col gap-3">
                 {[
                   {
-                    label: 'Seating Map',
+                    label: 'Bản đồ chỗ ngồi',
                     done: !!concert.seatingMapConfigured,
-                    value: concert.seatingMapConfigured ? 'Configured' : 'Pending',
+                    value: concert.seatingMapConfigured ? 'Đã cấu hình' : 'Đang chờ',
                   },
                   {
-                    label: 'Seating Zones',
+                    label: 'Khu vực ghế ngồi',
                     done: !!concert.seatingZonesCount,
                     value: concert.seatingZonesCount
-                      ? `${concert.seatingZonesCount} zones`
-                      : 'Pending',
+                      ? `${concert.seatingZonesCount} khu vực`
+                      : 'Đang chờ',
                   },
                   {
-                    label: 'Ticket Types',
+                    label: 'Loại vé',
                     done: !!concert.ticketTypesCount,
                     value: concert.ticketTypesCount
-                      ? `${concert.ticketTypesCount} types`
-                      : 'Pending',
+                      ? `${concert.ticketTypesCount} loại`
+                      : 'Đang chờ',
                   },
                   {
-                    label: 'Check-in Staff',
+                    label: 'Nhân viên check-in',
                     done: !!concert.checkinStaffCount,
-                    value: `${concert.checkinStaffCount || 0} assigned`,
+                    value: `${concert.checkinStaffCount || 0} đã phân công`,
                   },
                 ].map((row) => (
                   <div key={row.label} className="flex items-center justify-between text-sm">
@@ -523,7 +686,7 @@ export function ConcertEditPage() {
                   className="w-full justify-center"
                   onClick={() => {
                     if (concert.status !== 'DRAFT') {
-                      alert('This concert is no longer in DRAFT status. You will only be able to view the venue map.');
+                      alert('Sự kiện này không còn ở trạng thái BẢN NHÁP. Bạn sẽ chỉ có thể xem bản đồ địa điểm.');
                     }
                     navigate(`/admin/venue-maps/${concert.id}`);
                   }}
@@ -543,23 +706,54 @@ export function ConcertEditPage() {
                       image
                     </span>
                   </div>
-                  <h3 className="font-display text-xs font-bold uppercase tracking-wider text-on-surface">
-                    Media
-                  </h3>
+                  <h3 className="font-display text-xs font-bold uppercase tracking-wider text-on-surface">Đa phương tiện</h3>
                 </div>
                 {posterUrl && (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="text-xs font-medium text-primary transition-colors hover:text-primary-container"
-                  >
-                    Replace
-                  </button>
+                  >Thay thế</button>
                 )}
               </div>
 
               <div className="flex flex-col gap-3">
+                {/* Banner Upload Area */}
+                <h4 className="text-sm font-semibold">Banner (Ảnh nổi bật)</h4>
+                <div 
+                  className="group relative h-[100px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
+                  onClick={() => bannerInputRef.current?.click()}
+                >
+                  <input 
+                    type="file" 
+                    ref={bannerInputRef} 
+                    className="hidden" 
+                    accept="image/jpeg,image/png,image/webp" 
+                    onChange={handleBannerChange}
+                  />
+
+                  {uploadBannerMutation.isPending && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="size-6 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
+                    </div>
+                  )}
+
+                  {concert.bannerAsset?.publicUrl ? (
+                    <img
+                      src={concert.bannerAsset.publicUrl}
+                      alt="Banner"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
+                      <span className="material-symbols-outlined text-xl">add_photo_alternate</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider">Tải lên Banner</span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Primary Header Upload Area */}
+                <h4 className="text-sm font-semibold mt-2">Poster (Khổ dọc)</h4>
                 <div 
                   className="group relative h-[160px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-surface-container-low transition-colors hover:border-primary/50"
                   onClick={() => fileInputRef.current?.click()}
@@ -587,9 +781,7 @@ export function ConcertEditPage() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                       <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                        <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">
-                          Primary Header
-                        </Badge>
+                        <Badge className="bg-black/60 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white backdrop-blur-md">Ảnh đại diện chính</Badge>
                       </div>
                       <div className="absolute bottom-2.5 right-2.5 font-mono text-[9px] text-white/70">
                         1920×1080
@@ -598,7 +790,7 @@ export function ConcertEditPage() {
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant transition-colors group-hover:text-primary/70">
                       <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
-                      <span className="font-mono text-[10px] uppercase tracking-wider">Upload Header</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider">Tải lên Ảnh đại diện</span>
                     </div>
                   )}
                 </div>
@@ -608,9 +800,7 @@ export function ConcertEditPage() {
             {/* Save / Discard repeated at bottom */}
             <div className="flex flex-col gap-2">
               <Button type="submit" loading={isPending} className="w-full justify-center">
-                <span className="material-symbols-outlined text-[16px]">save</span>
-                Save Changes
-              </Button>
+                <span className="material-symbols-outlined text-[16px]">save</span>Lưu thay đổi</Button>
               <Button
                 type="button"
                 variant="outline"
@@ -618,9 +808,7 @@ export function ConcertEditPage() {
                 disabled={isPending}
                 className="w-full justify-center"
               >
-                <span className="material-symbols-outlined text-[16px]">undo</span>
-                Discard
-              </Button>
+                <span className="material-symbols-outlined text-[16px]">undo</span>Hủy bỏ</Button>
             </div>
           </div>
         </div>

@@ -16,10 +16,20 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
     artistName: string;
     venueName: string;
     venueAddress?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     city: string;
     startsAt: Date;
     endsAt: Date;
     description?: string;
+    eventType?: string;
+    resaleEnabled?: boolean;
+    resaleMaxPricePercent?: number;
+    isFeatured?: boolean;
+    displayOrder?: number;
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    seoImageUrl?: string | null;
   }): Promise<Concert> {
     const record = await this.prisma.concert.create({
       data: {
@@ -29,13 +39,32 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         artistName: data.artistName,
         venueName: data.venueName,
         venueAddress: data.venueAddress ?? null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
         city: data.city,
         startsAt: data.startsAt,
         endsAt: data.endsAt,
         description: data.description ?? null,
-        status: ConcertStatus.DRAFT,
+        eventType: (data.eventType as any) ?? 'CONCERT',
+        resaleEnabled: data.resaleEnabled ?? false,
+        resaleMaxPricePercent: data.resaleMaxPricePercent ?? 110,
+        isFeatured: data.isFeatured ?? false,
+        displayOrder: data.displayOrder ?? 0,
+        seoTitle: data.seoTitle ?? null,
+        seoDescription: data.seoDescription ?? null,
+        seoImageUrl: data.seoImageUrl ?? null,
       },
       include: {
+        posterAsset: true,
+        bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         _count: {
           select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
         },
@@ -52,6 +81,8 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       artistName?: string;
       venueName?: string;
       venueAddress?: string;
+      latitude?: number | null;
+      longitude?: number | null;
       city?: string;
       startsAt?: Date;
       endsAt?: Date;
@@ -60,6 +91,14 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       publishedAt?: Date | null;
       cancelledAt?: Date | null;
       slug?: string;
+      eventType?: string;
+      resaleEnabled?: boolean;
+      resaleMaxPricePercent?: number;
+      isFeatured?: boolean;
+      displayOrder?: number;
+      seoTitle?: string | null;
+      seoDescription?: string | null;
+      seoImageUrl?: string | null;
     },
   ): Promise<Concert> {
     const record = await this.prisma.concert.update({
@@ -69,16 +108,36 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
         artistName: data.artistName,
         venueName: data.venueName,
         venueAddress: data.venueAddress,
+        latitude: data.latitude,
+        longitude: data.longitude,
         city: data.city,
         startsAt: data.startsAt,
         endsAt: data.endsAt,
         description: data.description,
-        status: data.status as ConcertStatus | undefined,
+        status: data.status as any,
         publishedAt: data.publishedAt,
         cancelledAt: data.cancelledAt,
         slug: data.slug,
+        eventType: data.eventType as any,
+        resaleEnabled: data.resaleEnabled,
+        resaleMaxPricePercent: data.resaleMaxPricePercent,
+        isFeatured: data.isFeatured,
+        displayOrder: data.displayOrder,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoDescription,
+        seoImageUrl: data.seoImageUrl,
       },
       include: {
+        posterAsset: true,
+        bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         _count: {
           select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
         },
@@ -92,6 +151,16 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
     const record = await this.prisma.concert.findUnique({
       where: { id },
       include: {
+        posterAsset: true,
+        bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         _count: {
           select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
         },
@@ -106,6 +175,16 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       where: { createdById },
       orderBy: { updatedAt: 'desc' },
       include: {
+        posterAsset: true,
+        bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         _count: {
           select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
         },
@@ -118,6 +197,16 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
     const records = await this.prisma.concert.findMany({
       orderBy: { updatedAt: 'desc' },
       include: {
+        posterAsset: true,
+        bannerAsset: true,
+        concertArtists: {
+          orderBy: { displayOrder: 'asc' },
+          include: {
+            artist: {
+              include: { avatarAsset: true },
+            },
+          },
+        },
         _count: {
           select: { ticketTypes: true, seatingZones: true, checkinStaff: true },
         },
@@ -218,13 +307,68 @@ export class PrismaConcertWriteRepository implements ConcertWriteRepositoryPort 
       description: record.description,
       venueName: record.venueName,
       venueAddress: record.venueAddress,
+      latitude: record.latitude !== null && record.latitude !== undefined
+        ? Number(record.latitude)
+        : null,
+      longitude: record.longitude !== null && record.longitude !== undefined
+        ? Number(record.longitude)
+        : null,
       city: record.city,
       startsAt: record.startsAt,
       endsAt: record.endsAt,
       status: record.status,
       createdById: record.createdById,
       posterAssetId: record.posterAssetId,
+      posterAsset: record.posterAsset
+        ? {
+            id: record.posterAsset.id,
+            kind: record.posterAsset.kind,
+            status: record.posterAsset.status,
+            publicUrl: record.posterAsset.publicUrl,
+            originalName: record.posterAsset.originalName,
+            contentType: record.posterAsset.contentType,
+            sizeBytes: record.posterAsset.sizeBytes,
+          }
+        : null,
       seatingMapAssetId: record.seatingMapAssetId,
+      bannerAssetId: record.bannerAssetId,
+      bannerAsset: record.bannerAsset
+        ? {
+            id: record.bannerAsset.id,
+            kind: record.bannerAsset.kind,
+            status: record.bannerAsset.status,
+            publicUrl: record.bannerAsset.publicUrl,
+            originalName: record.bannerAsset.originalName,
+            contentType: record.bannerAsset.contentType,
+            sizeBytes: record.bannerAsset.sizeBytes,
+          }
+        : null,
+      eventType: record.eventType,
+      resaleEnabled: (record as any).resaleEnabled,
+      resaleMaxPricePercent: (record as any).resaleMaxPricePercent,
+      isFeatured: record.isFeatured,
+      displayOrder: record.displayOrder,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription,
+      seoImageUrl: record.seoImageUrl,
+      artists: record.concertArtists?.map((ca: any) => ({
+        id: ca.artist.id,
+        slug: ca.artist.slug,
+        displayName: ca.artist.displayName,
+        status: ca.artist.status,
+        displayOrder: ca.displayOrder,
+        avatarAsset: ca.artist.avatarAsset
+          ? {
+              id: ca.artist.avatarAsset.id,
+              kind: ca.artist.avatarAsset.kind,
+              status: ca.artist.avatarAsset.status,
+              publicUrl: ca.artist.avatarAsset.publicUrl,
+              originalName: ca.artist.avatarAsset.originalName,
+              contentType: ca.artist.avatarAsset.contentType,
+              sizeBytes: ca.artist.avatarAsset.sizeBytes,
+            }
+          : null,
+      })) ?? [],
       publishedAt: record.publishedAt,
       cancelledAt: record.cancelledAt,
       createdAt: record.createdAt,

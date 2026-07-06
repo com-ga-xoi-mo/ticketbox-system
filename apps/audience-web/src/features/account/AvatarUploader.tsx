@@ -43,13 +43,18 @@ export function AvatarUploader({ profile }: { profile: MyProfileResponse }) {
     }
   }
 
-  const avatarImageUrl = resolveAvatarImageUrl(profile.avatarAssetId, profile.avatarUrl);
+  const avatarImageUrl = resolveAvatarImageUrl(
+    profile.avatarAssetId,
+    profile.avatarUrl,
+    profile.externalAvatarUrl,
+  );
+  const hasManagedAvatar = Boolean(profile.avatarAssetId || profile.avatarUrl);
 
   return (
     <div className="flex flex-col sm:flex-row items-start gap-6">
       <div className="relative size-24 shrink-0 overflow-hidden rounded-full border bg-muted flex items-center justify-center">
         {avatarImageUrl ? (
-          <img src={avatarImageUrl} alt={profile.displayName || 'Avatar'} className="h-full w-full object-cover" />
+          <img src={avatarImageUrl} alt={profile.displayName || 'Avatar'} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
         ) : (
           <User className="h-10 w-10 text-muted-foreground" />
         )}
@@ -59,7 +64,7 @@ export function AvatarUploader({ profile }: { profile: MyProfileResponse }) {
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
             Đổi ảnh
           </Button>
-          {avatarImageUrl && (
+          {hasManagedAvatar && (
             <Button variant="ghost" size="sm" className="text-destructive" onClick={handleRemove} disabled={loading}>
               Xóa ảnh
             </Button>

@@ -27,6 +27,8 @@ export interface UploadPosterResult {
   asset: PosterAsset;
   concert: {
     id: string;
-    posterAssetId: string;
+    posterAssetId?: string;
+    bannerAssetId?: string;
   };
+  replacedStorageKey?: string | null;
 }

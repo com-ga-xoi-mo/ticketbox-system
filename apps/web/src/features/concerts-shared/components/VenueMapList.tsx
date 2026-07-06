@@ -51,7 +51,7 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
   }, [concerts, selectedStatus, selectedCity, searchQuery]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-400">Loading...</div>;
+    return <div className="p-8 text-center text-slate-400">Đang tải...</div>;
   }
 
   const totalItems = filteredConcerts.length;
@@ -75,7 +75,7 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search concerts"
-            placeholder="Search by title or artist..."
+            placeholder="Tìm kiếm theo tiêu đề hoặc nghệ sĩ..."
             className="w-full rounded-md border border-slate-700 bg-slate-800 py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
           />
         </div>
@@ -89,11 +89,11 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
               onChange={(e) => setSelectedStatus(e.target.value as ConcertStatus | 'ALL')}
               className="appearance-none cursor-pointer rounded-md border border-slate-700 bg-slate-800 py-1.5 pl-3 pr-8 text-sm text-white transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
             >
-              <option value="ALL">Status: All</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="DRAFT">Draft</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="ENDED">Ended</option>
+              <option value="ALL">Trạng thái: Tất cả</option>
+              <option value="PUBLISHED">Đã xuất bản</option>
+              <option value="DRAFT">Bản nháp</option>
+              <option value="CANCELLED">Đã hủy</option>
+              <option value="ENDED">Đã kết thúc</option>
             </select>
             <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">
               expand_more
@@ -107,7 +107,7 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
               onChange={(e) => setSelectedCity(e.target.value)}
               className="appearance-none cursor-pointer rounded-md border border-slate-700 bg-slate-800 py-1.5 pl-3 pr-8 text-sm text-white transition-all focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
             >
-              <option value="ALL">City: All</option>
+              <option value="ALL">Thành phố: Tất cả</option>
               {uniqueCities.map((city) => (
                 <option key={city} value={city}>{city}</option>
               ))}
@@ -121,7 +121,7 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
 
       {filteredConcerts.length === 0 ? (
         <div className="p-12 text-center text-slate-400 border border-dashed border-slate-700 rounded-lg bg-slate-900/50">
-          No concerts found matching your filters.
+          Không tìm thấy sự kiện nào khớp với bộ lọc của bạn.
         </div>
       ) : (
         <>
@@ -172,22 +172,22 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 md:min-w-[340px]">
                         
                         <div className="flex-1 space-y-1">
-                          <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tickets</div>
+                          <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Vé</div>
                           <div className="flex items-center gap-2">
                             <div className="text-xl font-bold text-slate-200">
                               {concert.ticketTypesCount || 0}
                             </div>
-                            <div className="text-sm text-slate-400">Types</div>
+                            <div className="text-sm text-slate-400">Loại</div>
                           </div>
                         </div>
 
                         <div className="flex-1 space-y-1 border-l border-slate-800 pl-6">
-                          <div className="text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">Map Status</div>
+                          <div className="text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">Trạng thái sơ đồ</div>
                           <div className="flex items-center gap-2">
                             {isConfigured ? (
-                              <span className="text-sm text-slate-300 font-medium">{concert.seatingZonesCount} zones</span>
+                              <span className="text-sm text-slate-300 font-medium">{concert.seatingZonesCount} khu vực</span>
                             ) : (
-                            <Badge variant="muted" className="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20">Incomplete</Badge>
+                            <Badge variant="muted" className="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20">Chưa hoàn tất</Badge>
                             )}
                           </div>
                         </div>
@@ -195,11 +195,11 @@ export function VenueMapList({ concerts, basePath, isLoading }: VenueMapListProp
                         <div className="hidden md:flex">
                           {isDraft ? (
                             <Button variant="outline" className="border-slate-700 hover:bg-slate-800 shrink-0">
-                              Edit Map
+                              Chỉnh sửa sơ đồ
                             </Button>
                           ) : (
                             <Button variant="ghost" className="text-slate-400 hover:text-white shrink-0">
-                              View Map
+                              Xem sơ đồ
                             </Button>
                           )}
                         </div>

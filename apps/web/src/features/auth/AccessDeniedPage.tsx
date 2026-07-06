@@ -15,17 +15,16 @@ export function AccessDeniedPage() {
       <div className="glass-panel rounded-xl p-8 max-w-md w-full text-center space-y-6">
         <span className="material-symbols-outlined text-5xl text-error">lock</span>
         <div className="space-y-2">
-          <h1 className="font-display text-2xl font-bold text-on-surface">Access Denied</h1>
+          <h1 className="font-display text-2xl font-bold text-on-surface">Từ chối truy cập</h1>
           <p className="text-on-surface-variant text-sm leading-relaxed">
-            Your account doesn't have access to the TicketBox web portal. Please contact your
-            administrator if you believe this is a mistake.
+            Tài khoản của bạn không có quyền truy cập vào cổng thông tin TicketBox. Vui lòng liên hệ với quản trị viên nếu bạn cho rằng đây là sự nhầm lẫn.
           </p>
         </div>
         <button
           onClick={handleLogout}
           className="btn-primary w-full py-2.5 px-4 rounded-lg text-on-primary-container font-semibold text-sm"
         >
-          Sign Out
+          Đăng xuất
         </button>
       </div>
     </div>

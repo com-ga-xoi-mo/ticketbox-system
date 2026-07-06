@@ -6,6 +6,8 @@ import { AdminReportsPage } from '../features/admin/reports/AdminReportsPage';
 import { OrganizerDashboard } from '../features/organizer/dashboard/OrganizerDashboard';
 import { ConcertsPage as AdminConcertsPage } from '../features/admin/concerts/ConcertsPage';
 import { ConcertEditPage as AdminConcertEditPage } from '../features/admin/concerts/ConcertEditPage';
+import { ArtistsPage as AdminArtistsPage } from '../features/admin/artists/ArtistsPage';
+import { ArtistEditPage as AdminArtistEditPage } from '../features/admin/artists/ArtistEditPage';
 import { AdminVenueMapsList, AdminVenueMapEditor } from '../features/admin/venue-maps/pages';
 import { AdminAccountsPage } from '../features/admin/accounts/AdminAccountsPage';
 import { SelfAccountPage } from '../features/account/SelfAccountPage';
@@ -18,6 +20,8 @@ import { ProtectedRoute } from '../shared/auth/ProtectedRoute';
 import { ShellLayout } from '../shared/ui/ShellLayout';
 import { useAuth } from '../shared/auth/AuthContext';
 import { redirectFor } from '../shared/auth/role-access';
+
+import { AdminResaleDisputesPage } from '../features/admin/resale-disputes/AdminResaleDisputesPage';
 
 function RootRedirect() {
   const { session } = useAuth();
@@ -90,6 +94,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: '/admin/artists',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminArtistsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/artists/:id/edit',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminArtistEditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/admin/concerts/:id/edit',
         element: (
           <ProtectedRoute allowedRoles={['ADMIN']}>
@@ -118,6 +138,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminAssignmentsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/resale-disputes',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminResaleDisputesPage />
           </ProtectedRoute>
         ),
       },

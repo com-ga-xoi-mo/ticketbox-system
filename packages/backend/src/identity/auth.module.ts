@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { DatabaseModule } from '../platform/database/database.module';
 import { StorageModule } from '../platform/storage/storage.module';
@@ -10,6 +11,9 @@ import { PlatformConfigService } from '../platform/config/platform-config.servic
 // Application — use-cases
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
+import { GoogleSignInUseCase } from './application/use-cases/google-sign-in.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { AuthorizeAdminActionUseCase } from './application/use-cases/authorize-admin-action.use-case';
 import { AuthorizeCheckinAssignmentUseCase } from './application/use-cases/authorize-checkin-assignment.use-case';
 import { AuthorizeConcertManagementUseCase } from './application/use-cases/authorize-concert-management.use-case';
@@ -37,11 +41,20 @@ import { AdminUsersController } from './adapters/http/admin-users.controller';
 import { AuthController } from './adapters/http/auth.controller';
 import { RolesGuard } from './adapters/http/guards/roles.guard';
 import { ProfileController } from './adapters/http/profile.controller';
+import { SellerBankProfileController } from './adapters/http/seller-bank-profile.controller';
 
 // Domain — DI tokens
 import { PASSWORD_HASHER, type PasswordHasherPort } from './domain/ports/password-hasher.port';
 import { TOKEN_ISSUER, type TokenIssuerPort } from './domain/ports/token-issuer.port';
 import { USER_REPOSITORY, type IUserRepository } from './domain/ports/user-repository.port';
+import {
+  GOOGLE_IDENTITY_VERIFIER,
+  type GoogleIdentityVerifierPort,
+} from './domain/ports/google-identity-verifier.port';
+import {
+  GOOGLE_IDENTITY_REPOSITORY,
+  type GoogleIdentityRepositoryPort,
+} from './domain/ports/google-identity-repository.port';
 import {
   BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
   type BulkCheckinStaffProvisioningRepositoryPort,
@@ -61,16 +74,30 @@ import { PrismaBulkCheckinStaffProvisioningRepository } from './infrastructure/d
 import { PrismaCheckinStaffAssignmentRepository } from './infrastructure/database/prisma-checkin-staff-assignment.repository';
 import { PrismaConcertOwnershipRepository } from './infrastructure/database/prisma-concert-ownership.repository';
 import { PrismaUserRepository } from './infrastructure/database/prisma-user.repository';
+import { PrismaPasswordResetTokenRepository } from './infrastructure/database/prisma-password-reset-token.repository';
+import { NodemailerEmailSender } from './infrastructure/email/nodemailer-email-sender';
+import { PrismaGoogleIdentityRepository } from './infrastructure/database/prisma-google-identity.repository';
+import { GoogleIdentityVerifierAdapter } from './infrastructure/google/google-identity-verifier.adapter';
 import { PrismaProfileQueryAdapter } from './infrastructure/database/prisma-profile-query.adapter';
 import { JwtAuthGuard } from './infrastructure/passport/jwt-auth.guard';
 import { JwtStrategy } from './infrastructure/passport/jwt.strategy';
 import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
+import { PrismaSellerBankProfileRepository } from '../users/infrastructure/database/prisma-seller-bank-profile.repository';
+import { GetBankProfileQuery } from '../users/application/queries/get-bank-profile.query';
+import { SaveBankProfileUseCase } from '../users/application/use-cases/save-bank-profile.use-case';
+
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
     PlatformConfigModule,
     DatabaseModule,
     StorageModule,
+    UsersModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
@@ -83,7 +110,13 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
         }) as any,
     }),
   ],
-  controllers: [AuthController, ProfileController, AdminCheckinStaffAssignmentsController, AdminUsersController],
+  controllers: [
+    AuthController,
+    ProfileController,
+    AdminCheckinStaffAssignmentsController,
+    AdminUsersController,
+    SellerBankProfileController,
+  ],
   providers: [
     {
       provide: AvatarImageValidator,
@@ -154,6 +187,33 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       ) => new LoginUseCase(userRepository, passwordHasher, tokenIssuer),
     },
     {
+      provide: GoogleSignInUseCase,
+      inject: [GOOGLE_IDENTITY_VERIFIER, GOOGLE_IDENTITY_REPOSITORY, TOKEN_ISSUER],
+      useFactory: (
+        verifier: GoogleIdentityVerifierPort,
+        identities: GoogleIdentityRepositoryPort,
+        tokenIssuer: TokenIssuerPort,
+      ) => new GoogleSignInUseCase(verifier, identities, tokenIssuer),
+    },
+    {
+      provide: ForgotPasswordUseCase,
+      inject: [USER_REPOSITORY, 'PasswordResetTokenRepository', 'EmailSenderPort'],
+      useFactory: (
+        userRepository: IUserRepository,
+        tokenRepo: any,
+        emailSender: any,
+      ) => new ForgotPasswordUseCase(userRepository, tokenRepo, emailSender),
+    },
+    {
+      provide: ResetPasswordUseCase,
+      inject: [USER_REPOSITORY, 'PasswordResetTokenRepository', PASSWORD_HASHER],
+      useFactory: (
+        userRepository: IUserRepository,
+        tokenRepo: any,
+        passwordHasher: PasswordHasherPort,
+      ) => new ResetPasswordUseCase(userRepository, tokenRepo, passwordHasher),
+    },
+    {
       provide: UpdateMyProfileUseCase,
       inject: [USER_REPOSITORY],
       useFactory: (userRepository: IUserRepository) => new UpdateMyProfileUseCase(userRepository),
@@ -216,8 +276,24 @@ import { JwtTokenIssuer } from './infrastructure/token/jwt-token-issuer';
       useClass: PrismaUserRepository,
     },
     {
+      provide: GOOGLE_IDENTITY_VERIFIER,
+      useClass: GoogleIdentityVerifierAdapter,
+    },
+    {
+      provide: GOOGLE_IDENTITY_REPOSITORY,
+      useClass: PrismaGoogleIdentityRepository,
+    },
+    {
       provide: BULK_CHECKIN_STAFF_PROVISIONING_REPOSITORY,
       useClass: PrismaBulkCheckinStaffProvisioningRepository,
+    },
+    {
+      provide: 'PasswordResetTokenRepository',
+      useClass: PrismaPasswordResetTokenRepository,
+    },
+    {
+      provide: 'EmailSenderPort',
+      useClass: NodemailerEmailSender,
     },
     {
       provide: PROFILE_QUERY,

@@ -54,6 +54,10 @@ export class PlatformConfigService {
     return this.configService.get('JWT_EXPIRY');
   }
 
+  get googleClientId(): string | undefined {
+    return this.configService.get('GOOGLE_CLIENT_ID', { infer: true });
+  }
+
   get qrTokenSecret(): string {
     return this.configService.get('QR_TOKEN_SECRET');
   }
@@ -190,6 +194,10 @@ export class PlatformConfigService {
     return this.configService.get('EMAIL_SMTP_SECURE');
   }
 
+  get frontendUrl(): string {
+    return this.configService.get('FRONTEND_URL');
+  }
+
   get maildevWebUrl(): string | undefined {
     return this.configService.get('MAILDEV_WEB_URL', { infer: true });
   }
@@ -289,5 +297,21 @@ export class PlatformConfigService {
 
   get s3PublicBaseUrl(): string {
     return this.configService.get('S3_PUBLIC_BASE_URL');
+  }
+
+  get nominatimBaseUrl(): string {
+    return this.configService.get('NOMINATIM_BASE_URL');
+  }
+
+  get nominatimUserAgent(): string | undefined {
+    return this.configService.get('NOMINATIM_USER_AGENT', { infer: true });
+  }
+
+  get nominatimContactEmail(): string | undefined {
+    return this.configService.get('NOMINATIM_CONTACT_EMAIL', { infer: true });
+  }
+
+  get nominatimTimeoutMs(): number {
+    return this.configService.get('NOMINATIM_TIMEOUT_MS');
   }
 }

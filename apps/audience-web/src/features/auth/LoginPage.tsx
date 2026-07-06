@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Ticket } from 'lucide-react';
 import { useAuth } from '../../shared/auth/AuthContext';
-import { loginRequest } from '../../shared/api/auth';
+import { googleLoginRequest, loginRequest } from '../../shared/api/auth';
+import { ApiError } from '../../shared/api/client';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 interface LoginFormValues {
   email: string;
@@ -20,6 +22,8 @@ export function LoginPage() {
   const searchParams = new URLSearchParams(location.search);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(true);
 
   const returnTo = searchParams.get('returnTo');
   const stateFrom = (location.state as { from?: { pathname: string } })?.from?.pathname;
@@ -42,6 +46,25 @@ export function LoginPage() {
       setError('Email hoặc mật khẩu không đúng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGoogleCredential(credential: string) {
+    if (googleLoading) return;
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      const token = await googleLoginRequest(credential);
+      signIn(token);
+      navigate(from, { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'ACCOUNT_LINK_REQUIRED') {
+        setError('Email này đã có tài khoản TicketBox. Hãy đăng nhập bằng mật khẩu.');
+      } else {
+        setError('Không thể đăng nhập bằng Google. Vui lòng thử lại.');
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
@@ -71,13 +94,34 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-foreground" htmlFor="password">Mật khẩu</label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">Quên mật khẩu?</Link>
+              </div>
               <Input id="password" name="password" type="password" placeholder="••••••••" autoComplete="current-password" required />
             </div>
 
             <Button type="submit" className="h-11 w-full rounded-full shadow-xl shadow-primary/20" disabled={loading}>
               {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
+
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">hoặc</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {googleAvailable ? (
+              <GoogleSignInButton
+                disabled={googleLoading || loading}
+                onCredential={handleGoogleCredential}
+                onUnavailable={() => setGoogleAvailable(false)}
+              />
+            ) : (
+              <p className="text-center text-sm text-muted-foreground">
+                Đăng nhập Google hiện không khả dụng. Bạn vẫn có thể dùng email và mật khẩu.
+              </p>
+            )}
             
             <div className="text-center text-sm text-muted-foreground mt-4">
               Chưa có tài khoản? <Link to="/register" className="text-primary hover:underline">Đăng ký ngay</Link>

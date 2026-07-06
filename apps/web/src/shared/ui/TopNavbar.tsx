@@ -25,7 +25,7 @@ const { session, logout } = useAuth();
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const role = session?.roles?.includes('ADMIN') ? 'Admin' : 'Organizer';
+  const role = session?.roles?.includes('ADMIN') ? 'Quản trị viên' : 'Ban tổ chức';
   const avatarImageUrl = resolveAvatarImageUrl(profile?.avatarAssetId, profile?.avatarUrl);
 
   return (
@@ -33,7 +33,7 @@ const { session, logout } = useAuth();
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
         <Link to="/" className="text-on-surface-variant transition-colors hover:text-primary">
-          Console
+          Hệ thống
         </Link>
         {breadcrumbs.map((crumb, i) => (
           <React.Fragment key={i}>
@@ -115,7 +115,7 @@ const { session, logout } = useAuth();
             <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-900 shadow-xl">
               <div className="px-4 py-3 border-b border-white/10">
                 <p className="text-sm font-medium text-white">{profile?.displayName || role}</p>
-                <p className="text-xs text-slate-400 truncate">{profile?.email || 'Loading...'}</p>
+                <p className="text-xs text-slate-400 truncate">{profile?.email || 'Đang tải...'}</p>
               </div>
               <div className="py-1">
                 <Link
@@ -124,7 +124,7 @@ const { session, logout } = useAuth();
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <span className="material-symbols-outlined text-[18px]">settings</span>
-                  Settings
+                  Cài đặt
                 </Link>
                 <div className="h-px bg-white/10 my-1" />
                 <button
@@ -132,7 +132,7 @@ const { session, logout } = useAuth();
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span>
-                  Sign out
+                  Đăng xuất
                 </button>
               </div>
             </div>

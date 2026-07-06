@@ -23,11 +23,11 @@ export function OrganizerDashboard() {
   });
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#dae2fd]">Loading...</div>;
+    return <div className="flex h-screen items-center justify-center bg-[#020617] text-[#dae2fd]">Đang tải...</div>;
   }
 
   if (error || !data) {
-    return <div className="p-6 text-red-500">Failed to load dashboard metrics.</div>;
+    return <div className="p-6 text-red-500">Lỗi khi tải dữ liệu bảng điều khiển.</div>;
   }
 
   const { overallCheckinRate } = data;
@@ -48,8 +48,8 @@ export function OrganizerDashboard() {
         {/* Header Section */}
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-[#dae2fd] tracking-tight">Welcome back, Organizer</h2>
-            <p className="text-[#cbc3d7] mt-1">Here is what's happening with your events today.</p>
+            <h2 className="text-3xl font-bold text-[#dae2fd] tracking-tight">Chào mừng trở lại, Ban tổ chức</h2>
+            <p className="text-[#cbc3d7] mt-1">Dưới đây là thông tin tổng quan về các sự kiện của bạn.</p>
           </div>
         </div>
 
@@ -57,7 +57,7 @@ export function OrganizerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
             <div className="flex justify-between items-start mb-4">
-              <span className="text-[#cbc3d7] text-sm">Total Revenue</span>
+              <span className="text-[#cbc3d7] text-sm">Tổng doanh thu</span>
               <div className="p-2 bg-[#d0bcff]/10 rounded-lg">
                 <Activity className="w-5 h-5 text-[#d0bcff]" />
               </div>
@@ -65,13 +65,13 @@ export function OrganizerDashboard() {
             <div className="text-3xl font-bold text-[#dae2fd]">{formatCurrency(data.myTotalRevenueVnd)}</div>
             <div className="mt-4 flex items-center gap-2 text-[#4cd7f6] text-sm">
               <Activity className="w-4 h-4" />
-              <span>Real-time tracking</span>
+              <span>Cập nhật theo thời gian thực</span>
             </div>
           </div>
 
           <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
             <div className="flex justify-between items-start mb-4">
-              <span className="text-[#cbc3d7] text-sm">Active Events</span>
+              <span className="text-[#cbc3d7] text-sm">Sự kiện đang hoạt động</span>
               <div className="p-2 bg-[#4cd7f6]/10 rounded-lg">
                 <Ticket className="w-5 h-5 text-[#4cd7f6]" />
               </div>
@@ -86,7 +86,7 @@ export function OrganizerDashboard() {
 
           <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-6 rounded-2xl border-l-4 border-[#10B981]/50">
             <div className="flex justify-between items-start mb-4">
-              <span className="text-[#cbc3d7] text-sm">Avg. Check-in Rate</span>
+              <span className="text-[#cbc3d7] text-sm">Tỉ lệ check-in trung bình</span>
               <div className="p-2 bg-[#10B981]/10 rounded-lg">
                 <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
               </div>
@@ -95,7 +95,7 @@ export function OrganizerDashboard() {
               {checkinPercentage}%
             </div>
             <p className="text-[#cbc3d7] mt-4 text-sm">
-              {overallCheckinRate.checkedInTickets} / {overallCheckinRate.eligibleTickets} eligible tickets
+              {overallCheckinRate.checkedInTickets} / {overallCheckinRate.eligibleTickets} vé hợp lệ
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export function OrganizerDashboard() {
             {/* Sales Velocity Chart */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-6 rounded-2xl h-[400px] flex flex-col">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-semibold text-[#dae2fd] text-base">Sales Velocity</h3>
+                <h3 className="font-semibold text-[#dae2fd] text-base">Tốc độ bán vé</h3>
                 <div className="relative">
                   <select 
                     className="bg-[#171f33] border-none text-sm rounded-lg py-1 pl-3 pr-8 outline-none text-[#cbc3d7] focus:ring-1 focus:ring-[#d0bcff] cursor-pointer appearance-none"
@@ -116,10 +116,10 @@ export function OrganizerDashboard() {
                     onChange={(e) => setWindowDays(Number(e.target.value))}
                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbc3d7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
                   >
-                    <option value={7}>Last 7 days</option>
-                    <option value={14}>Last 14 days</option>
-                    <option value={30}>Last 30 days</option>
-                    <option value={90}>Last 90 days</option>
+                    <option value={7}>7 ngày qua</option>
+                    <option value={14}>14 ngày qua</option>
+                    <option value={30}>30 ngày qua</option>
+                    <option value={90}>90 ngày qua</option>
                   </select>
                 </div>
               </div>
@@ -155,22 +155,22 @@ export function OrganizerDashboard() {
             {/* Active Concerts Table */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 rounded-2xl overflow-hidden">
               <div className="p-6 flex justify-between items-center border-b border-white/5">
-                <h3 className="font-semibold text-[#dae2fd] text-base">My Active Concerts</h3>
-                <Link to="/organizer/concerts" className="text-[#d0bcff] text-sm font-medium hover:underline">View All</Link>
+                <h3 className="font-semibold text-[#dae2fd] text-base">Sự kiện đang hoạt động</h3>
+                <Link to="/organizer/concerts" className="text-[#d0bcff] text-sm font-medium hover:underline">Xem tất cả</Link>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-white/5 text-[#cbc3d7] font-mono text-[11px] uppercase tracking-wider">
-                      <th className="px-6 py-4">Event Name</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Date</th>
-                      <th className="px-6 py-4">Action</th>
+                      <th className="px-6 py-4">Tên sự kiện</th>
+                      <th className="px-6 py-4">Trạng thái</th>
+                      <th className="px-6 py-4">Ngày diễn ra</th>
+                      <th className="px-6 py-4">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#494454]/30">
                     {activeConcerts.length === 0 ? (
-                      <tr><td colSpan={4} className="px-6 py-4 text-[#cbc3d7] text-sm text-center">No active concerts found.</td></tr>
+                      <tr><td colSpan={4} className="px-6 py-4 text-[#cbc3d7] text-sm text-center">Không có sự kiện nào đang hoạt động.</td></tr>
                     ) : (
                       activeConcerts.map(concert => (
                         <tr key={concert.id} className="hover:bg-white/5 transition-colors group">
@@ -186,11 +186,11 @@ export function OrganizerDashboard() {
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               concert.status === 'PUBLISHED' ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-white/10 text-[#cbc3d7]'
                             }`}>
-                              {concert.status === 'PUBLISHED' ? 'Selling' : 'Draft'}
+                              {concert.status === 'PUBLISHED' ? 'Đang bán' : 'Bản nháp'}
                             </span>
                           </td>
                           <td className="px-6 py-4 font-mono text-sm">
-                            {new Date(concert.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(concert.startsAt).toLocaleDateString('vi-VN')}
                           </td>
                           <td className="px-6 py-4">
                             <Link to={`/organizer/concerts/${concert.id}/edit`} className="text-[#cbc3d7] hover:text-[#d0bcff] transition-colors"><MoreVertical className="w-5 h-5" /></Link>
@@ -209,7 +209,7 @@ export function OrganizerDashboard() {
             
             {/* Live Check-in Status */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-8 rounded-2xl text-center">
-              <h3 className="font-semibold text-left mb-8 text-[#dae2fd]">Live Check-in Status</h3>
+              <h3 className="font-semibold text-left mb-8 text-[#dae2fd]">Trạng thái Check-in trực tiếp</h3>
               <div className="relative w-48 h-48 mx-auto mb-6">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" fill="none" r="45" stroke="rgba(255,255,255,0.05)" strokeWidth="8"></circle>
@@ -217,30 +217,30 @@ export function OrganizerDashboard() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-3xl font-bold text-[#dae2fd]">{checkinPercentage}%</span>
-                  <span className="text-[10px] text-[#cbc3d7] uppercase font-mono mt-1">Checked In</span>
+                  <span className="text-[10px] text-[#cbc3d7] uppercase font-mono mt-1">Đã Check-in</span>
                 </div>
               </div>
               <div className="flex items-center justify-center gap-2 p-2 bg-[#10B981]/10 rounded-lg mt-8">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-                <span className="text-xs text-[#10B981] font-semibold uppercase tracking-widest">Live Updates</span>
+                <span className="text-xs text-[#10B981] font-semibold uppercase tracking-widest">Cập nhật trực tiếp</span>
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className="bg-[rgba(30,41,59,0.6)] backdrop-blur-[20px] border border-white/10 p-6 rounded-2xl">
-              <h3 className="font-semibold mb-6 text-[#dae2fd]">Quick Actions</h3>
+              <h3 className="font-semibold mb-6 text-[#dae2fd]">Thao tác nhanh</h3>
               <div className="space-y-3">
                 <Link to="/organizer/concerts" className="w-full group flex items-center justify-between p-4 rounded-xl border border-[#494454] bg-white/5 hover:border-[#d0bcff] hover:bg-[#d0bcff]/5 transition-all active:scale-[0.98]">
                   <div className="flex items-center gap-4">
                     <Users className="w-5 h-5 text-[#cbc3d7] group-hover:text-[#d0bcff] transition-colors" />
-                    <span className="font-medium text-sm text-[#dae2fd]">Manage Concerts</span>
+                    <span className="font-medium text-sm text-[#dae2fd]">Quản lý sự kiện</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#cbc3d7] group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link to="/organizer/venue-maps" className="w-full group flex items-center justify-between p-4 rounded-xl border border-[#494454] bg-white/5 hover:border-[#4cd7f6] hover:bg-[#4cd7f6]/5 transition-all active:scale-[0.98]">
                   <div className="flex items-center gap-4">
                     <Map className="w-5 h-5 text-[#cbc3d7] group-hover:text-[#4cd7f6] transition-colors" />
-                    <span className="font-medium text-sm text-[#dae2fd]">Manage Venue Maps</span>
+                    <span className="font-medium text-sm text-[#dae2fd]">Quản lý sơ đồ ghế</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#cbc3d7] group-hover:translate-x-1 transition-transform" />
                 </Link>

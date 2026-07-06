@@ -102,6 +102,18 @@ describe('LoginUseCase', () => {
     ).rejects.toThrow(InvalidCredentialsError);
   });
 
+  it('rejects an OAuth-only user without comparing a null password hash', async () => {
+    vi.mocked(userRepo.findByEmail).mockResolvedValue({
+      ...makeUserRecord('unused'),
+      passwordHash: null,
+    });
+
+    await expect(
+      useCase.execute({ email: 'test@example.com', password: 'anypassword' }),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    expect(passwordHasher.compare).not.toHaveBeenCalled();
+  });
+
   it('InvalidCredentialsError message is generic for both wrong-password and missing-user', async () => {
     vi.mocked(userRepo.findByEmail).mockResolvedValue(null);
     const err1 = await useCase.execute({ email: 'x@x.com', password: 'pw' }).catch((e) => e);

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { UpdateMyPasswordUseCase } from './update-my-password.use-case';
 import type { IUserRepository } from '../../domain/ports/user-repository.port';
 import type { PasswordHasherPort } from '../../domain/ports/password-hasher.port';
+import { LocalPasswordRequiredError } from '../../domain/errors';
 import { InvalidCredentialsError } from '../../domain/errors';
 import { Role } from '../../domain/role.enum';
 import { UserStatus } from '../../domain/user-status.enum';
@@ -37,5 +38,27 @@ describe('UpdateMyPasswordUseCase', () => {
     const useCase = new UpdateMyPasswordUseCase(userRepo, hasher);
     
     await expect(useCase.execute('user-1', { currentPassword: 'wrong', newPassword: 'new' })).rejects.toThrow(InvalidCredentialsError);
+  });
+
+  it('rejects an OAuth-only account without comparing null', async () => {
+    const userRepo = {
+      findByIdWithPassword: vi.fn().mockResolvedValue({
+        id: 'user-1',
+        passwordHash: null,
+        roles: ['AUDIENCE'],
+        email: 'google@test.com',
+        displayName: 'Google User',
+        status: UserStatus.ACTIVE,
+      }),
+      updatePassword: vi.fn(),
+    } as any;
+    const passwordHasher: PasswordHasherPort = { hash: vi.fn(), compare: vi.fn() };
+    const useCase = new UpdateMyPasswordUseCase(userRepo, passwordHasher);
+
+    await expect(
+      useCase.execute('user-1', { currentPassword: 'unused', newPassword: 'new-password' }),
+    ).rejects.toBeInstanceOf(LocalPasswordRequiredError);
+    expect(passwordHasher.compare).not.toHaveBeenCalled();
+    expect(userRepo.updatePassword).not.toHaveBeenCalled();
   });
 });

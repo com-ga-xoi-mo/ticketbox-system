@@ -84,13 +84,15 @@ describe('Concert Write Use Cases', () => {
     it('succeeds for organizer who owns the concert', async () => {
       const useCase = new UpdateConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -146,13 +148,15 @@ describe('Concert Write Use Cases', () => {
     it('allows admin to update any concert', async () => {
       const useCase = new UpdateConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -186,13 +190,15 @@ describe('Concert Write Use Cases', () => {
     it('rejects update if concert status is ENDED or CANCELLED', async () => {
       const useCase = new UpdateConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const endedConcert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -222,13 +228,15 @@ describe('Concert Write Use Cases', () => {
     it('rejects invalid URL slug during update', async () => {
       const useCase = new UpdateConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -258,13 +266,15 @@ describe('Concert Write Use Cases', () => {
     it('throws ConflictException if updated slug is duplicate (P2002 conflict)', async () => {
       const useCase = new UpdateConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -297,13 +307,15 @@ describe('Concert Write Use Cases', () => {
     it('succeeds for DRAFT concert', async () => {
       const useCase = new PublishConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -335,13 +347,15 @@ describe('Concert Write Use Cases', () => {
     it('throws for PUBLISHED, CANCELLED, or ENDED concert', async () => {
       const useCase = new PublishConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -372,13 +386,15 @@ describe('Concert Write Use Cases', () => {
     it('succeeds for DRAFT or PUBLISHED concert', async () => {
       const useCase = new CancelConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -410,13 +426,15 @@ describe('Concert Write Use Cases', () => {
     it('throws for CANCELLED or ENDED concert', async () => {
       const useCase = new CancelConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -459,13 +477,15 @@ describe('Concert Write Use Cases', () => {
     it('authorizes and returns concert when it exists and belongs to organizer', async () => {
       const useCase = new GetOrganizerConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),
@@ -517,13 +537,15 @@ describe('Concert Write Use Cases', () => {
     it('authorizes with allowAdminOverride: true and returns concert when it exists', async () => {
       const useCase = new GetAdminConcertUseCase(concertWriteRepo, authorizeConcertManagement);
       const concert: Concert = {
-        id: 'concert-1',
+        eventType: 'CONCERT', isFeatured: false, displayOrder: 0, seoTitle: null, seoDescription: null, seoImageUrl: null, bannerAssetId: null, artists: [], id: 'concert-1',
         slug: 'my-concert',
         title: 'My Concert',
         artistName: 'Artist 1',
         description: null,
         venueName: 'Venue 1',
         venueAddress: null,
+        latitude: null,
+        longitude: null,
         city: 'City',
         startsAt: new Date(),
         endsAt: new Date(),

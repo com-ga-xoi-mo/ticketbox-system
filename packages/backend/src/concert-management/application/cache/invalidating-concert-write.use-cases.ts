@@ -81,3 +81,18 @@ export class InvalidatingCancelConcertUseCase {
     return result;
   }
 }
+
+import type { UploadBannerUseCase } from '../use-cases/upload-banner.use-case';
+
+export class InvalidatingUploadBannerUseCase {
+  constructor(
+    private readonly inner: UploadBannerUseCase,
+    private readonly cache: CacheServicePort,
+  ) {}
+
+  async execute(input: any): Promise<any> {
+    const result = await this.inner.execute(input);
+    await invalidateConcertCatalogCache(this.cache);
+    return result;
+  }
+}

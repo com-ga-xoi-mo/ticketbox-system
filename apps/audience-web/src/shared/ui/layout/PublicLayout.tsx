@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, LifeBuoy, LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle } from 'lucide-react';
+import { Bell, LifeBuoy, LogOut, Menu, ShoppingBag, Sparkles, Ticket, UserCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { NotificationStreamListener } from '../../api/NotificationStreamListener';
+import { MessagingStreamListener } from '../../api/MessagingStreamListener';
 import { cn } from '../cn';
 import { Button } from '../../../components/ui/button';
 import {
@@ -26,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avat
 import { useMyProfile } from '../../api/profile';
 import { resolveAvatarImageUrl } from '../../api/client';
 import { useAudienceNotificationUnreadCount } from '../../api/notifications';
+import { useMyThreads } from '../../api/messaging';
 
 function Logo() {
   return (
@@ -52,6 +54,11 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
   const navigate = useNavigate();
   const { data: profile } = useMyProfile(!!session);
   const { data: unread } = useAudienceNotificationUnreadCount(!!session);
+  const { data: threads } = useMyThreads();
+
+  const unreadMessagesCount = useMemo(() => {
+    return threads?.reduce((acc: number, t: any) => acc + (t.unreadCount || 0), 0) || 0;
+  }, [threads]);
 
   const handleSignOut = () => {
     signOut();
@@ -64,7 +71,11 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  const avatarImageUrl = resolveAvatarImageUrl(profile?.avatarAssetId, profile?.avatarUrl);
+  const avatarImageUrl = resolveAvatarImageUrl(
+    profile?.avatarAssetId,
+    profile?.avatarUrl,
+    profile?.externalAvatarUrl,
+  );
 
   return (
     <nav className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-2">
@@ -76,6 +87,13 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
         Sự kiện
       </Link>
       <Link
+        to="/resale"
+        onClick={onClick}
+        className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        Resale
+      </Link>
+      <Link
         to="/artists"
         onClick={onClick}
         className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors hover:bg-secondary hover:text-foreground"
@@ -84,6 +102,17 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       </Link>
       {session ? (
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative rounded-full" asChild onClick={onClick}>
+            <Link to="/account/messages">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[0.65rem] font-bold text-primary-foreground">
+                  {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+                </span>
+              )}
+            </Link>
+          </Button>
+
           <Button variant="ghost" size="icon" className="relative rounded-full" asChild onClick={onClick}>
             <Link to="/account/notifications">
               <Bell className="h-5 w-5 text-muted-foreground" />
@@ -99,7 +128,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full focus-visible:ring-0 px-0">
                 <Avatar className="h-9 w-9 border border-border/50 hover:opacity-80 transition-opacity">
-                  <AvatarImage src={avatarImageUrl || ''} alt={profile?.displayName || 'User'} />
+                  <AvatarImage src={avatarImageUrl || ''} alt={profile?.displayName || 'User'} referrerPolicy="no-referrer" />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(profile?.displayName)}
                   </AvatarFallback>
@@ -132,6 +161,12 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
                 <Link to="/account/tickets" onClick={onClick} className="cursor-pointer w-full flex items-center">
                   <Ticket className="mr-2 h-4 w-4" />
                   <span>Vé của tôi</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/account/messages" onClick={onClick} className="cursor-pointer w-full flex items-center">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <span>Tin nhắn</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -170,6 +205,7 @@ export function PublicLayout() {
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
       <NotificationStreamListener />
+      <MessagingStreamListener />
       <header className="sticky top-0 z-50 border-b border-white/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />

@@ -56,6 +56,8 @@ describe('public concert catalog HTTP contracts', () => {
     description: 'A great summer concert',
     publishedArtistBio: 'The Suns are a jazz band',
     venueAddress: '123 Main St',
+    latitude: null,
+    longitude: null,
     seoTitle: 'Summer Beats Concert',
     seoDescription: 'A great summer concert',
     seoImageUrl: null,
@@ -127,19 +129,33 @@ describe('public concert catalog HTTP contracts', () => {
     { execute: vi.fn().mockResolvedValue([featured]) } as any,
   );
 
+  // The public catalog omits `artists`; the shared schema fills it with a [] default
+  // on the client, so parsed output equals the payload plus that default.
   it('returns a public list response compatible with the shared schema', async () => {
-    const payload = toHttpPayload(await controller.listConcerts({ eventType: 'CONCERT' }));
-    expect(PublicConcertListResponseSchema.parse(payload)).toEqual(payload);
+    const payload = toHttpPayload(
+      await controller.listConcerts({ eventType: 'CONCERT' }),
+    ) as Record<string, unknown>[];
+    expect(PublicConcertListResponseSchema.parse(payload)).toEqual(
+      payload.map((item) => ({ ...item, artists: [] })),
+    );
   });
 
   it('returns a public featured list response compatible with the shared schema', async () => {
-    const payload = toHttpPayload(await controller.listFeatured({ limit: 5 }));
-    expect(PublicFeaturedConcertListResponseSchema.parse(payload)).toEqual(payload);
+    const payload = toHttpPayload(await controller.listFeatured({ limit: 5 })) as Record<
+      string,
+      unknown
+    >[];
+    expect(PublicFeaturedConcertListResponseSchema.parse(payload)).toEqual(
+      payload.map((item) => ({ ...item, artists: [] })),
+    );
   });
 
   it('returns a public detail response compatible with the shared schema', async () => {
-    const payload = toHttpPayload(await controller.getConcertDetail('summer-beats'));
-    expect(PublicConcertDetailResponseSchema.parse(payload)).toEqual(payload);
+    const payload = toHttpPayload(await controller.getConcertDetail('summer-beats')) as Record<
+      string,
+      unknown
+    >;
+    expect(PublicConcertDetailResponseSchema.parse(payload)).toEqual({ ...payload, artists: [] });
   });
 
   it('returns a public availability response compatible with the shared schema', async () => {

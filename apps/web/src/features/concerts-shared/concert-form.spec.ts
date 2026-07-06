@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { validateConcertForm, toCreatePayload, toUpdatePayload } from './concert-form';
+import {
+  OrganizerCreateConcertSchema,
+  OrganizerUpdateConcertSchema,
+  AdminUpdateConcertSchema,
+} from '@ticketbox/api-types';
+import {
+  validateConcertForm,
+  toCreatePayload,
+  toUpdatePayload,
+  type ConcertFormValues,
+} from './concert-form';
 
 describe('concert form utilities', () => {
   const validValues = {
@@ -11,6 +21,8 @@ describe('concert form utilities', () => {
     startsAt: '2026-07-01T20:00:00.000Z',
     endsAt: '2026-07-01T22:00:00.000Z',
     description: 'A great concert',
+    latitude: 10.762622,
+    longitude: 106.660172,
   };
 
   it('validates a correct form values successfully', () => {
@@ -69,8 +81,80 @@ describe('concert form utilities', () => {
     expect(createPayload.venueAddress).toBeUndefined();
     expect(createPayload.description).toBeUndefined();
 
+    // The wire contracts type these as non-nullable optionals, so empty
+    // values must be omitted on update too — never sent as null.
     const updatePayload = toUpdatePayload(values);
-    expect(updatePayload.venueAddress).toBeNull();
-    expect(updatePayload.description).toBeNull();
+    expect(updatePayload.venueAddress).toBeUndefined();
+    expect(updatePayload.description).toBeUndefined();
+  });
+});
+
+describe('concert form payloads satisfy the shared wire contracts', () => {
+  // Values exactly as the form state holds them: datetime-local strings and
+  // empty strings for untouched optional fields.
+  const organizerFormValues: ConcertFormValues = {
+    slug: 'midnight-echo-live',
+    title: 'Midnight Echo Live',
+    artistName: 'The Midnight',
+    venueName: 'Grand Arena',
+    venueAddress: '',
+    city: 'Ho Chi Minh City',
+    startsAt: '2026-07-16T18:18',
+    endsAt: '2026-07-30T18:18',
+    description: '',
+    eventType: 'CONCERT',
+    seoTitle: '',
+    seoDescription: '',
+    seoImageUrl: '',
+  };
+
+  const adminFormValues: ConcertFormValues = {
+    ...organizerFormValues,
+    isFeatured: true,
+    displayOrder: 2,
+  };
+
+  // The payload crosses the network as JSON, which drops undefined keys —
+  // mirror that before validating against the strict wire schemas.
+  function asWirePayload(payload: unknown): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(payload));
+  }
+
+  it('organizer create payload passes OrganizerCreateConcertSchema', () => {
+    expect(() =>
+      OrganizerCreateConcertSchema.parse(asWirePayload(toCreatePayload(organizerFormValues))),
+    ).not.toThrow();
+  });
+
+  it('organizer update payload passes OrganizerUpdateConcertSchema', () => {
+    expect(() =>
+      OrganizerUpdateConcertSchema.parse(asWirePayload(toUpdatePayload(organizerFormValues))),
+    ).not.toThrow();
+  });
+
+  it('admin update payload passes AdminUpdateConcertSchema', () => {
+    expect(() =>
+      AdminUpdateConcertSchema.parse(asWirePayload(toUpdatePayload(adminFormValues))),
+    ).not.toThrow();
+  });
+
+  it('converts datetime-local values to ISO datetimes with offset', () => {
+    const payload = toUpdatePayload(organizerFormValues);
+    expect(payload.startsAt).toMatch(/Z$/);
+    expect(new Date(payload.startsAt).getTime()).toBe(new Date('2026-07-16T18:18').getTime());
+  });
+
+  it('organizer payload never contains moderation fields on the wire', () => {
+    const payload = asWirePayload(toUpdatePayload(organizerFormValues));
+    expect(payload).not.toHaveProperty('isFeatured');
+    expect(payload).not.toHaveProperty('displayOrder');
+  });
+
+  it('rejects a non-https SEO image URL locally before submit', () => {
+    const errors = validateConcertForm({
+      ...organizerFormValues,
+      seoImageUrl: 'http://insecure.example.com/x.png',
+    });
+    expect(errors.seoImageUrl).toBeTruthy();
   });
 });

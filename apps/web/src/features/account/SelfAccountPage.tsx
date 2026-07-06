@@ -33,11 +33,11 @@ export const SelfAccountPage = () => {
   }, [searchParams, isLoading]);
 
   if (isLoading) {
-    return <div className="p-8 text-slate-400">Loading profile...</div>;
+    return <div className="p-8 text-slate-400">Đang tải hồ sơ...</div>;
   }
 
   if (!profile) {
-    return <div className="p-8 text-red-400">Failed to load profile.</div>;
+    return <div className="p-8 text-red-400">Tải hồ sơ thất bại.</div>;
   }
 
   const handleProfileSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -52,8 +52,8 @@ export const SelfAccountPage = () => {
       city: String(formData.get('city')) || null,
       district: String(formData.get('district')) || null,
     }, {
-      onSuccess: () => toast.success('Profile updated successfully'),
-      onError: (err: any) => toast.error(err.message || 'Update failed')
+      onSuccess: () => toast.success('Cập nhật hồ sơ thành công'),
+      onError: (err: any) => toast.error(err.message || 'Cập nhật thất bại')
     });
   };
 
@@ -65,7 +65,7 @@ export const SelfAccountPage = () => {
     const confirmPassword = String(formData.get('confirmPassword'));
 
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Mật khẩu không khớp');
       return;
     }
 
@@ -74,10 +74,10 @@ export const SelfAccountPage = () => {
       newPassword,
     }, {
       onSuccess: () => {
-        toast.success('Password changed successfully');
+        toast.success('Đổi mật khẩu thành công');
         form.reset();
       },
-      onError: (err: any) => toast.error(err.message || 'Password change failed')
+      onError: (err: any) => toast.error(err.message || 'Đổi mật khẩu thất bại')
     });
   };
 
@@ -85,8 +85,8 @@ export const SelfAccountPage = () => {
     const file = e.target.files?.[0];
     if (file) {
       uploadAvatar.mutate(file, {
-        onSuccess: () => toast.success('Avatar updated'),
-        onError: (err: any) => toast.error(err.message || 'Avatar upload failed')
+        onSuccess: () => toast.success('Cập nhật ảnh đại diện thành công'),
+        onError: (err: any) => toast.error(err.message || 'Tải ảnh đại diện thất bại')
       });
     }
   };
@@ -95,15 +95,15 @@ export const SelfAccountPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <h1 className="text-2xl font-bold text-white tracking-tight">Account Settings</h1>
+      <h1 className="text-2xl font-bold text-white tracking-tight">Cài đặt tài khoản</h1>
 
       {/* Avatar Section */}
       <section className="bg-slate-900/40 border border-white/10 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Profile Picture</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Ảnh đại diện</h2>
         <div className="flex items-center gap-6">
           <div className="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
             {avatarImageUrl ? (
-              <img src={avatarImageUrl} alt={profile.displayName || 'Avatar'} className="w-full h-full object-cover" />
+              <img src={avatarImageUrl} alt={profile.displayName || 'Ảnh đại diện'} className="w-full h-full object-cover" />
             ) : (
               <span className="text-2xl font-medium text-slate-400">
                 {profile.displayName ? profile.displayName.substring(0, 2).toUpperCase() : 'U'}
@@ -114,7 +114,7 @@ export const SelfAccountPage = () => {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Button variant="outline" className="border-white/10 hover:bg-white/5 text-white" disabled={uploadAvatar.isPending}>
-                  {uploadAvatar.isPending ? 'Uploading...' : 'Change Avatar'}
+                  {uploadAvatar.isPending ? 'Đang tải lên...' : 'Đổi ảnh đại diện'}
                 </Button>
                 <input 
                   type="file" 
@@ -127,21 +127,21 @@ export const SelfAccountPage = () => {
                 <Button 
                   variant="outline" 
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                  onClick={() => removeAvatar.mutate(undefined, { onSuccess: () => toast.success('Avatar removed') })}
+                  onClick={() => removeAvatar.mutate(undefined, { onSuccess: () => toast.success('Đã xóa ảnh đại diện') })}
                   disabled={removeAvatar.isPending}
                 >
-                  Remove
+                  Xóa
                 </Button>
               )}
             </div>
-            <p className="text-xs text-slate-500">JPG, PNG or WebP. Max 2MB.</p>
+            <p className="text-xs text-slate-500">JPG, PNG hoặc WebP. Tối đa 2MB.</p>
           </div>
         </div>
       </section>
 
       {/* Profile Info Section */}
       <section className="bg-slate-900/40 border border-white/10 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-6">Personal Information</h2>
+        <h2 className="text-lg font-semibold text-white mb-6">Thông tin cá nhân</h2>
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -149,42 +149,42 @@ export const SelfAccountPage = () => {
               <Input value={profile.email} disabled className="bg-slate-800/50 border-white/10 text-slate-500 cursor-not-allowed" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Display Name</label>
+              <label className="text-sm font-medium text-slate-400">Tên hiển thị</label>
               <Input name="displayName" defaultValue={profile.displayName} required className="bg-slate-800/50 border-white/10 text-white" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Phone</label>
+              <label className="text-sm font-medium text-slate-400">Số điện thoại</label>
               <Input name="phone" type="tel" defaultValue={profile.phone || ''} placeholder="+84..." className="bg-slate-800/50 border-white/10 text-white" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Date of Birth</label>
+              <label className="text-sm font-medium text-slate-400">Ngày sinh</label>
               <Input name="dateOfBirth" type="date" defaultValue={isoUtcToDateInput(profile.dateOfBirth)} className="bg-slate-800/50 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:invert" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Gender</label>
+              <label className="text-sm font-medium text-slate-400">Giới tính</label>
               <select name="gender" defaultValue={profile.gender || ''} className="w-full h-10 px-3 py-2 bg-slate-800/50 border border-white/10 rounded-md text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50">
-                <option value="">Unspecified</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
+                <option value="">Không xác định</option>
+                <option value="MALE">Nam</option>
+                <option value="FEMALE">Nữ</option>
+                <option value="OTHER">Khác</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Address Line</label>
+              <label className="text-sm font-medium text-slate-400">Địa chỉ</label>
               <Input name="addressLine" defaultValue={profile.addressLine || ''} className="bg-slate-800/50 border-white/10 text-white" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">City</label>
+              <label className="text-sm font-medium text-slate-400">Thành phố</label>
               <Input name="city" defaultValue={profile.city || ''} className="bg-slate-800/50 border-white/10 text-white" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">District</label>
+              <label className="text-sm font-medium text-slate-400">Quận/Huyện</label>
               <Input name="district" defaultValue={profile.district || ''} className="bg-slate-800/50 border-white/10 text-white" />
             </div>
           </div>
           <div className="pt-4 flex justify-end">
             <Button type="submit" disabled={updateProfile.isPending} className="bg-[#4cd7f6] text-slate-900 hover:bg-[#3bc1e0]">
-              {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
+              {updateProfile.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
           </div>
         </form>
@@ -192,23 +192,23 @@ export const SelfAccountPage = () => {
 
       {/* Password Section */}
       <section ref={passwordSectionRef} className="bg-slate-900/40 border border-white/10 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-6">Change Password</h2>
+        <h2 className="text-lg font-semibold text-white mb-6">Đổi mật khẩu</h2>
         <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">Current Password</label>
+            <label className="text-sm font-medium text-slate-400">Mật khẩu hiện tại</label>
             <Input name="currentPassword" type="password" required className="bg-slate-800/50 border-white/10 text-white" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">New Password</label>
+            <label className="text-sm font-medium text-slate-400">Mật khẩu mới</label>
             <Input name="newPassword" type="password" minLength={8} required className="bg-slate-800/50 border-white/10 text-white" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">Confirm New Password</label>
+            <label className="text-sm font-medium text-slate-400">Xác nhận mật khẩu mới</label>
             <Input name="confirmPassword" type="password" minLength={8} required className="bg-slate-800/50 border-white/10 text-white" />
           </div>
           <div className="pt-2">
             <Button type="submit" disabled={updatePassword.isPending} className="bg-[#4cd7f6] text-slate-900 hover:bg-[#3bc1e0]">
-              {updatePassword.isPending ? 'Updating...' : 'Update Password'}
+              {updatePassword.isPending ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
             </Button>
           </div>
         </form>

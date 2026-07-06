@@ -7,12 +7,15 @@ import { CheckinModule } from '../checkin/checkin.module';
 import { NotificationModule } from '../notification/notification.module';
 import { GuestListImportModule } from '../guest-list-import/guest-list-import.module';
 import { FavoritesModule } from '../favorites/favorites.module';
+import { LocationGeocodingModule } from '../location-geocoding/location-geocoding.module';
 import { PlatformConfigModule } from './config/platform-config.module';
 import { DatabaseModule } from './database/database.module';
 import { CacheModule } from './cache/cache.module';
 import { RateLimitingModule } from './rate-limiting/rate-limiting.module';
 import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
+import { ResaleModule } from '../resale/resale.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -22,6 +25,7 @@ import { StorageModule } from './storage/storage.module';
     RedisModule,
     CacheModule,
     RateLimitingModule,
+    QueueModule,
     AuthModule,
     AiArtistBioModule,
     ArtistDiscoveryModule,
@@ -29,6 +33,8 @@ import { StorageModule } from './storage/storage.module';
     NotificationModule,
     GuestListImportModule,
     FavoritesModule,
+    LocationGeocodingModule,
+    ResaleModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -37,6 +43,7 @@ import { StorageModule } from './storage/storage.module';
     RedisModule,
     CacheModule,
     RateLimitingModule,
+    QueueModule,
     AuthModule,
     AiArtistBioModule,
     ArtistDiscoveryModule,
@@ -44,6 +51,8 @@ import { StorageModule } from './storage/storage.module';
     NotificationModule,
     GuestListImportModule,
     FavoritesModule,
+    LocationGeocodingModule,
+    ResaleModule,
   ],
 })
 export class BackendCoreModule {}

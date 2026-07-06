@@ -96,6 +96,8 @@ type FeaturedConcertRecord = ConcertSummaryRecord & {
 type ConcertDetailRecord = ConcertSummaryRecord & {
   description: string | null;
   venueAddress: string | null;
+  latitude: unknown | null;
+  longitude: unknown | null;
   seoTitle: string | null;
   seoDescription: string | null;
   seoImageUrl: string | null;
@@ -386,9 +388,16 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
 
     return {
       ...this.toConcertSummary(concert),
-      description: concert.description,
+      description: concert.description || null,
       publishedArtistBio: concert.artistBios[0]?.publishedBio ?? null,
       venueAddress: concert.venueAddress,
+      latitude: concert.latitude !== null && concert.latitude !== undefined
+        ? Number(concert.latitude)
+        : null,
+      longitude: concert.longitude !== null && concert.longitude !== undefined
+        ? Number(concert.longitude)
+        : null,
+      resaleEnabled: (concert as any).resaleEnabled ?? false,
       seoTitle: concert.seoTitle,
       seoDescription: concert.seoDescription,
       seoImageUrl: concert.seoImageUrl,
@@ -433,7 +442,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       id: ticketType.id,
       code: ticketType.code,
       name: ticketType.name,
-      description: ticketType.description,
+      description: ticketType.description || null,
       priceVnd: ticketType.priceVnd,
       totalQuantity: ticketType.totalQuantity,
       availableQuantity: calculateAvailableQuantity(

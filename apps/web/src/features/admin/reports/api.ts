@@ -6,6 +6,7 @@ export interface ReportConcertRow {
   startsAt: string;
   status: string;
   posterAssetId: string | null;
+  posterPublicUrl: string | null;
   organizerId: string;
   organizerDisplayName: string;
   revenueVnd: number;

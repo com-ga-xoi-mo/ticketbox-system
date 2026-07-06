@@ -22,7 +22,7 @@ export function Sidebar() {
               Ticket<span className="gradient-text">Box</span>
             </h1>
             <p className="font-mono text-[10px] text-on-surface-variant mt-1.5 uppercase tracking-[0.15em] leading-none font-bold">
-              {role === 'ADMIN' ? 'Admin Terminal' : 'Organizer Terminal'}
+              {role === 'ADMIN' ? 'Hệ thống Quản trị' : 'Hệ thống BTC'}
             </p>
           </div>
         </div>

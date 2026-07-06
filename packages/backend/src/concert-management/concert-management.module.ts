@@ -80,6 +80,8 @@ import { CreateTicketTypeUseCase } from './application/use-cases/create-ticket-t
 import { UpdateTicketTypeUseCase } from './application/use-cases/update-ticket-type.use-case';
 import { ArchiveTicketTypeUseCase } from './application/use-cases/archive-ticket-type.use-case';
 import { UploadPosterUseCase } from './application/use-cases/upload-poster.use-case';
+import { UploadBannerUseCase } from './application/use-cases/upload-banner.use-case';
+import { InvalidatingUploadBannerUseCase } from './application/cache/invalidating-concert-write.use-cases';
 import { UploadSeatingMapUseCase } from './application/use-cases/upload-seating-map.use-case';
 import { UpsertSeatingZonesUseCase } from './application/use-cases/upsert-seating-zones.use-case';
 import { UpdateTicketTypeZoneMappingsUseCase } from './application/use-cases/update-ticket-type-zone-mappings.use-case';
@@ -306,6 +308,25 @@ import { AssetController } from './adapters/http/asset.controller';
           svgSanitizer,
           svgElementIdExtractor,
         ),
+    },
+    {
+      provide: UploadBannerUseCase,
+      inject: [
+        AuthorizeConcertManagementUseCase,
+        OBJECT_STORAGE,
+        POSTER_WRITE_REPOSITORY,
+        PlatformConfigService,
+        PosterImageValidator,
+        CACHE_SERVICE,
+      ],
+      useFactory: (
+        authorize: AuthorizeConcertManagementUseCase,
+        storage: ObjectStoragePort,
+        posterRepo: PosterWriteRepositoryPort,
+        config: PlatformConfigService,
+        posterImageValidator: PosterImageValidator,
+        cache: CacheServicePort,
+      ) => new InvalidatingUploadBannerUseCase(new UploadBannerUseCase(authorize, storage, posterRepo, config, posterImageValidator), cache),
     },
     {
       provide: UploadPosterUseCase,

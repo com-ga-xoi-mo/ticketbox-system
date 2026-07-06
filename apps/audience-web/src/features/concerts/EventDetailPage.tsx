@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon } from 'lucide-react';
+import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
@@ -12,10 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Separator } from '../../components/ui/separator';
 import { FavoriteButton } from '../../shared/ui/FavoriteButton';
 import { VenueMapModal } from './components/VenueMapModal';
-import { getVenueCoordinates } from './utils/venue-coordinates';
+import { SeatingZoneMap } from './components/SeatingZoneMap';
+import { getSaleWindowState } from './utils/ticket-type-status';
+import { getTicketTypesForZone, getZoneLabelsForTicketType } from './utils/seating-zone-mapping';
 import { SeoHead } from '../../shared/ui/seo/SeoHead';
 import { EVENT_TYPE_LABELS } from '../../shared/utils/event-types';
-import type { PublicTicketType, PublicConcertDetailResponse } from '@ticketbox/api-types';
+import type { PublicConcertDetailResponse } from '@ticketbox/api-types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -40,31 +42,6 @@ function formatPrice(vnd: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(vnd);
 }
 
-function getSaleWindowState(ticketType: PublicTicketType, now: Date = new Date()): 'upcoming' | 'on-sale' | 'ended' | 'paused' | 'sold-out' {
-  if (ticketType.status === 'SOLD_OUT' || ticketType.availableQuantity === 0) return 'sold-out';
-  if (ticketType.status === 'PAUSED') return 'paused';
-  if (ticketType.status === 'ARCHIVED') return 'ended';
-
-  const start = new Date(ticketType.saleStartsAt);
-  const end = new Date(ticketType.saleEndsAt);
-
-  if (now < start) return 'upcoming';
-  if (now > end) return 'ended';
-  return 'on-sale';
-}
-
-function calculateZoneAvailability(zoneId: string, data: PublicConcertDetailResponse): number {
-  const mappedTicketTypeIds = data.ticketTypeZoneMappings
-    .filter(m => m.seatingZoneId === zoneId)
-    .map(m => m.ticketTypeId);
-  
-  if (mappedTicketTypeIds.length === 0) return 0;
-  
-  return data.ticketTypes
-    .filter(tt => mappedTicketTypeIds.includes(tt.id))
-    .reduce((sum, tt) => sum + tt.availableQuantity, 0);
-}
-
 export function EventDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -73,11 +50,16 @@ export function EventDetailPage() {
   const [mapError, setMapError] = useState(false);
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map());
   const [showMap, setShowMap] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [activeTicketTypeId, setActiveTicketTypeId] = useState<string | null>(null);
+  const mapSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPosterError(false);
     setMapError(false);
     setQuantities(new Map());
+    setSelectedZoneId(null);
+    setActiveTicketTypeId(null);
   }, [slug]);
 
   const { data, isLoading, isError, error } = useQuery({
@@ -100,7 +82,26 @@ export function EventDetailPage() {
   if (!data) return <PageUnavailable />;
 
   const isAllSoldOut = data.ticketTypes.length > 0 && data.ticketTypes.every(tt => tt.availableQuantity === 0 || tt.status === 'SOLD_OUT');
-  
+
+  const hasSeatingMapAsset = Boolean(data.seatingMapAsset?.publicUrl);
+  const hasSeatingZones = data.seatingZones.length > 0;
+  const useInteractiveMap = hasSeatingMapAsset && hasSeatingZones && !mapError;
+  const useStaticFallbackWithLegend = hasSeatingMapAsset && hasSeatingZones && mapError;
+  const useStaticOnly = hasSeatingMapAsset && !hasSeatingZones;
+
+  const handleZoneSelect = (zoneId: string | null) => {
+    setSelectedZoneId(zoneId);
+    setActiveTicketTypeId(null);
+  };
+
+  const handleViewLocation = (ticketTypeId: string) => {
+    setActiveTicketTypeId(prev => (prev === ticketTypeId ? null : ticketTypeId));
+    setSelectedZoneId(null);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   const handleQuantityChange = (ticketTypeId: string, delta: number, maxPerUser: number, availableQuantity: number) => {
     setQuantities(prev => {
       const current = prev.get(ticketTypeId) || 0;
@@ -167,51 +168,78 @@ export function EventDetailPage() {
             </div>
           )}
 
-          {data.seatingMapAsset?.publicUrl && !mapError && (
-            <Card className="overflow-hidden border-white/70 bg-card/80 shadow-sm backdrop-blur">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MapIcon className="size-4 text-primary" />
-                  Sơ đồ sự kiện
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <img 
-                  src={resolveImageUrl(data.seatingMapAsset.publicUrl)} 
-                  alt="Sơ đồ sự kiện" 
-                  className="w-full object-contain"
-                  onError={() => setMapError(true)}
-                />
-              </CardContent>
-            </Card>
-          )}
+          <div ref={mapSectionRef} className="space-y-6">
+            {useInteractiveMap && (
+              <Card className="overflow-hidden border-white/70 bg-card/80 shadow-sm backdrop-blur">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MapIcon className="size-4 text-primary" />
+                    Sơ đồ sự kiện
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <SeatingZoneMap
+                    seatingMapAsset={data.seatingMapAsset!}
+                    seatingZones={data.seatingZones}
+                    ticketTypes={data.ticketTypes}
+                    selectedZoneId={selectedZoneId}
+                    activeTicketTypeId={activeTicketTypeId}
+                    onZoneSelect={handleZoneSelect}
+                    onLoadError={() => setMapError(true)}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-          {data.seatingZones && data.seatingZones.length > 0 && (
-            <Card className="border-white/70 bg-card/80 shadow-sm backdrop-blur">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Khu vực ghế</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
-                  {data.seatingZones.map(zone => {
-                    const available = calculateZoneAvailability(zone.id, data);
-                    return (
-                      <div key={zone.id} className="flex items-center gap-2 text-sm">
-                        <div 
-                          className="size-3 shrink-0 rounded-full border border-black/10" 
-                          style={{ backgroundColor: zone.color || '#ccc' }} 
-                        />
-                        <span className="truncate flex-1" title={zone.label}>{zone.label}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {available > 0 ? `(${available})` : '(Hết)'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {(useStaticFallbackWithLegend || useStaticOnly) && (
+              <Card className="overflow-hidden border-white/70 bg-card/80 shadow-sm backdrop-blur">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MapIcon className="size-4 text-primary" />
+                    Sơ đồ sự kiện
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <img
+                    src={resolveImageUrl(data.seatingMapAsset!.publicUrl)}
+                    alt="Sơ đồ sự kiện"
+                    className="w-full object-contain"
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {useStaticFallbackWithLegend && (
+              <Card className="border-white/70 bg-card/80 shadow-sm backdrop-blur">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Khu vực ghế</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
+                    {data.seatingZones.map(zone => {
+                      const applicable = getTicketTypesForZone(zone.id, data.ticketTypes);
+                      const applicableNames = applicable.map(tt => tt.name).join(', ');
+                      return (
+                        <div key={zone.id} className="flex items-center gap-2 text-sm">
+                          <div
+                            className="size-3 shrink-0 rounded-full border border-black/10"
+                            style={{ backgroundColor: zone.color || '#ccc' }}
+                          />
+                          <span className="truncate flex-1" title={zone.label}>{zone.label}</span>
+                          <span
+                            className="max-w-[8rem] truncate text-xs text-muted-foreground"
+                            title={applicableNames || 'Chưa có loại vé áp dụng'}
+                          >
+                            {applicableNames || 'Chưa có loại vé áp dụng'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -246,6 +274,7 @@ export function EventDetailPage() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">{data.venueName}, {data.city}</p>
                   {data.venueAddress && <p className="text-sm leading-6 text-muted-foreground">{data.venueAddress}</p>}
+                  {data.latitude != null && data.longitude != null && (
                   <button
                     onClick={() => setShowMap(true)}
                     className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
@@ -253,6 +282,7 @@ export function EventDetailPage() {
                     <MapIcon className="size-3" />
                     Xem bản đồ
                   </button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -272,6 +302,25 @@ export function EventDetailPage() {
                 <div className="text-sm leading-7 text-muted-foreground whitespace-pre-wrap">
                   {data.publishedArtistBio}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(data as any).resaleEnabled && (
+            <Card className="border-blue-500/30 bg-blue-50/50 shadow-sm overflow-hidden">
+              <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-blue-600" />
+                    Thị trường vé bán lại (Resale)
+                  </h3>
+                  <p className="text-sm text-blue-800/80 mt-1">
+                    Tìm mua vé từ người khác hoặc bán lại vé của bạn một cách an toàn.
+                  </p>
+                </div>
+                <Button asChild className="shrink-0 rounded-full shadow-sm bg-blue-600 hover:bg-blue-700">
+                  <a href={`/resale?concertId=${data.id}`}>Xem vé resale</a>
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -308,6 +357,23 @@ export function EventDetailPage() {
                               Còn {tt.availableQuantity} / {tt.totalQuantity} vé · Tối đa {tt.maxPerUser} vé/người
                             </span>
                           </div>
+                          {tt.zoneIds.length > 0 && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Áp dụng cho: {getZoneLabelsForTicketType(tt, data.seatingZones).join(', ')}
+                            </p>
+                          )}
+                          {useInteractiveMap && tt.zoneIds.length > 0 && (
+                            <Button
+                              variant={activeTicketTypeId === tt.id ? 'default' : 'outline'}
+                              size="sm"
+                              className="mt-2 rounded-full"
+                              aria-pressed={activeTicketTypeId === tt.id}
+                              onClick={() => handleViewLocation(tt.id)}
+                            >
+                              <LocateFixed className="size-3.5" />
+                              Xem vị trí
+                            </Button>
+                          )}
                         </div>
                         <div className="flex items-center justify-between gap-4 sm:justify-end sm:flex-col sm:items-end">
                           <div className="text-right flex flex-col items-end">
@@ -366,20 +432,17 @@ export function EventDetailPage() {
           )}
         </div>
       </div>
-      {/* Venue Map Modal */}
-      {(() => {
-        const coords = getVenueCoordinates(data.venueName);
-        return (
-          <VenueMapModal
-            latitude={coords.latitude}
-            longitude={coords.longitude}
-            venueName={data.venueName}
-            address={data.venueAddress ?? undefined}
-            open={showMap}
-            onClose={() => setShowMap(false)}
-          />
-        );
-      })()}
+      {/* Venue Map Modal — only rendered when coordinates are available */}
+      {data.latitude != null && data.longitude != null && (
+        <VenueMapModal
+          latitude={data.latitude}
+          longitude={data.longitude}
+          venueName={data.venueName}
+          address={data.venueAddress ?? undefined}
+          open={showMap}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </div>
   );
 }

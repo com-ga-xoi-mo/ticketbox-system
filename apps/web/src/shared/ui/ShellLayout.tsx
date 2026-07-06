@@ -6,12 +6,12 @@ function useBreadcrumbs() {
   const { pathname } = useLocation();
 
   if (pathname.endsWith('/edit')) {
-    return [{ label: 'Concerts', path: '/concerts' }, { label: 'Edit' }];
+    return [{ label: 'Sự kiện', path: '/concerts' }, { label: 'Chỉnh sửa' }];
   }
-  if (pathname.startsWith('/concerts')) return [{ label: 'Concerts' }];
-  if (pathname.startsWith('/dashboard')) return [{ label: 'Dashboard' }];
-  if (pathname.startsWith('/staff')) return [{ label: 'Staff' }];
-  if (pathname.startsWith('/settings')) return [{ label: 'Settings' }];
+  if (pathname.startsWith('/concerts')) return [{ label: 'Sự kiện' }];
+  if (pathname.startsWith('/dashboard')) return [{ label: 'Bảng điều khiển' }];
+  if (pathname.startsWith('/staff')) return [{ label: 'Nhân viên' }];
+  if (pathname.startsWith('/settings')) return [{ label: 'Cài đặt' }];
   return [];
 }
 

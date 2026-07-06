@@ -32,12 +32,12 @@ export function ConcertEmptyState({ canCreate = true, onCreateClick }: ConcertEm
           </div>
 
           <h3 className="mb-3 font-display text-xl font-bold text-on-surface">
-            {canCreate ? 'No concerts yet' : 'Nothing to moderate yet'}
+            {canCreate ? 'Chưa có sự kiện nào' : 'Chưa có gì để kiểm duyệt'}
           </h3>
           <p className="mx-auto mb-8 max-w-xs text-sm leading-relaxed text-on-surface-variant">
             {canCreate
-              ? 'Your upcoming events will appear here. Create your first concert to get started.'
-              : 'Concert events created by organizers will appear here once submitted.'}
+              ? 'Các sự kiện sắp tới của bạn sẽ xuất hiện ở đây. Hãy tạo sự kiện đầu tiên để bắt đầu.'
+              : 'Các sự kiện do ban tổ chức tạo sẽ xuất hiện ở đây sau khi được gửi.'}
           </p>
 
           {canCreate && onCreateClick && (
@@ -45,7 +45,7 @@ export function ConcertEmptyState({ canCreate = true, onCreateClick }: ConcertEm
               <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
                 add_circle
               </span>
-              Create concert
+              Tạo sự kiện
             </Button>
           )}
         </div>

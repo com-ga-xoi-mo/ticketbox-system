@@ -15,15 +15,15 @@ export const AdminAccountsPage = () => {
     <div className="p-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Account Management</h1>
-          <p className="text-slate-400">Manage system users and permissions</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Quản lý tài khoản</h1>
+          <p className="text-slate-400">Quản lý người dùng hệ thống và quyền hạn</p>
         </div>
         <Button
           onClick={() => setIsCreateOpen(true)}
           className="bg-gradient-to-br from-[#d0bcff] to-[#e14ef6] text-slate-900 font-semibold shadow-[0_0_15px_rgba(225,78,246,0.3)] hover:shadow-[0_0_25px_rgba(225,78,246,0.5)] border-0 transition-all duration-300"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Add Account
+          Thêm tài khoản
         </Button>
       </div>
 
@@ -35,7 +35,7 @@ export const AdminAccountsPage = () => {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-indigo-400" />
             <input
               type="text"
-              placeholder="Search accounts..."
+              placeholder="Tìm kiếm tài khoản..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-md border border-white/10 bg-[#131b2e] py-1.5 pl-9 pr-3 text-sm text-white placeholder:placeholder:text-slate-500 transition-all focus:border-[#4cd7f6] focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50"
@@ -50,11 +50,11 @@ export const AdminAccountsPage = () => {
                 onChange={(e) => setRole(e.target.value)}
                 className="appearance-none cursor-pointer rounded-md border border-white/10 bg-[#131b2e] py-1.5 pl-3 pr-8 text-sm text-white transition-all focus:border-[#4cd7f6] focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50"
               >
-                <option value="all">Role: All</option>
-                <option value="ADMIN">Admin</option>
-                <option value="ORGANIZER">Organizer</option>
-                <option value="CHECKIN_STAFF">Staff</option>
-                <option value="AUDIENCE">Audience</option>
+                <option value="all">Vai trò: Tất cả</option>
+                <option value="ADMIN">Quản trị viên</option>
+                <option value="ORGANIZER">Người tổ chức</option>
+                <option value="CHECKIN_STAFF">Nhân viên</option>
+                <option value="AUDIENCE">Khán giả</option>
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
                 ▼
@@ -67,9 +67,9 @@ export const AdminAccountsPage = () => {
                 onChange={(e) => setStatus(e.target.value)}
                 className="appearance-none cursor-pointer rounded-md border border-white/10 bg-[#131b2e] py-1.5 pl-3 pr-8 text-sm text-white transition-all focus:border-[#4cd7f6] focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/50"
               >
-                <option value="all">Status: All</option>
-                <option value="ACTIVE">Active</option>
-                <option value="DISABLED">Disabled</option>
+                <option value="all">Trạng thái: Tất cả</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="DISABLED">Đã vô hiệu hóa</option>
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
                 ▼
@@ -79,7 +79,7 @@ export const AdminAccountsPage = () => {
             <button
               onClick={() => { setSearch(''); setRole('all'); setStatus('all'); }}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
-              title="Clear filters"
+              title="Xóa bộ lọc"
             >
               ✕
             </button>

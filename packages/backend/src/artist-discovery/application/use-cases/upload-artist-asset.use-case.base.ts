@@ -4,6 +4,8 @@ import { ObjectStoragePort } from '../../../platform/storage';
 import { randomUUID } from 'crypto';
 import { createHash } from 'crypto';
 import { extname } from 'path';
+import { PosterImageValidator } from '../../../concert-management/application/services/poster-image-validator';
+import { PlatformConfigService } from '../../../platform/config/platform-config.service';
 
 export interface UploadArtistAssetCommand {
   artistId: string;
@@ -13,54 +15,77 @@ export interface UploadArtistAssetCommand {
   uploadedById: string;
 }
 
+export interface UploadArtistAssetResult {
+  id: string;
+  publicUrl: string;
+}
+
 export abstract class UploadArtistAssetUseCaseBase {
+  protected readonly validator = new PosterImageValidator();
+
   constructor(
     protected readonly repository: ArtistRepositoryPort,
     protected readonly storage: ObjectStoragePort,
-    protected readonly maxBytes: number,
+    protected readonly config: PlatformConfigService,
     protected readonly assetKind: string,
     protected readonly storagePrefix: string,
   ) {}
 
-  async execute(command: UploadArtistAssetCommand): Promise<void> {
+  async execute(command: UploadArtistAssetCommand): Promise<UploadArtistAssetResult> {
     const artist = await this.repository.findById(command.artistId);
     if (!artist) {
       throw new ArtistNotFoundError(command.artistId);
     }
 
-    if (command.content.length > this.maxBytes) {
-      throw new Error(`File size exceeds maximum allowed size of ${this.maxBytes} bytes`);
-    }
+    const maxBytes = this.assetKind === 'ARTIST_AVATAR' ? this.config.posterImageMaxBytes ?? 5242880 : this.config.posterImageMaxBytes ?? 5242880;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(command.contentType)) {
-      throw new Error('Invalid file type');
-    }
+    const validated = this.validator.validate(
+      {
+        concertId: command.artistId, // reusing the type
+        userId: command.uploadedById,
+        fileBuffer: command.content,
+        mimeType: command.contentType,
+        originalName: command.originalName,
+        sizeBytes: command.content.length,
+        allowAdminOverride: true,
+      },
+      maxBytes,
+    );
 
     const assetId = randomUUID();
-    const ext = extname(command.originalName) || '.jpg';
-    const storageKey = `artists/${command.artistId}/${this.storagePrefix}/${assetId}${ext}`;
-    const checksum = createHash('sha256').update(command.content).digest('hex');
+    const storageKey = `artists/${command.artistId}/${this.storagePrefix}/${assetId}.${validated.extension}`;
+    const publicUrl = this.storage.getPublicUrl(storageKey);
+    const checksum = `sha256:${createHash('sha256').update(command.content).digest('hex')}`;
 
     await this.storage.putObject({
       key: storageKey,
       content: command.content,
-      contentType: command.contentType,
+      contentType: validated.contentType,
     });
 
-    // In a full implementation, we would create the Asset record in the database
-    // and update the Artist record. For this spec, we will delegate the asset creation
-    // to the repository port.
-    await this.updateArtistAsset(command.artistId, {
-      id: assetId,
-      storageKey,
-      originalName: command.originalName,
-      contentType: command.contentType,
-      sizeBytes: command.content.length,
-      checksum,
-      uploadedById: command.uploadedById,
-    });
+    let result;
+    try {
+      result = await this.updateArtistAsset(command.artistId, {
+        id: assetId,
+        storageKey,
+        publicUrl,
+        originalName: command.originalName,
+        contentType: validated.contentType,
+        sizeBytes: command.content.length,
+        checksum,
+        uploadedById: command.uploadedById,
+      });
+    } catch (err) {
+      await this.storage.deleteObject(storageKey).catch(() => undefined);
+      throw err;
+    }
+
+    if (result && result.replacedStorageKey) {
+      await this.storage.deleteObject(result.replacedStorageKey).catch(() => undefined);
+    }
+
+    return { id: assetId, publicUrl };
   }
 
-  protected abstract updateArtistAsset(artistId: string, assetData: any): Promise<void>;
+  protected abstract updateArtistAsset(artistId: string, assetData: any): Promise<{ replacedStorageKey?: string }>;
 }

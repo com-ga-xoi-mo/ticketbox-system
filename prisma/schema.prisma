@@ -21,7 +21,6 @@ enum UserStatus {
   @@map("user_status")
 }
 
-
 enum Gender {
   MALE
   FEMALE
@@ -37,6 +36,12 @@ enum RoleCode {
   ADMIN
 
   @@map("role_code")
+}
+
+enum AuthProvider {
+  GOOGLE
+
+  @@map("auth_provider")
 }
 
 enum AssetKind {
@@ -135,6 +140,8 @@ enum TicketStatus {
   CHECKED_IN
   VOIDED
   REFUNDED
+  LISTED_FOR_RESALE
+  TRANSFERRED
 
   @@map("ticket_status")
 }
@@ -286,6 +293,49 @@ enum IdempotencyRecordStatus {
   @@map("idempotency_record_status")
 }
 
+enum OrderSourceType {
+  DIRECT
+  RESALE
+
+  @@map("order_source_type")
+}
+
+enum ResaleOrderStatus {
+  RESERVED
+  PENDING_CONFIRM
+  COMPLETED
+  CANCELLED
+  IN_DISPUTE
+
+  @@map("resale_order_status")
+}
+
+enum ResaleListingStatus {
+  ACTIVE
+  RESERVED
+  SOLD
+  CANCELLED
+  EXPIRED
+
+  @@map("resale_listing_status")
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSED
+
+  @@map("payout_status")
+}
+
+enum SellerTrustTier {
+  NEW
+  TRUSTED
+  HIGHLY_TRUSTED
+  TOP_SELLER
+
+  @@map("seller_trust_tier")
+}
+
 model Artist {
   id            String       @id @default(uuid()) @db.Uuid
   slug          String       @unique @db.VarChar(180)
@@ -354,43 +404,89 @@ model ArtistFavorite {
 }
 
 model User {
-  id           String     @id @default(uuid()) @db.Uuid
-  email        String     @unique @db.VarChar(320)
-  passwordHash String     @map("password_hash")
-  displayName  String     @map("display_name") @db.VarChar(160)
-  status       UserStatus @default(ACTIVE)
-  phone         String?      @db.VarChar(40)
-  dateOfBirth   DateTime?    @map("date_of_birth") @db.Timestamptz(6)
-  gender        Gender?
-  addressLine   String?      @map("address_line") @db.VarChar(255)
-  city          String?      @db.VarChar(120)
-  district      String?      @db.VarChar(120)
-  avatarAssetId String?      @map("avatar_asset_id") @db.Uuid
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                      String     @id @default(uuid()) @db.Uuid
+  email                   String     @unique @db.VarChar(320)
+  normalizedEmail         String     @unique @map("normalized_email") @db.VarChar(320)
+  passwordHash            String?    @map("password_hash")
+  displayName             String     @map("display_name") @db.VarChar(160)
+  status                  UserStatus @default(ACTIVE)
+  phone                   String?    @db.VarChar(40)
+  dateOfBirth             DateTime?  @map("date_of_birth") @db.Timestamptz(6)
+  gender                  Gender?
+  addressLine             String?    @map("address_line") @db.VarChar(255)
+  city                    String?    @db.VarChar(120)
+  district                String?    @db.VarChar(120)
+  avatarAssetId           String?    @map("avatar_asset_id") @db.Uuid
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  buyerViolationCount     Int        @default(0) @map("buyer_violation_count")
+  resaleMarketSuspendedAt DateTime?  @map("resale_market_suspended_at") @db.Timestamptz(6)
 
-  roles               UserRole[]
-  avatarAsset         Asset?                   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
-  assets              Asset[]                  @relation("AssetUploader")
-  createdConcerts     Concert[]                @relation("ConcertCreator")
-  orders              Order[]                  @relation("CustomerOrders")
-  payments            Payment[]                @relation("PaymentUser")
-  tickets             Ticket[]                 @relation("TicketOwner")
-  checkinAssignments  CheckinStaffAssignment[] @relation("CheckinStaffAssignments")
-  checkinEvents       CheckinEvent[]           @relation("CheckinStaffEvents")
-  notifications       Notification[]
-  supportRequests     SupportRequest[]
-  refundRequests      RefundRequest[]
-  guestListBatches    GuestListBatch[]         @relation("GuestListUploader")
-  idempotencyRecords  IdempotencyRecord[]
-  reviewedArtistBios  ArtistBio[]              @relation("ArtistBioReviewer")
-  requestedArtistBios ArtistBio[]              @relation("ArtistBioRequester")
-  promotionUsages     PromotionUsage[]
-  artistFollows       ArtistFollow[]           @relation("UserArtistFollows")
-  artistFavorites     ArtistFavorite[]         @relation("UserArtistFavorites")
-  concertFavorites    FavoriteConcert[]        @relation("UserConcertFavorites")
+  roles                 UserRole[]
+  authIdentities        AuthIdentity[]
+  passwordResetTokens   PasswordResetToken[]
+  avatarAsset           Asset?                   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  assets                Asset[]                  @relation("AssetUploader")
+  createdConcerts       Concert[]                @relation("ConcertCreator")
+  orders                Order[]                  @relation("CustomerOrders")
+  payments              Payment[]                @relation("PaymentUser")
+  tickets               Ticket[]                 @relation("TicketOwner")
+  checkinAssignments    CheckinStaffAssignment[] @relation("CheckinStaffAssignments")
+  checkinEvents         CheckinEvent[]           @relation("CheckinStaffEvents")
+  notifications         Notification[]
+  supportRequests       SupportRequest[]
+  refundRequests        RefundRequest[]
+  guestListBatches      GuestListBatch[]         @relation("GuestListUploader")
+  idempotencyRecords    IdempotencyRecord[]
+  reviewedArtistBios    ArtistBio[]              @relation("ArtistBioReviewer")
+  requestedArtistBios   ArtistBio[]              @relation("ArtistBioRequester")
+  promotionUsages       PromotionUsage[]
+  artistFollows         ArtistFollow[]           @relation("UserArtistFollows")
+  artistFavorites       ArtistFavorite[]         @relation("UserArtistFavorites")
+  concertFavorites      FavoriteConcert[]        @relation("UserConcertFavorites")
+  resaleListings        ResaleListing[]
+  listingComments       ListingComment[]
+  listingCommentReplies ListingCommentReply[]
+  commentFlags          CommentFlag[]
+  directMessagesSent    DirectMessage[]
+  dmThreadsAsBuyer      DirectMessageThread[]    @relation("DirectMessageBuyer")
+  dmThreadsAsSeller     DirectMessageThread[]    @relation("DirectMessageSeller")
+  bankProfile           SellerBankProfile?
+  resaleOrdersAsBuyer   ResaleOrder[]            @relation("ResaleOrderBuyer")
+  resaleOrdersAsSeller  ResaleOrder[]            @relation("ResaleOrderSeller")
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model AuthIdentity {
+  id                  String       @id @default(uuid()) @db.Uuid
+  userId              String       @map("user_id") @db.Uuid
+  provider            AuthProvider
+  providerSubject     String       @map("provider_subject") @db.VarChar(255)
+  providerEmail       String       @map("provider_email") @db.VarChar(320)
+  providerDisplayName String?      @map("provider_display_name") @db.VarChar(160)
+  providerPictureUrl  String?      @map("provider_picture_url")
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("auth_identities")
 }
 
 model Role {
@@ -449,31 +545,35 @@ model Asset {
 }
 
 model Concert {
-  id                String        @id @default(uuid()) @db.Uuid
-  slug              String        @unique @db.VarChar(180)
-  title             String        @db.VarChar(220)
-  artistName        String        @map("artist_name") @db.VarChar(220)
-  description       String?
-  venueName         String        @map("venue_name") @db.VarChar(220)
-  venueAddress      String?       @map("venue_address")
-  city              String        @db.VarChar(120)
-  startsAt          DateTime      @map("starts_at") @db.Timestamptz(6)
-  endsAt            DateTime      @map("ends_at") @db.Timestamptz(6)
-  status            ConcertStatus @default(DRAFT)
-  eventType         EventType     @default(CONCERT) @map("event_type")
-  isFeatured        Boolean       @default(false) @map("is_featured")
-  displayOrder      Int           @default(0) @map("display_order")
-  seoTitle          String?       @map("seo_title") @db.VarChar(160)
-  seoDescription    String?       @map("seo_description") @db.VarChar(320)
-  seoImageUrl       String?       @map("seo_image_url")
-  createdById       String        @map("created_by_id") @db.Uuid
-  posterAssetId     String?       @map("poster_asset_id") @db.Uuid
-  seatingMapAssetId String?       @map("seating_map_asset_id") @db.Uuid
-  bannerAssetId     String?       @map("banner_asset_id") @db.Uuid
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  publishedAt       DateTime?     @map("published_at") @db.Timestamptz(6)
-  cancelledAt       DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  id                    String        @id @default(uuid()) @db.Uuid
+  slug                  String        @unique @db.VarChar(180)
+  title                 String        @db.VarChar(220)
+  artistName            String        @map("artist_name") @db.VarChar(220)
+  description           String?
+  venueName             String        @map("venue_name") @db.VarChar(220)
+  venueAddress          String?       @map("venue_address")
+  latitude              Decimal?      @db.Decimal(9, 6)
+  longitude             Decimal?      @db.Decimal(9, 6)
+  city                  String        @db.VarChar(120)
+  startsAt              DateTime      @map("starts_at") @db.Timestamptz(6)
+  endsAt                DateTime      @map("ends_at") @db.Timestamptz(6)
+  status                ConcertStatus @default(DRAFT)
+  eventType             EventType     @default(CONCERT) @map("event_type")
+  isFeatured            Boolean       @default(false) @map("is_featured")
+  displayOrder          Int           @default(0) @map("display_order")
+  seoTitle              String?       @map("seo_title") @db.VarChar(160)
+  seoDescription        String?       @map("seo_description") @db.VarChar(320)
+  seoImageUrl           String?       @map("seo_image_url")
+  createdById           String        @map("created_by_id") @db.Uuid
+  posterAssetId         String?       @map("poster_asset_id") @db.Uuid
+  seatingMapAssetId     String?       @map("seating_map_asset_id") @db.Uuid
+  bannerAssetId         String?       @map("banner_asset_id") @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  publishedAt           DateTime?     @map("published_at") @db.Timestamptz(6)
+  cancelledAt           DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  resaleEnabled         Boolean       @default(false) @map("resale_enabled")
+  resaleMaxPricePercent Int           @default(110) @map("resale_max_price_percent")
 
   createdBy        User                     @relation("ConcertCreator", fields: [createdById], references: [id], onDelete: Restrict)
   posterAsset      Asset?                   @relation("ConcertPoster", fields: [posterAssetId], references: [id], onDelete: SetNull)
@@ -491,6 +591,7 @@ model Concert {
   artistBios       ArtistBio[]
   concertArtists   ConcertArtist[]
   favoritedBy      FavoriteConcert[]        @relation("ConcertFavoritedBy")
+  resaleListings   ResaleListing[]
 
   @@index([status, startsAt])
   @@index([createdById])
@@ -535,11 +636,12 @@ model TicketType {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  concert       Concert          @relation(fields: [concertId], references: [id], onDelete: Cascade)
-  zones         TicketTypeZone[]
-  orderItems    OrderItem[]
-  tickets       Ticket[]
-  guestListRows GuestListEntry[]
+  concert        Concert          @relation(fields: [concertId], references: [id], onDelete: Cascade)
+  zones          TicketTypeZone[]
+  orderItems     OrderItem[]
+  tickets        Ticket[]
+  guestListRows  GuestListEntry[]
+  resaleListings ResaleListing[]
 
   @@unique([id, concertId])
   @@unique([concertId, code])
@@ -563,24 +665,25 @@ model TicketTypeZone {
 }
 
 model Order {
-  id                   String      @id @default(uuid()) @db.Uuid
-  orderNumber          String      @unique @map("order_number") @db.VarChar(80)
-  userId               String      @map("user_id") @db.Uuid
-  concertId            String      @map("concert_id") @db.Uuid
-  idempotencyKey       String?     @map("idempotency_key") @db.VarChar(80)
-  status               OrderStatus @default(PENDING_PAYMENT)
-  subtotalVnd          Int         @default(0) @map("subtotal_vnd")
-  discountAmountVnd    Int         @default(0) @map("discount_amount_vnd")
-  serviceFeeVnd        Int         @default(0) @map("service_fee_vnd")
-  totalAmountVnd       Int         @map("total_amount_vnd")
-  promoCode            String?     @map("promo_code") @db.VarChar(80)
-  promotionId          String?     @map("promotion_id") @db.Uuid
-  reservationExpiresAt DateTime?   @map("reservation_expires_at") @db.Timestamptz(6)
-  paidAt               DateTime?   @map("paid_at") @db.Timestamptz(6)
-  expiredAt            DateTime?   @map("expired_at") @db.Timestamptz(6)
-  cancelledAt          DateTime?   @map("cancelled_at") @db.Timestamptz(6)
-  createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                   String          @id @default(uuid()) @db.Uuid
+  orderNumber          String          @unique @map("order_number") @db.VarChar(80)
+  userId               String          @map("user_id") @db.Uuid
+  concertId            String          @map("concert_id") @db.Uuid
+  idempotencyKey       String?         @map("idempotency_key") @db.VarChar(80)
+  status               OrderStatus     @default(PENDING_PAYMENT)
+  orderSourceType      OrderSourceType @default(DIRECT) @map("order_source_type")
+  subtotalVnd          Int             @default(0) @map("subtotal_vnd")
+  discountAmountVnd    Int             @default(0) @map("discount_amount_vnd")
+  serviceFeeVnd        Int             @default(0) @map("service_fee_vnd")
+  totalAmountVnd       Int             @map("total_amount_vnd")
+  promoCode            String?         @map("promo_code") @db.VarChar(80)
+  promotionId          String?         @map("promotion_id") @db.Uuid
+  reservationExpiresAt DateTime?       @map("reservation_expires_at") @db.Timestamptz(6)
+  paidAt               DateTime?       @map("paid_at") @db.Timestamptz(6)
+  expiredAt            DateTime?       @map("expired_at") @db.Timestamptz(6)
+  cancelledAt          DateTime?       @map("cancelled_at") @db.Timestamptz(6)
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user            User             @relation("CustomerOrders", fields: [userId], references: [id], onDelete: Restrict)
   concert         Concert          @relation(fields: [concertId], references: [id], onDelete: Restrict)
@@ -657,18 +760,19 @@ model PaymentEvent {
 }
 
 model Ticket {
-  id           String       @id @default(uuid()) @db.Uuid
-  ticketNumber String       @unique @map("ticket_number") @db.VarChar(80)
-  orderId      String       @map("order_id") @db.Uuid
-  orderItemId  String       @map("order_item_id") @db.Uuid
-  userId       String       @map("user_id") @db.Uuid
-  concertId    String       @map("concert_id") @db.Uuid
-  ticketTypeId String       @map("ticket_type_id") @db.Uuid
-  qrTokenHash  String       @unique @map("qr_token_hash")
-  status       TicketStatus @default(ISSUED)
-  issuedAt     DateTime     @default(now()) @map("issued_at") @db.Timestamptz(6)
-  checkedInAt  DateTime?    @map("checked_in_at") @db.Timestamptz(6)
-  voidedAt     DateTime?    @map("voided_at") @db.Timestamptz(6)
+  id            String       @id @default(uuid()) @db.Uuid
+  ticketNumber  String       @unique @map("ticket_number") @db.VarChar(80)
+  orderId       String       @map("order_id") @db.Uuid
+  orderItemId   String       @map("order_item_id") @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  concertId     String       @map("concert_id") @db.Uuid
+  ticketTypeId  String       @map("ticket_type_id") @db.Uuid
+  qrTokenHash   String       @unique @map("qr_token_hash")
+  status        TicketStatus @default(ISSUED)
+  issuedAt      DateTime     @default(now()) @map("issued_at") @db.Timestamptz(6)
+  checkedInAt   DateTime?    @map("checked_in_at") @db.Timestamptz(6)
+  voidedAt      DateTime?    @map("voided_at") @db.Timestamptz(6)
+  transferredAt DateTime?    @map("transferred_at") @db.Timestamptz(6)
 
   order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderItem       OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
@@ -678,6 +782,7 @@ model Ticket {
   checkinEvents   CheckinEvent[]
   supportRequests SupportRequest[]
   refundRequests  RefundRequest[]
+  resaleListings  ResaleListing[]
 
   @@index([userId, status])
   @@index([concertId, status])
@@ -1052,4 +1157,196 @@ model FavoriteConcert {
   @@id([userId, concertId])
   @@index([userId, createdAt(sort: Desc)])
   @@map("favorite_concerts")
+}
+
+model SellerBankProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  bankAccountName   String   @map("bank_account_name") @db.VarChar(120)
+  bankAccountNumber String   @map("bank_account_number") @db.VarChar(40)
+  bankName          String   @map("bank_name") @db.VarChar(120)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("seller_bank_profiles")
+}
+
+model ResaleOrder {
+  id                 String            @id @default(uuid()) @db.Uuid
+  listingId          String            @map("listing_id") @db.Uuid
+  buyerId            String            @map("buyer_id") @db.Uuid
+  sellerId           String            @map("seller_id") @db.Uuid
+  status             ResaleOrderStatus @default(RESERVED)
+  paymentProofUrl    String?           @map("payment_proof_url")
+  disputeReason      String?           @map("dispute_reason")
+  disputeRaisedBy    String?           @map("dispute_raised_by") @db.Uuid
+  resolvedBy         String?           @map("resolved_by") @db.Uuid
+  resolutionNote     String?           @map("resolution_note")
+  reservedAt         DateTime          @default(now()) @map("reserved_at") @db.Timestamptz(6)
+  paymentConfirmedAt DateTime?         @map("payment_confirmed_at") @db.Timestamptz(6)
+  completedAt        DateTime?         @map("completed_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  disputedAt         DateTime?         @map("disputed_at") @db.Timestamptz(6)
+  resolvedAt         DateTime?         @map("resolved_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing ResaleListing @relation(fields: [listingId], references: [id])
+  buyer   User          @relation("ResaleOrderBuyer", fields: [buyerId], references: [id])
+  seller  User          @relation("ResaleOrderSeller", fields: [sellerId], references: [id])
+
+  @@index([listingId])
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@map("resale_orders")
+}
+
+model ResaleListing {
+  id               String              @id @default(uuid()) @db.Uuid
+  ticketId         String              @map("ticket_id") @db.Uuid
+  sellerId         String              @map("seller_id") @db.Uuid
+  concertId        String              @map("concert_id") @db.Uuid
+  ticketTypeId     String              @map("ticket_type_id") @db.Uuid
+  askingPriceVnd   Int                 @map("asking_price_vnd")
+  originalPriceVnd Int                 @map("original_price_vnd")
+  status           ResaleListingStatus @default(ACTIVE)
+  upvoteCount      Int                 @default(0) @map("upvote_count")
+  commentCount     Int                 @default(0) @map("comment_count")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  expiresAt        DateTime            @map("expires_at") @db.Timestamptz(6)
+  soldAt           DateTime?           @map("sold_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?           @map("cancelled_at") @db.Timestamptz(6)
+
+  ticket               Ticket                @relation(fields: [ticketId], references: [id])
+  seller               User                  @relation(fields: [sellerId], references: [id])
+  concert              Concert               @relation(fields: [concertId], references: [id])
+  ticketType           TicketType            @relation(fields: [ticketTypeId], references: [id])
+  listingComments      ListingComment[]
+  directMessageThreads DirectMessageThread[]
+  transactions         ResaleTransaction[]
+  resaleOrders         ResaleOrder[]
+
+  @@map("resale_listings")
+}
+
+model ResaleTransaction {
+  id                String       @id @default(uuid()) @db.Uuid
+  listingId         String       @map("listing_id") @db.Uuid
+  sellerTicketId    String       @map("seller_ticket_id") @db.Uuid
+  buyerTicketId     String       @map("buyer_ticket_id") @db.Uuid
+  buyerId           String       @map("buyer_id") @db.Uuid
+  sellerId          String       @map("seller_id") @db.Uuid
+  salePriceVnd      Int          @map("sale_price_vnd")
+  platformFeeVnd    Int          @map("platform_fee_vnd")
+  sellerPayoutVnd   Int          @map("seller_payout_vnd")
+  payoutStatus      PayoutStatus @default(PENDING) @map("payout_status")
+  payoutProcessedAt DateTime?    @map("payout_processed_at") @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing ResaleListing @relation(fields: [listingId], references: [id])
+
+  @@map("resale_transactions")
+}
+
+model ListingUpvote {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([listingId, userId])
+  @@map("listing_upvotes")
+}
+
+model ListingComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  body      String
+  isHidden  Boolean  @default(false) @map("is_hidden")
+  flagCount Int      @default(0) @map("flag_count")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author  User                  @relation(fields: [authorId], references: [id])
+  listing ResaleListing         @relation(fields: [listingId], references: [id])
+  replies ListingCommentReply[]
+  flags   CommentFlag[]
+
+  @@map("listing_comments")
+}
+
+model ListingCommentReply {
+  id        String   @id @default(uuid()) @db.Uuid
+  commentId String   @map("comment_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  body      String
+  isHidden  Boolean  @default(false) @map("is_hidden")
+  flagCount Int      @default(0) @map("flag_count")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  author  User           @relation(fields: [authorId], references: [id])
+  comment ListingComment @relation(fields: [commentId], references: [id])
+
+  @@map("listing_comment_replies")
+}
+
+model CommentFlag {
+  id              String   @id @default(uuid()) @db.Uuid
+  commentId       String   @map("comment_id") @db.Uuid
+  flaggedByUserId String   @map("flagged_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  comment ListingComment @relation(fields: [commentId], references: [id])
+  user    User           @relation(fields: [flaggedByUserId], references: [id])
+
+  @@unique([commentId, flaggedByUserId])
+  @@map("comment_flags")
+}
+
+model DirectMessageThread {
+  id            String   @id @default(uuid()) @db.Uuid
+  listingId     String   @map("listing_id") @db.Uuid
+  buyerId       String   @map("buyer_id") @db.Uuid
+  sellerId      String   @map("seller_id") @db.Uuid
+  isClosed      Boolean  @default(false) @map("is_closed")
+  lastMessageAt DateTime @map("last_message_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing  ResaleListing   @relation(fields: [listingId], references: [id])
+  buyer    User            @relation("DirectMessageBuyer", fields: [buyerId], references: [id])
+  seller   User            @relation("DirectMessageSeller", fields: [sellerId], references: [id])
+  messages DirectMessage[]
+
+  @@unique([listingId, buyerId, sellerId])
+  @@map("direct_message_threads")
+}
+
+model DirectMessage {
+  id                String   @id @default(uuid()) @db.Uuid
+  threadId          String   @map("thread_id") @db.Uuid
+  senderId          String   @map("sender_id") @db.Uuid
+  body              String
+  isReadByRecipient Boolean  @default(false) @map("is_read_by_recipient")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  thread DirectMessageThread @relation(fields: [threadId], references: [id])
+  sender User                @relation(fields: [senderId], references: [id])
+
+  @@map("direct_messages")
+}
+
+model SellerTrustProfile {
+  id                     String          @id @default(uuid()) @db.Uuid
+  userId                 String          @unique @map("user_id") @db.Uuid
+  trustScore             Int             @map("trust_score")
+  completedSalesCount    Int             @map("completed_sales_count")
+  avgResponseTimeMinutes Int?            @map("avg_response_time_minutes")
+  noShowRate             Float           @map("no_show_rate")
+  tier                   SellerTrustTier @default(NEW)
+  lastComputedAt         DateTime        @map("last_computed_at") @db.Timestamptz(6)
+
+  @@map("seller_trust_profiles")
 }

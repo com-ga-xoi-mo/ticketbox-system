@@ -52,7 +52,13 @@ export class RedisCacheService implements CacheServicePort {
     return this.missCount;
   }
 
-  async getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    ttlSeconds: number,
+    loader: () => Promise<T>,
+    options?: { lockTtlSeconds?: number },
+  ): Promise<T> {
+    const lockTtlSeconds = options?.lockTtlSeconds ?? LOCK_TTL_SECONDS;
     const lockKey = `lock:${key}`;
 
     // --- 1. Try to read from cache ---
@@ -72,7 +78,7 @@ export class RedisCacheService implements CacheServicePort {
     // --- 2. Cache miss — coordinate loaders through a token-owned mutex lock ---
     while (true) {
       const token = randomUUID();
-      const lockAcquired = await this.tryAcquireLock(lockKey, token, key, loader);
+      const lockAcquired = await this.tryAcquireLock(lockKey, token, key, loader, lockTtlSeconds);
 
       if (lockAcquired.status === 'fail-open') {
         return lockAcquired.value;
@@ -100,9 +106,10 @@ export class RedisCacheService implements CacheServicePort {
     token: string,
     cacheKey: string,
     loader: () => Promise<T>,
+    lockTtlSeconds: number,
   ): Promise<LockAcquireResult<T>> {
     try {
-      const acquired = await this.redis.set(lockKey, token, 'EX', LOCK_TTL_SECONDS, 'NX');
+      const acquired = await this.redis.set(lockKey, token, 'EX', lockTtlSeconds, 'NX');
       return acquired === 'OK' ? { status: 'acquired' } : { status: 'locked' };
     } catch (err) {
       this.logger.warn(

@@ -28,6 +28,9 @@ describe('identity HTTP contract mappers', () => {
         district: null,
         avatarAssetId: null,
         avatarUrl: null,
+        hasPassword: true,
+        authProviders: [],
+        externalAvatarUrl: null,
       },
     );
 

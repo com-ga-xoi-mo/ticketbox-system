@@ -4,6 +4,7 @@ import { OptionalJwtAuthGuard } from '../../../identity/infrastructure/passport/
 import { ListArtistsUseCase } from '../../application/use-cases/list-artists.use-case';
 import { GetArtistProfileUseCase } from '../../application/use-cases/get-artist-profile.use-case';
 import { GetTopArtistsUseCase } from '../../application/use-cases/get-top-artists.use-case';
+import { mapToPublicArtistSummary } from './public-artist.mapper';
 
 @Controller('public/artists')
 export class PublicArtistController {
@@ -15,7 +16,19 @@ export class PublicArtistController {
 
   @Get()
   async list(@Query('q') q?: string, @Query('limit') limit = 20, @Query('offset') offset = 0) {
-    return this.listArtists.execute({ query: q, limit: Number(limit), offset: Number(offset) });
+    const parsedLimit = Number(limit);
+    const parsedOffset = Number(offset);
+    const result = await this.listArtists.execute({
+      query: q,
+      limit: parsedLimit,
+      offset: parsedOffset,
+    });
+    return {
+      items: result.items.map(mapToPublicArtistSummary),
+      total: result.total,
+      limit: parsedLimit,
+      offset: parsedOffset,
+    };
   }
 
   @Get('top')
