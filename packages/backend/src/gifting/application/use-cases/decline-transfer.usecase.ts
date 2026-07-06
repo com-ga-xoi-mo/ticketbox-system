@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import {
   ITicketTransferRepository,
   TICKET_TRANSFER_REPOSITORY,

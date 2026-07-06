@@ -218,6 +218,7 @@ import { PurchaseConfirmationNotificationProducer } from './infrastructure/queue
     PurchaseConfirmationNotificationProducer,
     NOTIFICATION_REPOSITORY,
     EMAIL_NOTIFICATION_CHANNEL,
+    REALTIME_NOTIFICATION_PUBLISHER,
   ],
 })
 export class NotificationModule {}
