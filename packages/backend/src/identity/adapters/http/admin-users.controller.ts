@@ -31,6 +31,8 @@ import {
   UpdateUserAccountUseCase,
 } from '../../application/use-cases/admin-account-management.use-cases';
 import { CreateAdminUserDto, ListUsersQueryDto, SetUserStatusDto, UpdateAdminUserDto } from './dto/admin-user.dto';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,6 +47,7 @@ export class AdminUsersController {
   ) {}
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async create(@Body() dto: CreateAdminUserDto, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.createUseCase.execute({ actor: { userId: req.user.id, roles: req.user.roles } }, dto),
@@ -66,6 +69,7 @@ export class AdminUsersController {
   }
 
   @Patch(':id')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async update(@Param('id') id: string, @Body() dto: UpdateAdminUserDto, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.updateUseCase.execute({ actor: { userId: req.user.id, roles: req.user.roles } }, id, dto),
@@ -73,6 +77,7 @@ export class AdminUsersController {
   }
 
   @Patch(':id/status')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async setStatus(@Param('id') id: string, @Body() dto: SetUserStatusDto, @Request() req: { user: AuthenticatedUser }) {
     return this.handleErrors(() =>
       this.setStatusUseCase.execute({ actor: { userId: req.user.id, roles: req.user.roles } }, id, dto.status),

@@ -23,6 +23,8 @@ import { GetOrganizerConcertUseCase } from '../../application/use-cases/get-orga
 import { mapConcertErrors } from './concert-error.mapper';
 import { CreateConcertDto } from './dto/create-concert.dto';
 import { UpdateConcertDto } from './dto/update-concert.dto';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('organizer/concerts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -53,6 +55,7 @@ export class OrganizerConcertController {
   }
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async create(@Body() dto: CreateConcertDto, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.createConcertUseCase.execute({
@@ -71,6 +74,7 @@ export class OrganizerConcertController {
   }
 
   @Patch(':id')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateConcertDto,
@@ -96,6 +100,7 @@ export class OrganizerConcertController {
   }
 
   @Post(':id/publish')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.publishConcertUseCase.execute({
@@ -108,6 +113,7 @@ export class OrganizerConcertController {
   }
 
   @Post(':id/cancel')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.cancelConcertUseCase.execute({

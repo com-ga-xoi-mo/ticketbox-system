@@ -13,6 +13,8 @@ import { RetryArtistBioJobUseCase } from '../../application/use-cases/retry-arti
 import { handleArtistBioHttpErrors } from './artist-bio-error.mapper';
 import { toArtistBioResponse } from './artist-bio-response.mapper';
 import { UploadArtistBioPressKitDto } from './dto/upload-artist-bio-press-kit.dto';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('organizer/concerts/:concertId/artist-bio')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +29,7 @@ export class OrganizerArtistBioController {
   ) {}
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async upload(
     @Param('concertId') concertId: string,
     @Body() dto: UploadArtistBioPressKitDto,
@@ -63,6 +66,7 @@ export class OrganizerArtistBioController {
   }
 
   @Post(':artistBioId/retry')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async retry(
     @Param('concertId') concertId: string,
     @Param('artistBioId') artistBioId: string,
@@ -80,6 +84,7 @@ export class OrganizerArtistBioController {
   }
 
   @Post(':artistBioId/publish')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async publish(
     @Param('concertId') concertId: string,
     @Param('artistBioId') artistBioId: string,
@@ -97,6 +102,7 @@ export class OrganizerArtistBioController {
   }
 
   @Post(':artistBioId/reject')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async reject(
     @Param('concertId') concertId: string,
     @Param('artistBioId') artistBioId: string,

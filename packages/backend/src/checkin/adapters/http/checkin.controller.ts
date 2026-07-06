@@ -12,6 +12,8 @@ import { GetTicketCacheUseCase } from '../../application/use-cases/get-ticket-ca
 import { OnlineCheckinDto } from './dto/online-checkin.dto';
 import { toBatchSyncResponse, toOnlineScanResponse } from './checkin-contract.mapper';
 import { ZodBodyPipe } from './zod-body.pipe';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('checkin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,6 +44,7 @@ export class CheckinController {
   }
 
   @Post('sync')
+  @RateLimited(RateLimitPolicy.CHECKIN_SYNC)
   async sync(
     @Body(new ZodBodyPipe(BatchSyncRequestSchema)) body: BatchSyncRequest,
     @Request() req: { user: AuthenticatedUser },

@@ -4,11 +4,11 @@ import type { GetConcertAvailabilityUseCase } from '../use-cases/get-concert-ava
 import type { GetPublicConcertDetailUseCase } from '../use-cases/get-public-concert-detail.use-case';
 import { ConcertCacheKeys } from './concert-cache-keys';
 
-const TTL_SECONDS = 60;
+const TTL_SECONDS = 300;
 
 /**
  * Decorator for `GetPublicConcertDetailUseCase`.
- * Key: `ticketbox:cache:concert:detail:{slug}`, TTL 60s.
+ * Key: `ticketbox:cache:concert:detail:{slug}`, TTL 300s.
  *
  * Exceptions (e.g. `PublicConcertNotFoundError`) propagate unchanged and are
  * NOT cached (fail-open is for Redis errors only).

@@ -8,6 +8,8 @@ import { ListPublicConcertsUseCase } from '../../application/use-cases/list-publ
 import { ListFeaturedConcertsUseCase } from '../../application/use-cases/list-featured-concerts.use-case';
 import type { CatalogSearchFilters } from '../../domain/catalog.types';
 import { PublicConcertNotFoundError } from '../../domain/errors';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('concerts')
 export class PublicConcertCatalogController {
@@ -20,6 +22,7 @@ export class PublicConcertCatalogController {
   ) {}
 
   @Get()
+  @RateLimited(RateLimitPolicy.BROWSING)
   async listConcerts(@Query() query: unknown) {
     try {
       const parsedQuery = CatalogSearchParamsSchema.parse(query);
@@ -44,11 +47,13 @@ export class PublicConcertCatalogController {
   }
 
   @Get('cities')
+  @RateLimited(RateLimitPolicy.BROWSING)
   async listCities() {
     return this.listConcertCities.execute();
   }
 
   @Get('featured')
+  @RateLimited(RateLimitPolicy.BROWSING)
   async listFeatured(@Query() query: unknown) {
     try {
       const parsedQuery = FeaturedConcertParamsSchema.parse(query || {});
@@ -62,6 +67,7 @@ export class PublicConcertCatalogController {
   }
 
   @Get(':slug/availability')
+  @RateLimited(RateLimitPolicy.BROWSING)
   async getAvailability(@Param('slug') slug: string) {
     try {
       return await this.getConcertAvailability.execute(slug);
@@ -74,6 +80,7 @@ export class PublicConcertCatalogController {
   }
 
   @Get(':slug')
+  @RateLimited(RateLimitPolicy.BROWSING)
   async getConcertDetail(@Param('slug') slug: string) {
     try {
       return await this.getPublicConcertDetail.execute(slug);

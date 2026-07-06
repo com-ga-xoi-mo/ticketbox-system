@@ -24,8 +24,10 @@ import { ConcertCacheKeys } from './concert-cache-keys';
 
 class FakeCacheService implements CacheServicePort {
   private readonly store = new Map<string, { value: unknown; expiresAt: number }>();
+  readonly getOrSetCalls: Array<{ key: string; ttlSeconds: number }> = [];
 
   async getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>): Promise<T> {
+    this.getOrSetCalls.push({ key, ttlSeconds });
     const entry = this.store.get(key);
     if (entry && Date.now() < entry.expiresAt) {
       return entry.value as T;
@@ -200,6 +202,19 @@ describe('5.2 CachingListPublicConcertsUseCase: serves from cache after first lo
     // Loader invoked only once — second call served from cache
     expect(innerExecute).toHaveBeenCalledTimes(1);
   });
+
+  it('uses a 60 second TTL for public list snapshots', async () => {
+    const innerExecute = vi.fn().mockResolvedValue(sampleSummaries);
+    const cache = new FakeCacheService();
+    const decorator = new CachingListPublicConcertsUseCase({ execute: innerExecute } as any, cache);
+
+    await decorator.execute(now);
+
+    expect(cache.getOrSetCalls).toContainEqual({
+      key: ConcertCacheKeys.list(),
+      ttlSeconds: 60,
+    });
+  });
 });
 
 describe('5.2 CachingGetPublicConcertDetailUseCase: serves from cache after first load', () => {
@@ -245,6 +260,32 @@ describe('5.2 CachingGetPublicConcertDetailUseCase: serves from cache after firs
     expect(result2.ticketTypes[1].availableQuantity).toBe(50);
     expect(innerExecute).toHaveBeenCalledTimes(1);
     expect(availabilityExecute).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses a 300 second TTL for static detail and keeps availability at 5 seconds', async () => {
+    const innerExecute = vi.fn().mockResolvedValue(sampleDetail);
+    const availabilityExecute = vi.fn().mockResolvedValue(sampleAvailability);
+    const cache = new FakeCacheService();
+    const availability = new CachingGetConcertAvailabilityUseCase(
+      { execute: availabilityExecute } as any,
+      cache,
+    );
+    const decorator = new CachingGetPublicConcertDetailUseCase(
+      { execute: innerExecute } as any,
+      cache,
+      availability,
+    );
+
+    await decorator.execute('summer-beats', now);
+
+    expect(cache.getOrSetCalls).toContainEqual({
+      key: ConcertCacheKeys.detail('summer-beats'),
+      ttlSeconds: 300,
+    });
+    expect(cache.getOrSetCalls).toContainEqual({
+      key: ConcertCacheKeys.availability('summer-beats'),
+      ttlSeconds: 5,
+    });
   });
 });
 
