@@ -1,8 +1,7 @@
 import { Badge } from '../../../components/ui/badge';
-import type { TicketStatus } from '@ticketbox/api-types';
 
 interface TicketStatusBadgeProps {
-  status: TicketStatus;
+  status: string; // Cast to string since TS may not have new enum value immediately
 }
 
 export function TicketStatusBadge({ status }: TicketStatusBadgeProps) {
@@ -16,12 +15,27 @@ export function TicketStatusBadge({ status }: TicketStatusBadgeProps) {
     case 'REFUNDED':
       return <Badge variant="secondary">Đã hoàn tiền</Badge>;
     case 'LISTED_FOR_RESALE':
-      return <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400">Đang bán lại</Badge>;
+      return (
+        <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400">
+          Đang bán lại
+        </Badge>
+      );
     case 'TRANSFERRED':
-      return <Badge variant="outline" className="border-gray-500 text-gray-500 dark:text-gray-400">Đã chuyển nhượng</Badge>;
+      return (
+        <Badge variant="outline" className="border-gray-500 text-gray-500 dark:text-gray-400">
+          Đã chuyển nhượng
+        </Badge>
+      );
+    case 'TRANSFER_PENDING':
+      return (
+        <Badge
+          variant="outline"
+          className="bg-amber-100 border-amber-500 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+        >
+          Đang tặng
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
 }
-
-
