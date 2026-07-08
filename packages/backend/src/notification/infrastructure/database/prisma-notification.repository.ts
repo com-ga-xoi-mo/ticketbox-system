@@ -52,6 +52,17 @@ export class PrismaNotificationRepository implements NotificationRepositoryPort 
     return this.toNotificationRecord(notification);
   }
 
+  async findByDedupeKey(dedupeKey: string): Promise<NotificationRecord | null> {
+    const notification = await this.prisma.notification.findUnique({
+      where: { dedupeKey },
+      include: {
+        attempts: true,
+      },
+    });
+
+    return notification ? this.toNotificationRecord(notification) : null;
+  }
+
   async findById(notificationId: string): Promise<NotificationRecord | null> {
     const notification = await this.prisma.notification.findUnique({
       where: { id: notificationId },

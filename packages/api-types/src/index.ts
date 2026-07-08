@@ -277,6 +277,23 @@ export type {
 } from './audience/support.contract';
 
 export {
+  JoinWaitlistRequestSchema,
+  LeaveWaitlistResponseSchema,
+  PurchaseEntitlementStatusSchema,
+  WaitlistEntitlementSchema,
+  WaitlistEntryStatusSchema,
+  WaitlistStatusResponseSchema,
+} from './audience/waitlist.contract';
+export type {
+  JoinWaitlistRequest,
+  LeaveWaitlistResponse,
+  PurchaseEntitlementStatus,
+  WaitlistEntitlement,
+  WaitlistEntryStatus,
+  WaitlistStatusResponse,
+} from './audience/waitlist.contract';
+
+export {
   CreateRefundRequestSchema,
   RefundEligibilityResponseSchema,
   RefundRequestListResponseSchema,

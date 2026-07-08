@@ -7,6 +7,8 @@ import { EnqueuePurchaseConfirmationUseCase } from '../notification/application/
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
+import { PrismaService } from '../platform/database/prisma.service';
+import { PrismaWaitlistEntitlementReservationAdapter } from '../official-waitlist/infrastructure/database/prisma-waitlist-entitlement-reservation.adapter';
 import { InternalOrderController } from './adapters/http/internal-order.controller';
 import { OrderController } from './adapters/http/order.controller';
 import { InternalApiKeyGuard } from './adapters/http/guards/internal-api-key.guard';
@@ -29,6 +31,10 @@ import {
   INVENTORY_RESERVATION_REPOSITORY,
   type IInventoryReservationRepository,
 } from './domain/ports/inventory-reservation.port';
+import {
+  WAITLIST_ENTITLEMENT_RESERVATION_PORT,
+  type WaitlistEntitlementReservationPort,
+} from './domain/ports/waitlist-entitlement-reservation.port';
 import {
   ORDER_PAID_NOTIFIER,
   type OrderPaidNotifierPort,
@@ -172,7 +178,22 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
       provide: TICKET_TYPE_PRICING_REPOSITORY,
       useClass: PrismaTicketTypePricingRepository,
     },
-    PrismaInventoryReservationRepository,
+    {
+      provide: WAITLIST_ENTITLEMENT_RESERVATION_PORT,
+      useClass: PrismaWaitlistEntitlementReservationAdapter,
+    },
+    {
+      provide: PrismaInventoryReservationRepository,
+      inject: [PrismaService, WAITLIST_ENTITLEMENT_RESERVATION_PORT],
+      useFactory: (
+        prisma: PrismaService,
+        waitlistEntitlementReservation: WaitlistEntitlementReservationPort,
+      ) =>
+        new PrismaInventoryReservationRepository(
+          prisma,
+          waitlistEntitlementReservation,
+        ),
+    },
     {
       provide: INVENTORY_RESERVATION_REPOSITORY,
       useExisting: PrismaInventoryReservationRepository,

@@ -17,6 +17,7 @@ import type { PromotionValidationPort } from '../../domain/ports/promotion-valid
 
 export interface CreateOrderCommand {
   promoCode?: string;
+  waitlistEntitlementId?: string;
   userId: string;
   concertId: string;
   idempotencyKey: string;
@@ -145,7 +146,9 @@ export class CreateOrderUseCase {
       items,
     });
 
-    return this.inventoryReservationRepository.reserve(order);
+    return this.inventoryReservationRepository.reserve(order, {
+      waitlistEntitlementId: command.waitlistEntitlementId,
+    });
   }
 
   private addReservationTtl(now: Date): Date {
