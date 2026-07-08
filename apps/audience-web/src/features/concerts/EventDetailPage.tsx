@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CalendarDays, Clock, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
+import { fetchWaitlistStatus, joinWaitlist, leaveWaitlist, waitlistKeys } from '../../shared/api/waitlist';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
+import { useCountdown } from '../../shared/hooks/useCountdown';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { PageLoading, PageError, PageUnavailable, PageSoldOut } from '../../shared/ui/PageStates';
 import { Badge } from '../../components/ui/badge';
@@ -40,6 +42,119 @@ function formatDate(iso: string): string {
 
 function formatPrice(vnd: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(vnd);
+}
+
+function TicketWaitlistControls({
+  concert,
+  ticketType,
+  desiredQuantity,
+}: {
+  concert: PublicConcertDetailResponse;
+  ticketType: PublicConcertDetailResponse['ticketTypes'][number];
+  desiredQuantity: number;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, redirectToLogin } = useRequireAuth();
+  const statusQuery = useQuery({
+    queryKey: waitlistKeys.status(concert.id, ticketType.id),
+    queryFn: () => fetchWaitlistStatus({ concertId: concert.id, ticketTypeId: ticketType.id }),
+    enabled: isAuthenticated,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const joinMutation = useMutation({
+    mutationFn: () =>
+      joinWaitlist({
+        concertId: concert.id,
+        ticketTypeId: ticketType.id,
+        desiredQuantity: Math.max(desiredQuantity, 1),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: waitlistKeys.status(concert.id, ticketType.id),
+      }),
+  });
+  const leaveMutation = useMutation({
+    mutationFn: () => leaveWaitlist(ticketType.id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: waitlistKeys.status(concert.id, ticketType.id),
+      }),
+  });
+  const entitlement = statusQuery.data?.entitlement ?? null;
+  const countdown = useCountdown(entitlement?.expiresAt ?? null);
+
+  const handleJoin = () => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    joinMutation.mutate();
+  };
+
+  const handleCheckout = () => {
+    if (!entitlement) return;
+    navigate('/checkout', {
+      state: {
+        concertId: concert.id,
+        concertSlug: concert.slug,
+        concertTitle: concert.title,
+        quantities: [[ticketType.id, entitlement.quantity]],
+        waitlistEntitlementId: entitlement.id,
+        idempotencyKey: generateIdempotencyKey(),
+      },
+    });
+  };
+
+  if (entitlement && !countdown.isExpired) {
+    return (
+      <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-primary">Đến lượt mua vé</span>
+          <span className="inline-flex items-center gap-1 font-mono text-primary">
+            <Clock className="size-3.5" />
+            {countdown.formatted}
+          </span>
+        </div>
+        <Button className="mt-3 w-full rounded-full" onClick={handleCheckout}>
+          Mua vé bằng lượt chờ
+        </Button>
+      </div>
+    );
+  }
+
+  if (statusQuery.data?.status === 'WAITING') {
+    return (
+      <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span>Đang trong danh sách chờ</span>
+          {statusQuery.data.queuePosition && (
+            <Badge variant="secondary">#{statusQuery.data.queuePosition}</Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          className="mt-3 w-full rounded-full"
+          onClick={() => leaveMutation.mutate()}
+          disabled={leaveMutation.isPending}
+        >
+          Rời danh sách chờ
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      className="mt-3 w-full rounded-full"
+      onClick={handleJoin}
+      disabled={joinMutation.isPending}
+    >
+      Báo tôi khi có vé
+    </Button>
+  );
 }
 
 export function EventDetailPage() {
@@ -338,8 +453,13 @@ export function EventDetailPage() {
               <CardContent className="space-y-3 p-5 pt-0">
                 {data.ticketTypes.map((tt) => {
                   const state = getSaleWindowState(tt);
-                  const isActive = state === 'on-sale';
+                  const showWaitlist = state === 'sold-out' || tt.waitlistGated;
+                  const isActive = state === 'on-sale' && !showWaitlist;
                   const currentQty = quantities.get(tt.id) || 0;
+                  const waitlistDesiredQuantity = Math.min(
+                    Math.max(currentQty, 1),
+                    tt.maxPerUser,
+                  );
                   
                   return (
                     <div
@@ -384,6 +504,13 @@ export function EventDetailPage() {
                             {state === 'paused' && <Badge variant="secondary" className="mt-1">Tạm dừng</Badge>}
                             {state === 'sold-out' && <Badge variant="destructive" className="mt-1">Hết vé</Badge>}
                             {state === 'on-sale' && <Badge className="mt-1 bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20">Đang mở bán</Badge>}
+                            {showWaitlist && (
+                              <TicketWaitlistControls
+                                concert={data}
+                                ticketType={tt}
+                                desiredQuantity={waitlistDesiredQuantity}
+                              />
+                            )}
                             
                           </div>
                           <div className="flex items-center rounded-full border bg-background/80 p-1">

@@ -43,6 +43,10 @@ class FakeNotificationRepository implements NotificationRepositoryPort {
     throw new Error('not used');
   }
 
+  async findByDedupeKey(): Promise<NotificationRecord | null> {
+    return null;
+  }
+
   async findById(): Promise<NotificationRecord | null> {
     return this.notification;
   }
