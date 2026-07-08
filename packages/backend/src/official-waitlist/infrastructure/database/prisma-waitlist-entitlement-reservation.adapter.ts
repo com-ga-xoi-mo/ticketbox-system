@@ -34,8 +34,7 @@ export class PrismaWaitlistEntitlementReservationAdapter
               status,
               quantity,
               expires_at AS "expiresAt",
-              waitlist_entry_id AS "waitlistEntryId",
-              lottery_registration_id AS "lotteryRegistrationId"
+              waitlist_entry_id AS "waitlistEntryId"
        FROM purchase_entitlements
        WHERE id = $1::uuid
        FOR UPDATE`,
@@ -49,7 +48,6 @@ export class PrismaWaitlistEntitlementReservationAdapter
       quantity: number;
       expiresAt: Date;
       waitlistEntryId: string | null;
-      lotteryRegistrationId: string | null;
     }>;
     const entitlement = entitlementRows[0];
     if (!entitlement) {
@@ -104,13 +102,6 @@ export class PrismaWaitlistEntitlementReservationAdapter
         },
       });
     }
-
-    if (entitlement.lotteryRegistrationId) {
-      await tx.lotteryRegistration.update({
-        where: { id: entitlement.lotteryRegistrationId },
-        data: { fulfilledAt: request.now },
-      });
-    }
   }
 
   private async findGatedTicketTypeIds(
@@ -127,31 +118,14 @@ export class PrismaWaitlistEntitlementReservationAdapter
           status: { in: ['WAITING', 'GRANTED'] },
         },
       });
-      // Waitlist-demand gating counts only WAITLIST-sourced entitlements so that
-      // leftover LOTTERY entitlements never keep a type gated after its presale
-      // window closes — lottery gating is governed solely by the time window below.
-      const activeWaitlistEntitlements = await tx.purchaseEntitlement.count({
+      const activeEntitlements = await tx.purchaseEntitlement.count({
         where: {
           ticketTypeId,
-          source: 'WAITLIST',
           status: 'ACTIVE',
           expiresAt: { gt: request.now },
         },
       });
-      // Time-based presale (lottery) gate window, read only from ticket_types so
-      // ordering has no dependency on the presale-lottery tables.
-      const ticketType = await tx.ticketType.findUnique({
-        where: { id: ticketTypeId },
-        select: { presaleGateOpensAt: true, presaleGateClosesAt: true },
-      });
-      const inPresaleWindow = Boolean(
-        ticketType?.presaleGateOpensAt &&
-          ticketType.presaleGateClosesAt &&
-          ticketType.presaleGateOpensAt <= request.now &&
-          request.now < ticketType.presaleGateClosesAt,
-      );
-
-      if (activeEntries + activeWaitlistEntitlements > 0 || inPresaleWindow) {
+      if (activeEntries + activeEntitlements > 0) {
         result.push(ticketTypeId);
       }
     }

@@ -17,7 +17,6 @@ import { StorageModule } from './storage/storage.module';
 import { ResaleModule } from '../resale/resale.module';
 import { QueueModule } from './queue/queue.module';
 import { OfficialWaitlistModule } from '../official-waitlist/official-waitlist.module';
-import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module';
 
 @Module({
   imports: [
@@ -38,7 +37,6 @@ import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module'
     LocationGeocodingModule,
     ResaleModule,
     OfficialWaitlistModule,
-    PresaleLotteryModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -58,7 +56,6 @@ import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module'
     LocationGeocodingModule,
     ResaleModule,
     OfficialWaitlistModule,
-    PresaleLotteryModule,
   ],
 })
 export class BackendCoreModule {}
