@@ -29,6 +29,8 @@ export * from './favorites/favorites.module';
 export * from './audience-support/audience-support.module';
 export * from './official-waitlist/official-waitlist.module';
 export * from './official-waitlist/official-waitlist-worker.module';
+export * from './presale-lottery/presale-lottery.module';
+export * from './presale-lottery/presale-lottery-worker.module';
 export * from './ordering/order.module';
 export * from './ordering/ordering-worker.module';
 export * from './ordering/application/use-cases/expire-reservations.use-case';

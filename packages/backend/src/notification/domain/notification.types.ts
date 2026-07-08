@@ -34,6 +34,7 @@ export enum NotificationResourceType {
   REFUND_REQUEST = 'REFUND_REQUEST',
   CONCERT = 'CONCERT',
   WAITLIST_ENTITLEMENT = 'WAITLIST_ENTITLEMENT',
+  LOTTERY_ENTITLEMENT = 'LOTTERY_ENTITLEMENT',
 }
 
 export interface NotificationRecord {

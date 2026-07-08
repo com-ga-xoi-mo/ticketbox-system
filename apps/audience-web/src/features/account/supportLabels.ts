@@ -57,6 +57,8 @@ export const notificationResourceLabels: Record<AudienceNotificationResourceType
   SUPPORT_REQUEST: 'Yêu cầu hỗ trợ',
   REFUND_REQUEST: 'Yêu cầu hoàn tiền',
   CONCERT: 'Sự kiện',
+  WAITLIST_ENTITLEMENT: 'Lượt mua vé chờ',
+  LOTTERY_ENTITLEMENT: 'Suất mua vé bốc thăm',
 };
 
 export function formatVnd(value?: number | null): string {
