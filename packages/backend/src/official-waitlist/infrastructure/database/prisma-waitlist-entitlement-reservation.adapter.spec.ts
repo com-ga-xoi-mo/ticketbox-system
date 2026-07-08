@@ -17,6 +17,14 @@ function makeTx(overrides: Partial<any> = {}) {
       count: vi.fn().mockResolvedValue(1),
       update: vi.fn().mockResolvedValue({}),
     },
+    lotteryRegistration: {
+      update: vi.fn().mockResolvedValue({}),
+    },
+    ticketType: {
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ presaleGateOpensAt: null, presaleGateClosesAt: null }),
+    },
     $queryRawUnsafe: vi.fn().mockResolvedValue([
       {
         id: 'entitlement-1',
@@ -27,6 +35,7 @@ function makeTx(overrides: Partial<any> = {}) {
         quantity: 2,
         expiresAt: new Date('2026-07-07T02:00:00.000Z'),
         waitlistEntryId: 'entry-1',
+        lotteryRegistrationId: null,
       },
     ]),
     ...overrides,
@@ -119,6 +128,133 @@ describe('PrismaWaitlistEntitlementReservationAdapter', () => {
         status: 'FULFILLED',
         fulfilledAt: request.now,
       },
+    });
+  });
+
+  it('gates a ticket type inside its presale lottery window even with no entries or entitlements', async () => {
+    const tx = makeTx({
+      waitlistEntry: { count: vi.fn().mockResolvedValue(0), update: vi.fn() },
+      purchaseEntitlement: { count: vi.fn().mockResolvedValue(0), update: vi.fn() },
+      ticketType: {
+        findUnique: vi.fn().mockResolvedValue({
+          presaleGateOpensAt: new Date('2026-07-07T00:00:00.000Z'),
+          presaleGateClosesAt: new Date('2026-07-07T05:00:00.000Z'),
+        }),
+      },
+    });
+
+    await expect(
+      new PrismaWaitlistEntitlementReservationAdapter().validateAndConsumeForReservation(tx, {
+        ...request,
+        entitlementId: undefined,
+      }),
+    ).rejects.toBeInstanceOf(WaitlistEntitlementRequiredError);
+  });
+
+  it('keeps non-winners blocked after an early manual draw while the presale window remains open', async () => {
+    const tx = makeTx({
+      waitlistEntry: { count: vi.fn().mockResolvedValue(0), update: vi.fn() },
+      purchaseEntitlement: {
+        count: vi.fn().mockImplementation(({ where }) =>
+          Promise.resolve(where.source === 'WAITLIST' ? 0 : 1),
+        ),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      ticketType: {
+        findUnique: vi.fn().mockResolvedValue({
+          presaleGateOpensAt: new Date('2026-07-07T00:00:00.000Z'),
+          presaleGateClosesAt: new Date('2026-07-07T05:00:00.000Z'),
+        }),
+      },
+    });
+
+    await expect(
+      new PrismaWaitlistEntitlementReservationAdapter().validateAndConsumeForReservation(tx, {
+        ...request,
+        entitlementId: undefined,
+      }),
+    ).rejects.toBeInstanceOf(WaitlistEntitlementRequiredError);
+    expect(tx.$queryRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it('allows direct checkout after public sale starts even if LOTTERY entitlements remain active', async () => {
+    const waitlistEntitlementCount = vi.fn().mockResolvedValue(0);
+    const tx = makeTx({
+      waitlistEntry: { count: vi.fn().mockResolvedValue(0), update: vi.fn() },
+      purchaseEntitlement: {
+        count: waitlistEntitlementCount,
+        update: vi.fn().mockResolvedValue({}),
+      },
+      ticketType: {
+        findUnique: vi.fn().mockResolvedValue({
+          presaleGateOpensAt: new Date('2026-07-07T00:00:00.000Z'),
+          presaleGateClosesAt: new Date('2026-07-07T05:00:00.000Z'),
+        }),
+      },
+    });
+
+    await new PrismaWaitlistEntitlementReservationAdapter().validateAndConsumeForReservation(
+      tx,
+      {
+        ...request,
+        now: new Date('2026-07-07T05:00:00.000Z'),
+        entitlementId: undefined,
+      },
+    );
+
+    expect(waitlistEntitlementCount).toHaveBeenCalledWith({
+      where: {
+        ticketTypeId: 'ticket-type-1',
+        source: 'WAITLIST',
+        status: 'ACTIVE',
+        expiresAt: { gt: new Date('2026-07-07T05:00:00.000Z') },
+      },
+    });
+    expect(tx.$queryRawUnsafe).not.toHaveBeenCalled();
+    expect(tx.purchaseEntitlement.update).not.toHaveBeenCalled();
+  });
+
+  it('consumes a LOTTERY entitlement and marks the lottery registration fulfilled', async () => {
+    const tx = makeTx({
+      waitlistEntry: { count: vi.fn().mockResolvedValue(0), update: vi.fn() },
+      purchaseEntitlement: {
+        count: vi.fn().mockResolvedValue(0),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      ticketType: {
+        findUnique: vi.fn().mockResolvedValue({
+          presaleGateOpensAt: new Date('2026-07-07T00:00:00.000Z'),
+          presaleGateClosesAt: new Date('2026-07-07T05:00:00.000Z'),
+        }),
+      },
+      $queryRawUnsafe: vi.fn().mockResolvedValue([
+        {
+          id: 'entitlement-1',
+          userId: 'user-1',
+          concertId: 'concert-1',
+          ticketTypeId: 'ticket-type-1',
+          status: 'ACTIVE',
+          quantity: 2,
+          expiresAt: new Date('2026-07-07T02:00:00.000Z'),
+          waitlistEntryId: null,
+          lotteryRegistrationId: 'reg-1',
+        },
+      ]),
+    });
+
+    await new PrismaWaitlistEntitlementReservationAdapter().validateAndConsumeForReservation(
+      tx,
+      request,
+    );
+
+    expect(tx.purchaseEntitlement.update).toHaveBeenCalledWith({
+      where: { id: 'entitlement-1' },
+      data: { status: 'CONSUMED', consumedAt: request.now, orderId: 'order-1' },
+    });
+    expect(tx.waitlistEntry.update).not.toHaveBeenCalled();
+    expect(tx.lotteryRegistration.update).toHaveBeenCalledWith({
+      where: { id: 'reg-1' },
+      data: { fulfilledAt: request.now },
     });
   });
 });

@@ -4,11 +4,30 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { EventDetailPage } from './EventDetailPage';
 import * as catalogApi from '../../shared/api/catalog';
+import * as lotteryApi from '../../shared/api/lottery';
+import { AuthProvider } from '../../shared/auth/AuthContext';
+import { HelmetProvider } from 'react-helmet-async';
 
 vi.mock('../../shared/api/catalog', () => ({
   fetchConcertDetail: vi.fn(),
   catalogKeys: {
     detail: vi.fn().mockReturnValue(['detail']),
+  },
+}));
+
+vi.mock('../../shared/api/lottery', () => ({
+  fetchLotteryConfig: vi.fn(),
+  fetchLotteryRegistrations: vi.fn(),
+  fetchLotteryStatus: vi.fn(),
+  registerForLottery: vi.fn(),
+  runLotteryDrawNow: vi.fn(),
+  updateLotteryTtl: vi.fn(),
+  withdrawFromLottery: vi.fn(),
+  lotteryKeys: {
+    all: ['lottery'],
+    status: (ticketTypeId: string) => ['lottery', 'status', ticketTypeId],
+    registrations: (ticketTypeId: string) => ['lottery', 'registrations', ticketTypeId],
+    config: (ticketTypeId: string) => ['lottery', 'config', ticketTypeId],
   },
 }));
 
@@ -38,15 +57,161 @@ function renderWithProviders(initialUrl = '/events/concert-1') {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialUrl]}>
-        <Routes>
-          <Route path="/events/:slug" element={<EventDetailPage />} />
-          <Route path="/checkout" element={<CheckoutProbe />} />
-        </Routes>
-      </MemoryRouter>
+      <HelmetProvider>
+        <MemoryRouter initialEntries={[initialUrl]}>
+          <Routes>
+            <Route path="/events/:slug" element={<EventDetailPage />} />
+            <Route path="/checkout" element={<CheckoutProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>
     </QueryClientProvider>
   );
 }
+
+function makeToken(roles: string[]) {
+  const encode = (value: unknown) =>
+    btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: 'user-1', roles })}.sig`;
+}
+
+function renderWithAuthProviders(initialUrl = '/events/concert-1') {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[initialUrl]}>
+            <Routes>
+              <Route path="/events/:slug" element={<EventDetailPage />} />
+              <Route path="/checkout" element={<CheckoutProbe />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </HelmetProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('EventDetailPage lottery operator controls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  const lotteryConcert = {
+    id: '11111111-1111-1111-1111-111111111111',
+    slug: 'c1',
+    title: 'Concert 1',
+    artistName: 'Artist 1',
+    city: 'HCMC',
+    startsAt: '2026-07-01T00:00:00Z',
+    venueName: 'Venue',
+    eventType: 'CONCERT',
+    availabilitySummary: { totalAvailableQuantity: 10, minPriceVnd: 100 },
+    seatingMapAsset: null,
+    seatingZones: [],
+    ticketTypeZoneMappings: [],
+    ticketTypes: [
+      {
+        id: '22222222-2222-2222-2222-222222222222',
+        code: 'T1',
+        name: 'Ticket 1',
+        priceVnd: 1000,
+        totalQuantity: 10,
+        availableQuantity: 10,
+        maxPerUser: 4,
+        saleStartsAt: '2020-01-01T00:00:00Z',
+        saleEndsAt: '2030-01-01T00:00:00Z',
+        status: 'ACTIVE',
+        zoneIds: [],
+      },
+    ],
+  };
+
+  it('shows organizer controls and renders registration list', async () => {
+    localStorage.setItem('ticketbox_audience_token', makeToken(['ORGANIZER']));
+    vi.mocked(catalogApi.fetchConcertDetail).mockResolvedValue(lotteryConcert as any);
+    vi.mocked(lotteryApi.fetchLotteryStatus).mockResolvedValue({
+      ticketTypeId: '22222222-2222-2222-2222-222222222222',
+      registrationId: null,
+      registrationStatus: null,
+      desiredQuantity: null,
+      configStatus: 'SCHEDULED',
+      registrationOpensAt: '2026-01-01T00:00:00.000Z',
+      registrationClosesAt: '2030-01-01T00:00:00.000Z',
+      drawAt: '2030-01-02T00:00:00.000Z',
+      entitlement: null,
+    });
+    vi.mocked(lotteryApi.fetchLotteryConfig).mockResolvedValue({
+      ticketTypeId: '22222222-2222-2222-2222-222222222222',
+      status: 'SCHEDULED',
+      registrationOpensAt: '2026-01-01T00:00:00.000Z',
+      registrationClosesAt: '2030-01-01T00:00:00.000Z',
+      drawAt: '2030-01-02T00:00:00.000Z',
+      allocation: 2,
+      entitlementTtlMinutes: 15,
+    });
+    vi.mocked(lotteryApi.fetchLotteryRegistrations).mockResolvedValue({
+      ticketTypeId: '22222222-2222-2222-2222-222222222222',
+      registrations: [
+        {
+          registrationId: '33333333-3333-3333-3333-333333333333',
+          userId: '44444444-4444-4444-4444-444444444444',
+          userEmail: 'user@example.com',
+          userDisplayName: 'User One',
+          desiredQuantity: 2,
+          status: 'REGISTERED',
+          registeredAt: '2026-01-01T01:00:00.000Z',
+          wonAt: null,
+          notSelectedAt: null,
+          withdrawnAt: null,
+          fulfilledAt: null,
+          entitlement: null,
+        },
+      ],
+    });
+    vi.mocked(lotteryApi.runLotteryDrawNow).mockResolvedValue({
+      ticketTypeId: '22222222-2222-2222-2222-222222222222',
+      granted: 1,
+      notSelected: 0,
+    });
+
+    renderWithAuthProviders();
+
+    expect(await screen.findByText('Lottery test controls')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Xem DS dang ky/ }));
+    expect(await screen.findByText('user@example.com')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Quay so ngay/ }));
+    expect(lotteryApi.runLotteryDrawNow).toHaveBeenCalledWith(
+      '22222222-2222-2222-2222-222222222222',
+    );
+  });
+
+  it('hides operator controls from a normal audience user', async () => {
+    localStorage.setItem('ticketbox_audience_token', makeToken(['AUDIENCE']));
+    vi.mocked(catalogApi.fetchConcertDetail).mockResolvedValue(lotteryConcert as any);
+    vi.mocked(lotteryApi.fetchLotteryStatus).mockResolvedValue({
+      ticketTypeId: '22222222-2222-2222-2222-222222222222',
+      registrationId: null,
+      registrationStatus: null,
+      desiredQuantity: null,
+      configStatus: 'SCHEDULED',
+      registrationOpensAt: '2026-01-01T00:00:00.000Z',
+      registrationClosesAt: '2030-01-01T00:00:00.000Z',
+      drawAt: '2030-01-02T00:00:00.000Z',
+      entitlement: null,
+    });
+
+    renderWithAuthProviders();
+
+    await screen.findByText('Ticket 1');
+    expect(screen.queryByText('Lottery test controls')).not.toBeInTheDocument();
+  });
+});
 
 describe.skip('EventDetailPage', () => {
   beforeEach(() => {
