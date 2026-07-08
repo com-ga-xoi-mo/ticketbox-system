@@ -43,6 +43,7 @@ export interface UpdateNotificationStatusInput {
 
 export interface NotificationRepositoryPort {
   upsertByDedupeKey(input: UpsertNotificationInput): Promise<NotificationRecord>;
+  findByDedupeKey?(dedupeKey: string): Promise<NotificationRecord | null>;
   findById(notificationId: string): Promise<NotificationRecord | null>;
   listInbox?(input: {
     userId: string;

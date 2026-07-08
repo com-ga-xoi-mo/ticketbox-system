@@ -67,6 +67,7 @@ export const CreateOrderRequestSchema = z.object({
   concertId: z.string().uuid(),
   idempotencyKey: z.string().min(1).max(80),
   promoCode: z.string().trim().min(1).optional(),
+  waitlistEntitlementId: z.string().uuid().optional(),
   items: z.array(CreateOrderItemRequestSchema).min(1),
 });
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;

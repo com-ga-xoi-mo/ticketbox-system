@@ -149,6 +149,22 @@ export function parseOrderError(error: unknown): string {
       ['IDEMPOTENCY_CONFLICT', 'ProgressError', 'PreviouslyFailed'],
       'Giao dịch đang được xử lý hoặc đã thất bại trước đó.',
     ],
+    [
+      ['Waitlist entitlement is required'],
+      'Bạn cần chờ đến lượt mua vé từ danh sách chờ chính thức.',
+    ],
+    [
+      ['Waitlist entitlement is expired'],
+      'Lượt mua vé của bạn đã hết hạn. Vui lòng kiểm tra lại danh sách chờ.',
+    ],
+    [
+      ['Waitlist entitlement quantity exceeded'],
+      'Số lượng vé vượt quá lượt mua được cấp từ danh sách chờ.',
+    ],
+    [
+      ['Waitlist entitlement is invalid'],
+      'Lượt mua vé từ danh sách chờ không hợp lệ hoặc không thuộc tài khoản này.',
+    ],
   ];
 
   for (const [patterns, userMessage] of mappings) {

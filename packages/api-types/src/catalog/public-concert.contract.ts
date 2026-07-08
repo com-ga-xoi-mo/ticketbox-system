@@ -123,6 +123,7 @@ export const PublicTicketTypeSchema = z
     saleEndsAt: z.string().datetime({ offset: true }),
     status: TicketTypeStatusCodeSchema,
     zoneIds: z.array(z.string().uuid()),
+    waitlistGated: z.boolean().default(false),
   })
   .strict();
 export type PublicTicketType = z.infer<typeof PublicTicketTypeSchema>;
