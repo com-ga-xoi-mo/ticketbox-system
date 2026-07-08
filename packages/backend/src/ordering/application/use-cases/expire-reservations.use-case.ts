@@ -4,6 +4,7 @@ import {
   PaidOrderExpirationSkippedError,
 } from '../../domain/errors';
 import type { IExpiredOrderRepository } from '../../domain/ports/expired-order-repository.port';
+import type { ReleasedPrimarySaleItem } from '../../domain/ports/waitlist-release-publisher.port';
 import type { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
 
 export interface ExpireReservationsCommand {
@@ -17,6 +18,7 @@ export interface ExpireReservationsResult {
   skippedPaid: number;
   conflicted: number;
   failed: number;
+  releasedItems: ReleasedPrimarySaleItem[];
 }
 
 export class ExpireReservationsUseCase {
@@ -37,16 +39,23 @@ export class ExpireReservationsUseCase {
     let skippedPaid = 0;
     let conflicted = 0;
     let failed = 0;
+    const releasedByTicketType = new Map<string, number>();
 
     for (const orderId of orderIds) {
       try {
-        await this.transitionOrderStatusUseCase.execute({
+        const order = await this.transitionOrderStatusUseCase.execute({
           orderId,
           status: OrderStatus.EXPIRED,
           skipOwnershipCheck: true,
           occurredAt: now,
         });
         expired += 1;
+        for (const item of order.items) {
+          releasedByTicketType.set(
+            item.ticketTypeId,
+            (releasedByTicketType.get(item.ticketTypeId) ?? 0) + item.quantity,
+          );
+        }
       } catch (error: unknown) {
         if (error instanceof PaidOrderExpirationSkippedError) {
           skippedPaid += 1;
@@ -64,6 +73,12 @@ export class ExpireReservationsUseCase {
       skippedPaid,
       conflicted,
       failed,
+      releasedItems: [...releasedByTicketType.entries()].map(
+        ([ticketTypeId, quantityReleased]) => ({
+          ticketTypeId,
+          quantityReleased,
+        }),
+      ),
     };
   }
 }

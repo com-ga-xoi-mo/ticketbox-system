@@ -26,6 +26,7 @@ interface CheckoutState {
   concertTitle: string;
   quantities: [string, number][];
   idempotencyKey?: string;
+  waitlistEntitlementId?: string;
 }
 
 export function CheckoutPage() {
@@ -69,6 +70,7 @@ export function CheckoutPage() {
           quantity,
         })),
         promoCode: promoCode ?? undefined,
+        waitlistEntitlementId: state!.waitlistEntitlementId,
       });
       setCreatedOrder(order);
       setStep(2);

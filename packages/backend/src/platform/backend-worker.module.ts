@@ -7,6 +7,8 @@ import {
 } from '../guest-list-import/guest-list-import.module';
 import { ConcertReminderProcessor } from '../notification/adapters/inbound/queue/concert-reminder.processor';
 import { NotificationDeliveryProcessor } from '../notification/adapters/inbound/queue/notification-delivery.processor';
+import { OfficialWaitlistWorkerModule } from '../official-waitlist/official-waitlist-worker.module';
+import { PresaleLotteryWorkerModule } from '../presale-lottery/presale-lottery-worker.module';
 import { PurchaseConfirmationProcessor } from '../notification/adapters/inbound/queue/purchase-confirmation.processor';
 import { OrderingWorkerModule } from '../ordering/ordering-worker.module';
 import { PaymentRecoveryWorkerModule } from '../payment/payment-recovery-worker.module';
@@ -20,6 +22,8 @@ import { QueueModule } from './queue/queue.module';
     QueueModule,
     OrderingWorkerModule,
     PaymentRecoveryWorkerModule,
+    OfficialWaitlistWorkerModule,
+    PresaleLotteryWorkerModule,
   ],
   providers: [
     PlatformHealthProcessor,

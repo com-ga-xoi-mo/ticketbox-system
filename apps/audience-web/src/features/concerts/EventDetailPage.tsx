@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Minus, Plus, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CalendarDays, Clock, ListChecks, MapPin, Minus, Plus, RotateCcw, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
+import { fetchWaitlistStatus, joinWaitlist, leaveWaitlist, waitlistKeys } from '../../shared/api/waitlist';
+import { fetchLotteryConfig, fetchLotteryRegistrations, fetchLotteryStatus, registerForLottery, runLotteryDrawNow, updateLotteryTtl, withdrawFromLottery, lotteryKeys } from '../../shared/api/lottery';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
+import { useCountdown } from '../../shared/hooks/useCountdown';
+import { useAuth } from '../../shared/auth/AuthContext';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { PageLoading, PageError, PageUnavailable, PageSoldOut } from '../../shared/ui/PageStates';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 import { Separator } from '../../components/ui/separator';
 import { FavoriteButton } from '../../shared/ui/FavoriteButton';
 import { VenueMapModal } from './components/VenueMapModal';
@@ -40,6 +45,402 @@ function formatDate(iso: string): string {
 
 function formatPrice(vnd: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(vnd);
+}
+
+function TicketWaitlistControls({
+  concert,
+  ticketType,
+  desiredQuantity,
+}: {
+  concert: PublicConcertDetailResponse;
+  ticketType: PublicConcertDetailResponse['ticketTypes'][number];
+  desiredQuantity: number;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, redirectToLogin } = useRequireAuth();
+  const statusQuery = useQuery({
+    queryKey: waitlistKeys.status(concert.id, ticketType.id),
+    queryFn: () => fetchWaitlistStatus({ concertId: concert.id, ticketTypeId: ticketType.id }),
+    enabled: isAuthenticated,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const joinMutation = useMutation({
+    mutationFn: () =>
+      joinWaitlist({
+        concertId: concert.id,
+        ticketTypeId: ticketType.id,
+        desiredQuantity: Math.max(desiredQuantity, 1),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: waitlistKeys.status(concert.id, ticketType.id),
+      }),
+  });
+  const leaveMutation = useMutation({
+    mutationFn: () => leaveWaitlist(ticketType.id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: waitlistKeys.status(concert.id, ticketType.id),
+      }),
+  });
+  const entitlement = statusQuery.data?.entitlement ?? null;
+  const countdown = useCountdown(entitlement?.expiresAt ?? null);
+
+  const handleJoin = () => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    joinMutation.mutate();
+  };
+
+  const handleCheckout = () => {
+    if (!entitlement) return;
+    navigate('/checkout', {
+      state: {
+        concertId: concert.id,
+        concertSlug: concert.slug,
+        concertTitle: concert.title,
+        quantities: [[ticketType.id, entitlement.quantity]],
+        waitlistEntitlementId: entitlement.id,
+        idempotencyKey: generateIdempotencyKey(),
+      },
+    });
+  };
+
+  if (entitlement && !countdown.isExpired) {
+    return (
+      <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-primary">Đến lượt mua vé</span>
+          <span className="inline-flex items-center gap-1 font-mono text-primary">
+            <Clock className="size-3.5" />
+            {countdown.formatted}
+          </span>
+        </div>
+        <Button className="mt-3 w-full rounded-full" onClick={handleCheckout}>
+          Mua vé bằng lượt chờ
+        </Button>
+      </div>
+    );
+  }
+
+  if (statusQuery.data?.status === 'WAITING') {
+    return (
+      <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span>Đang trong danh sách chờ</span>
+          {statusQuery.data.queuePosition && (
+            <Badge variant="secondary">#{statusQuery.data.queuePosition}</Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          className="mt-3 w-full rounded-full"
+          onClick={() => leaveMutation.mutate()}
+          disabled={leaveMutation.isPending}
+        >
+          Rời danh sách chờ
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      variant="outline"
+      className="mt-3 w-full rounded-full"
+      onClick={handleJoin}
+      disabled={joinMutation.isPending}
+    >
+      Báo tôi khi có vé
+    </Button>
+  );
+}
+
+function TicketLotteryControls({
+  concert,
+  ticketType,
+  desiredQuantity,
+}: {
+  concert: PublicConcertDetailResponse;
+  ticketType: PublicConcertDetailResponse['ticketTypes'][number];
+  desiredQuantity: number;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, redirectToLogin } = useRequireAuth();
+  const statusQuery = useQuery({
+    queryKey: lotteryKeys.status(ticketType.id),
+    queryFn: () => fetchLotteryStatus({ ticketTypeId: ticketType.id }),
+    enabled: isAuthenticated,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const registerMutation = useMutation({
+    mutationFn: () =>
+      registerForLottery({
+        ticketTypeId: ticketType.id,
+        desiredQuantity: Math.max(desiredQuantity, 1),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: lotteryKeys.status(ticketType.id) }),
+  });
+  const withdrawMutation = useMutation({
+    mutationFn: () => withdrawFromLottery(ticketType.id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: lotteryKeys.status(ticketType.id) }),
+  });
+
+  const data = statusQuery.data ?? null;
+  const entitlement = data?.entitlement ?? null;
+  const countdown = useCountdown(entitlement?.expiresAt ?? null);
+
+  const handleRegister = () => {
+    if (!isAuthenticated) {
+      redirectToLogin();
+      return;
+    }
+    registerMutation.mutate();
+  };
+
+  const handleCheckout = () => {
+    if (!entitlement) return;
+    navigate('/checkout', {
+      state: {
+        concertId: concert.id,
+        concertSlug: concert.slug,
+        concertTitle: concert.title,
+        quantities: [[ticketType.id, entitlement.quantity]],
+        waitlistEntitlementId: entitlement.id,
+        idempotencyKey: generateIdempotencyKey(),
+      },
+    });
+  };
+
+  // No lottery configured for this ticket type.
+  if (!data || !data.configStatus) return null;
+
+  if (entitlement && !countdown.isExpired) {
+    return (
+      <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-primary">Bạn đã trúng suất mua vé</span>
+          <span className="inline-flex items-center gap-1 font-mono text-primary">
+            <Clock className="size-3.5" />
+            {countdown.formatted}
+          </span>
+        </div>
+        <Button className="mt-3 w-full rounded-full" onClick={handleCheckout}>
+          Mua vé trúng thăm
+        </Button>
+      </div>
+    );
+  }
+
+  if (data.registrationStatus === 'REGISTERED') {
+    return (
+      <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span>Đã đăng ký bốc thăm</span>
+          {data.drawAt && (
+            <Badge variant="secondary">Quay số: {formatDate(data.drawAt)}</Badge>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          className="mt-3 w-full rounded-full"
+          onClick={() => withdrawMutation.mutate()}
+          disabled={withdrawMutation.isPending}
+        >
+          Hủy đăng ký
+        </Button>
+      </div>
+    );
+  }
+
+  if (data.registrationStatus === 'NOT_SELECTED') {
+    return (
+      <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+        Rất tiếc, bạn chưa trúng trong đợt bốc thăm này.
+      </div>
+    );
+  }
+
+  const now = Date.now();
+  const opensAt = data.registrationOpensAt ? Date.parse(data.registrationOpensAt) : null;
+  const closesAt = data.registrationClosesAt ? Date.parse(data.registrationClosesAt) : null;
+  const windowOpen =
+    data.configStatus === 'SCHEDULED' &&
+    opensAt !== null &&
+    closesAt !== null &&
+    now >= opensAt &&
+    now < closesAt;
+
+  if (windowOpen) {
+    return (
+      <Button
+        variant="outline"
+        className="mt-3 w-full rounded-full"
+        onClick={handleRegister}
+        disabled={registerMutation.isPending}
+      >
+        Đăng ký bốc thăm mua vé
+      </Button>
+    );
+  }
+
+  if (data.configStatus === 'SCHEDULED' && closesAt !== null && now >= closesAt) {
+    return (
+      <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+        Đã đóng đăng ký. Đang chờ quay số.
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function LotteryOperatorControls({
+  ticketType,
+}: {
+  ticketType: PublicConcertDetailResponse['ticketTypes'][number];
+}) {
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const isOperator =
+    session?.roles.includes('ORGANIZER') || session?.roles.includes('ADMIN') || false;
+  const [showRegistrations, setShowRegistrations] = useState(false);
+  const [ttlMinutes, setTtlMinutes] = useState('15');
+
+  const configQuery = useQuery({
+    queryKey: lotteryKeys.config(ticketType.id),
+    queryFn: () => fetchLotteryConfig(ticketType.id),
+    enabled: isOperator,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (configQuery.data?.entitlementTtlMinutes) {
+      setTtlMinutes(String(configQuery.data.entitlementTtlMinutes));
+    }
+  }, [configQuery.data?.entitlementTtlMinutes]);
+
+  const registrationsQuery = useQuery({
+    queryKey: lotteryKeys.registrations(ticketType.id),
+    queryFn: () => fetchLotteryRegistrations(ticketType.id),
+    enabled: isOperator && showRegistrations,
+    retry: false,
+  });
+
+  const updateTtlMutation = useMutation({
+    mutationFn: () =>
+      updateLotteryTtl(ticketType.id, {
+        entitlementTtlMinutes: Number(ttlMinutes),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lotteryKeys.config(ticketType.id) });
+    },
+  });
+
+  const drawNowMutation = useMutation({
+    mutationFn: () => runLotteryDrawNow(ticketType.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: lotteryKeys.config(ticketType.id) });
+      queryClient.invalidateQueries({ queryKey: lotteryKeys.status(ticketType.id) });
+      queryClient.invalidateQueries({
+        queryKey: lotteryKeys.registrations(ticketType.id),
+      });
+      setShowRegistrations(true);
+    },
+  });
+
+  if (!isOperator || !configQuery.data) return null;
+
+  const registrations = registrationsQuery.data?.registrations ?? [];
+  const ttlValue = Number(ttlMinutes);
+  const ttlInvalid = !Number.isInteger(ttlValue) || ttlValue < 1;
+
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3 text-left text-xs">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="font-semibold text-primary">Lottery test controls</span>
+        <Badge variant="secondary">{configQuery.data.status}</Badge>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+        <Input
+          className="h-9 rounded-full bg-background text-xs"
+          type="number"
+          min={1}
+          value={ttlMinutes}
+          aria-label="TTL phut"
+          onChange={(event) => setTtlMinutes(event.target.value)}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          disabled={ttlInvalid || updateTtlMutation.isPending}
+          onClick={() => updateTtlMutation.mutate()}
+        >
+          Sua TTL
+        </Button>
+        <Button
+          size="sm"
+          className="rounded-full"
+          disabled={drawNowMutation.isPending}
+          onClick={() => drawNowMutation.mutate()}
+        >
+          <RotateCcw className="size-3.5" />
+          Quay so ngay
+        </Button>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mt-2 w-full rounded-full"
+        onClick={() => setShowRegistrations((value) => !value)}
+      >
+        <ListChecks className="size-3.5" />
+        Xem DS dang ky
+      </Button>
+      {drawNowMutation.data && (
+        <p className="mt-2 text-muted-foreground">
+          Granted {drawNowMutation.data.granted}, not selected {drawNowMutation.data.notSelected}.
+        </p>
+      )}
+      {(updateTtlMutation.isError || drawNowMutation.isError || registrationsQuery.isError) && (
+        <p className="mt-2 text-destructive">Khong the thuc hien thao tac lottery.</p>
+      )}
+      {showRegistrations && registrations.length > 0 && (
+        <div className="mt-2 max-h-56 overflow-auto rounded-lg border bg-background">
+          {registrations.map((registration) => (
+            <div
+              key={registration.registrationId}
+              className="grid gap-1 border-b p-2 last:border-b-0"
+            >
+              <div className="flex justify-between gap-2">
+                <span className="font-medium">{registration.userDisplayName}</span>
+                <Badge variant="secondary">{registration.status}</Badge>
+              </div>
+              <span className="text-muted-foreground">{registration.userEmail}</span>
+              <span className="text-muted-foreground">
+                SL {registration.desiredQuantity}
+                {registration.entitlement
+                  ? ` · entitlement ${registration.entitlement.status}`
+                  : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {showRegistrations && !registrationsQuery.isLoading && registrations.length === 0 && (
+        <p className="mt-2 text-muted-foreground">Chua co dang ky.</p>
+      )}
+    </div>
+  );
 }
 
 export function EventDetailPage() {
@@ -338,8 +739,14 @@ export function EventDetailPage() {
               <CardContent className="space-y-3 p-5 pt-0">
                 {data.ticketTypes.map((tt) => {
                   const state = getSaleWindowState(tt);
-                  const isActive = state === 'on-sale';
+                  const showWaitlist = state === 'sold-out' || tt.waitlistGated;
+                  const showLottery = !showWaitlist && (state === 'upcoming' || state === 'on-sale');
+                  const isActive = state === 'on-sale' && !showWaitlist;
                   const currentQty = quantities.get(tt.id) || 0;
+                  const waitlistDesiredQuantity = Math.min(
+                    Math.max(currentQty, 1),
+                    tt.maxPerUser,
+                  );
                   
                   return (
                     <div
@@ -384,7 +791,24 @@ export function EventDetailPage() {
                             {state === 'paused' && <Badge variant="secondary" className="mt-1">Tạm dừng</Badge>}
                             {state === 'sold-out' && <Badge variant="destructive" className="mt-1">Hết vé</Badge>}
                             {state === 'on-sale' && <Badge className="mt-1 bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20">Đang mở bán</Badge>}
-                            
+                            {showWaitlist && (
+                              <TicketWaitlistControls
+                                concert={data}
+                                ticketType={tt}
+                                desiredQuantity={waitlistDesiredQuantity}
+                              />
+                            )}
+                            {showLottery && (
+                              <>
+                                <TicketLotteryControls
+                                  concert={data}
+                                  ticketType={tt}
+                                  desiredQuantity={waitlistDesiredQuantity}
+                                />
+                                <LotteryOperatorControls ticketType={tt} />
+                              </>
+                            )}
+
                           </div>
                           <div className="flex items-center rounded-full border bg-background/80 p-1">
                             <Button 

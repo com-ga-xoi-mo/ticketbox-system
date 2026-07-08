@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 
 import { QueueModule } from '../platform/queue/queue.module';
+import { OfficialWaitlistModule } from '../official-waitlist/official-waitlist.module';
 import { ExpireReservationsUseCase } from './application/use-cases/expire-reservations.use-case';
 import { TransitionOrderStatusUseCase } from './application/use-cases/transition-order-status.use-case';
 import {
@@ -16,6 +17,7 @@ import { OrderModule } from './order.module';
 @Module({
   imports: [
     OrderModule,
+    OfficialWaitlistModule,
     QueueModule,
     BullModule.registerQueue({
       name: ORDER_EXPIRATION_QUEUE,

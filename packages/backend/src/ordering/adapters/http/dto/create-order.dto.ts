@@ -33,6 +33,10 @@ export class CreateOrderDto {
   @IsOptional()
   promoCode?: string;
 
+  @IsUUID()
+  @IsOptional()
+  waitlistEntitlementId?: string;
+
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)

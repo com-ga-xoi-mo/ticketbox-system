@@ -18,6 +18,8 @@ export const AudienceNotificationResourceTypeSchema = z.enum([
   'SUPPORT_REQUEST',
   'REFUND_REQUEST',
   'CONCERT',
+  'WAITLIST_ENTITLEMENT',
+  'LOTTERY_ENTITLEMENT',
 ]);
 export type AudienceNotificationResourceType = z.infer<
   typeof AudienceNotificationResourceTypeSchema

@@ -70,6 +70,14 @@ export class PlatformConfigService {
     return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
   }
 
+  get waitlistEntitlementTtlMinutes(): number {
+    return this.configService.get('WAITLIST_ENTITLEMENT_TTL_MINUTES');
+  }
+
+  get lotteryEntitlementTtlMinutes(): number {
+    return this.configService.get('LOTTERY_ENTITLEMENT_TTL_MINUTES');
+  }
+
   get paymentRepairEnabled(): boolean {
     return this.configService.get('PAYMENT_REPAIR_ENABLED');
   }

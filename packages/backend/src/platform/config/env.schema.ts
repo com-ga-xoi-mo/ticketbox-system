@@ -32,6 +32,8 @@ export const envSchema = z
     QR_TOKEN_SECRET: z.string().min(1).default('ticketbox-qr-token-dev-secret'),
     BCRYPT_ROUNDS: z.coerce.number().int().min(1).max(31).default(12),
     ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+    WAITLIST_ENTITLEMENT_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+    LOTTERY_ENTITLEMENT_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
     PAYMENT_REPAIR_ENABLED: z.preprocess(
       (value) =>
         typeof value === 'string'
