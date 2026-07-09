@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../identity/auth.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PromotionModule } from '../promotion/promotion.module';
+import { VirtualWaitingRoomModule } from '../virtual-waiting-room/virtual-waiting-room.module';
 import { EnqueuePurchaseConfirmationUseCase } from '../notification/application/use-cases/enqueue-purchase-confirmation.use-case';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
@@ -36,6 +37,10 @@ import {
   type WaitlistEntitlementReservationPort,
 } from './domain/ports/waitlist-entitlement-reservation.port';
 import {
+  WAITING_ROOM_ADMISSION_PORT,
+  type WaitingRoomAdmissionPort,
+} from './domain/ports/waiting-room-admission.port';
+import {
   ORDER_PAID_NOTIFIER,
   type OrderPaidNotifierPort,
 } from './domain/ports/order-paid-notifier.port';
@@ -59,7 +64,14 @@ import { PrismaTicketTypePricingRepository } from './infrastructure/database/pri
 import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket-issuing-order-event-publisher';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, AuthModule, NotificationModule, PromotionModule],
+  imports: [
+    PlatformConfigModule,
+    DatabaseModule,
+    AuthModule,
+    NotificationModule,
+    PromotionModule,
+    VirtualWaitingRoomModule,
+  ],
   controllers: [OrderController, InternalOrderController],
   providers: [
     {
@@ -69,6 +81,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
         INVENTORY_RESERVATION_REPOSITORY,
         TICKET_TYPE_PRICING_REPOSITORY,
         'PromotionValidationPort',
+        WAITING_ROOM_ADMISSION_PORT,
         PlatformConfigService,
       ],
       useFactory: (
@@ -76,6 +89,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
         inventoryReservationRepository: IInventoryReservationRepository,
         ticketTypePricingRepository: TicketTypePricingRepositoryPort,
         promotionValidationPort: any,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
         config: PlatformConfigService,
       ) =>
         new CreateOrderUseCase(
@@ -83,6 +97,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
           inventoryReservationRepository,
           ticketTypePricingRepository,
           promotionValidationPort,
+          waitingRoomAdmissionPort,
           {
             serviceFeeVnd: config.serviceFeeVnd,
             reservationTtlMinutes: config.orderReservationTtlMinutes,

@@ -294,6 +294,27 @@ export type {
 } from './audience/waitlist.contract';
 
 export {
+  ConfigureWaitingRoomRequestSchema,
+  SetWaitingRoomOverrideRequestSchema,
+  WaitingRoomConfigResponseSchema,
+  WaitingRoomManualOverrideSchema,
+  WaitingRoomSseEventSchema,
+  WaitingRoomStatusResponseSchema,
+  WaitingRoomStatusSchema,
+  WaitingRoomStreamTokenResponseSchema,
+} from './audience/waiting-room.contract';
+export type {
+  ConfigureWaitingRoomRequest,
+  SetWaitingRoomOverrideRequest,
+  WaitingRoomConfigResponse,
+  WaitingRoomManualOverride,
+  WaitingRoomSseEvent,
+  WaitingRoomStatus,
+  WaitingRoomStatusResponse,
+  WaitingRoomStreamTokenResponse,
+} from './audience/waiting-room.contract';
+
+export {
   ConfigureLotteryRequestSchema,
   ConfigureLotteryResponseSchema,
   LotteryConfigStatusSchema,
