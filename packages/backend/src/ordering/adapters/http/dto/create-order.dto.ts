@@ -37,6 +37,10 @@ export class CreateOrderDto {
   @IsOptional()
   waitlistEntitlementId?: string;
 
+  @IsString()
+  @IsOptional()
+  waitingRoomAdmissionToken?: string;
+
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)

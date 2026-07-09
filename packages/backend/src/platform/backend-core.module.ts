@@ -18,6 +18,7 @@ import { ResaleModule } from '../resale/resale.module';
 import { QueueModule } from './queue/queue.module';
 import { OfficialWaitlistModule } from '../official-waitlist/official-waitlist.module';
 import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module';
+import { VirtualWaitingRoomModule } from '../virtual-waiting-room/virtual-waiting-room.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module'
     ResaleModule,
     OfficialWaitlistModule,
     PresaleLotteryModule,
+    VirtualWaitingRoomModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -59,6 +61,7 @@ import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module'
     ResaleModule,
     OfficialWaitlistModule,
     PresaleLotteryModule,
+    VirtualWaitingRoomModule,
   ],
 })
 export class BackendCoreModule {}

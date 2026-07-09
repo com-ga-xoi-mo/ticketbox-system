@@ -366,6 +366,14 @@ enum LotteryRegistrationStatus {
   @@map("lottery_registration_status")
 }
 
+enum WaitingRoomManualOverride {
+  NONE
+  FORCE_ON
+  FORCE_OFF
+
+  @@map("waiting_room_manual_override")
+}
+
 enum PayoutStatus {
   PENDING
   PROCESSED
@@ -645,6 +653,7 @@ model Concert {
   purchaseEntitlements PurchaseEntitlement[]
   lotteryConfigs   LotteryConfig[]
   lotteryRegistrations LotteryRegistration[]
+  waitingRoomConfig WaitingRoomConfig?
 
   @@index([status, startsAt])
   @@index([createdById])
@@ -887,6 +896,27 @@ model LotteryRegistration {
   @@index([userId, ticketTypeId, status])
   @@index([concertId, status])
   @@map("lottery_registrations")
+}
+
+model WaitingRoomConfig {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  concertId           String                    @unique @map("concert_id") @db.Uuid
+  enabled             Boolean                   @default(false)
+  autoActivate        Boolean                   @default(false) @map("auto_activate")
+  manualOverride      WaitingRoomManualOverride @default(NONE) @map("manual_override")
+  maxConcurrency      Int                       @default(500) @map("max_concurrency")
+  admissionTtlSeconds Int                       @default(600) @map("admission_ttl_seconds")
+  activateThreshold   Int                       @default(500) @map("activate_threshold")
+  deactivateThreshold Int                       @default(100) @map("deactivate_threshold")
+  cooldownSeconds     Int                       @default(60) @map("cooldown_seconds")
+  createdAt           DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  concert Concert @relation(fields: [concertId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, autoActivate])
+  @@index([manualOverride])
+  @@map("waiting_room_configs")
 }
 
 model LotteryDraw {

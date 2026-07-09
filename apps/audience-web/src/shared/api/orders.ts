@@ -165,6 +165,14 @@ export function parseOrderError(error: unknown): string {
       ['Waitlist entitlement is invalid'],
       'Lượt mua vé không hợp lệ hoặc không thuộc tài khoản này.',
     ],
+    [
+      ['Waiting room admission is required'],
+      'Sự kiện đang bật phòng chờ. Vui lòng xếp hàng trước khi đặt vé.',
+    ],
+    [
+      ['Waiting room admission token is invalid', 'Waiting room admission token is expired'],
+      'Lượt vào thanh toán đã hết hạn. Vui lòng quay lại phòng chờ.',
+    ],
   ];
 
   for (const [patterns, userMessage] of mappings) {

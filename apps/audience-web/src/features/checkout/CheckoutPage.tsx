@@ -1,11 +1,22 @@
-import { useState } from 'react';
-import { useLocation, useNavigate, Navigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Steps, Result } from 'antd';
 import { Loader2, Ticket, CreditCard, CheckCircle2, ChevronLeft } from 'lucide-react';
-import type { Order, PaymentProvider } from '@ticketbox/api-types';
+import type {
+  Order,
+  PaymentProvider,
+  WaitingRoomStatusResponse,
+} from '@ticketbox/api-types';
 
 import { createOrder, initiatePayment, parseOrderError, validatePromoCode } from '../../shared/api/orders';
 import { apiPost } from '../../shared/api/client';
+import {
+  fetchWaitingRoomStatus,
+  joinWaitingRoom,
+  leaveWaitingRoom,
+  mintWaitingRoomStreamToken,
+  openWaitingRoomStream,
+} from '../../shared/api/waiting-room';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { useCountdown } from '../../shared/hooks/useCountdown';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
@@ -13,7 +24,6 @@ import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { Separator } from '../../components/ui/separator';
 import { Badge } from '../../components/ui/badge';
 
 import { PromoCodeInput } from './components/PromoCodeInput';
@@ -27,6 +37,7 @@ interface CheckoutState {
   quantities: [string, number][];
   idempotencyKey?: string;
   waitlistEntitlementId?: string;
+  waitingRoomAdmissionToken?: string;
 }
 
 export function CheckoutPage() {
@@ -40,6 +51,8 @@ export function CheckoutPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('SIMULATOR');
+  const [waitingRoomStatus, setWaitingRoomStatus] =
+    useState<WaitingRoomStatusResponse | null>(null);
 
   const { formatted, isExpired } = useCountdown(createdOrder?.reservationExpiresAt ?? null);
 
@@ -48,6 +61,30 @@ export function CheckoutPage() {
     concertId: state?.concertId ?? '',
     ticketTypeIds: state?.quantities.map(([id]) => id) ?? [],
   });
+
+  useEffect(() => {
+    if (!state?.concertId || !waitingRoomStatus?.active || createdOrder) return;
+    let source: EventSource | null = null;
+    let closed = false;
+
+    void mintWaitingRoomStreamToken(state.concertId)
+      .then((token) => {
+        if (closed) return;
+        source = openWaitingRoomStream({
+          concertId: state.concertId,
+          token,
+          onStatus: setWaitingRoomStatus,
+        });
+      })
+      .catch(() => {
+        setErrorMsg('Không thể kết nối phòng chờ, vui lòng thử lại.');
+      });
+
+    return () => {
+      closed = true;
+      source?.close();
+    };
+  }, [state?.concertId, waitingRoomStatus?.active, createdOrder]);
 
   if (!isAuthenticated) {
     return <Navigate to={`/login?returnTo=/checkout`} replace />;
@@ -61,6 +98,22 @@ export function CheckoutPage() {
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
+      let admissionToken =
+        waitingRoomStatus?.admissionToken ??
+        state?.waitingRoomAdmissionToken ??
+        undefined;
+
+      if (!admissionToken) {
+        const status = await fetchWaitingRoomStatus(state!.concertId);
+        if (status.active && status.status !== 'ADMITTED') {
+          const joined = await joinWaitingRoom(state!.concertId);
+          setWaitingRoomStatus(joined);
+          return;
+        }
+        admissionToken = status.admissionToken ?? undefined;
+        setWaitingRoomStatus(status.active ? status : null);
+      }
+
       const idempotencyKey = state?.idempotencyKey || generateIdempotencyKey();
       const order = await createOrder({
         concertId: state!.concertId,
@@ -71,9 +124,24 @@ export function CheckoutPage() {
         })),
         promoCode: promoCode ?? undefined,
         waitlistEntitlementId: state!.waitlistEntitlementId,
+        waitingRoomAdmissionToken: admissionToken,
       });
       setCreatedOrder(order);
       setStep(2);
+    } catch (error) {
+      setErrorMsg(parseOrderError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLeaveWaitingRoom = async () => {
+    if (!state?.concertId) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const status = await leaveWaitingRoom(state.concertId);
+      setWaitingRoomStatus(status.active ? status : null);
     } catch (error) {
       setErrorMsg(parseOrderError(error));
     } finally {
@@ -162,32 +230,73 @@ export function CheckoutPage() {
             {step === 1 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Xác nhận đơn hàng</CardTitle>
+                  <CardTitle>
+                    {waitingRoomStatus?.active ? 'Phòng chờ mua vé' : 'Xác nhận đơn hàng'}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <p className="text-sm text-muted-foreground">
-                    Vui lòng kiểm tra lại thông tin vé trước khi tiếp tục.
-                  </p>
+                  {waitingRoomStatus?.active ? (
+                    <div className="rounded-xl border bg-muted/30 p-4">
+                      <p className="text-sm font-semibold">
+                        {waitingRoomStatus.status === 'ADMITTED'
+                          ? 'Đã đến lượt bạn vào thanh toán'
+                          : 'Bạn đang trong hàng chờ'}
+                      </p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {waitingRoomStatus.status === 'ADMITTED'
+                          ? 'Cửa sổ thanh toán đã sẵn sàng. Bấm tiếp tục để đặt vé.'
+                          : `Vị trí hiện tại: #${waitingRoomStatus.position ?? '-'}`}
+                      </p>
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          className="rounded-full"
+                          onClick={handleCreateOrder}
+                          disabled={
+                            isSubmitting ||
+                            waitingRoomStatus.status !== 'ADMITTED' ||
+                            !waitingRoomStatus.admissionToken
+                          }
+                        >
+                          {isSubmitting ? <Loader2 className="mr-2 animate-spin size-4" /> : null}
+                          Tiếp tục đặt vé
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={handleLeaveWaitingRoom}
+                          disabled={isSubmitting}
+                        >
+                          Rời phòng chờ
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Vui lòng kiểm tra lại thông tin vé trước khi tiếp tục.
+                      </p>
 
-                  <div className="rounded-lg border p-4 bg-muted/20">
-                    <h3 className="mb-3 font-semibold text-sm">Mã khuyến mãi</h3>
-                    <PromoCodeInput
-                      onApply={applyPromo}
-                      onRemove={removePromo}
-                      appliedPromoCode={promoCode}
-                      appliedPromoPreview={promoPreview}
-                      loading={validatingPromo}
-                    />
-                  </div>
+                      <div className="rounded-lg border p-4 bg-muted/20">
+                        <h3 className="mb-3 font-semibold text-sm">Mã khuyến mãi</h3>
+                        <PromoCodeInput
+                          onApply={applyPromo}
+                          onRemove={removePromo}
+                          appliedPromoCode={promoCode}
+                          appliedPromoPreview={promoPreview}
+                          loading={validatingPromo}
+                        />
+                      </div>
 
-                  <Button 
-                    className="w-full h-11 rounded-full shadow-lg shadow-primary/20" 
-                    onClick={handleCreateOrder} 
-                    disabled={isSubmitting || validatingPromo}
-                  >
-                    {isSubmitting ? <Loader2 className="mr-2 animate-spin size-4" /> : null}
-                    Xác nhận đặt vé
-                  </Button>
+                      <Button
+                        className="w-full h-11 rounded-full shadow-lg shadow-primary/20"
+                        onClick={handleCreateOrder}
+                        disabled={isSubmitting || validatingPromo}
+                      >
+                        {isSubmitting ? <Loader2 className="mr-2 animate-spin size-4" /> : null}
+                        Xác nhận đặt vé
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -262,7 +371,7 @@ export function CheckoutPage() {
                   </>
                 ) : (
                   <div className="text-sm text-muted-foreground">
-                    <p>Số lượng vé: {state.quantities.reduce((acc, [_, q]) => acc + q, 0)}</p>
+                    <p>Số lượng vé: {state.quantities.reduce((acc, [, q]) => acc + q, 0)}</p>
                     {promoPreview && (
                       <p className="mt-2 text-green-600">
                         * Đã áp dụng mã giảm giá {promoCode}
