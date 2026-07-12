@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "purchase_entitlements_user_id_concert_id_ticket_type_id_status_" RENAME TO "purchase_entitlements_user_id_concert_id_ticket_type_id_sta_idx";

@@ -18,6 +18,10 @@ import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
 import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
+import {
+  WaitingRoomAdmissionInvalidError,
+  WaitingRoomAdmissionRequiredError,
+} from '../../../virtual-waiting-room/domain/errors';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
 import { ValidatePromotionUseCase } from '../../../promotion/application/use-cases/validate-promotion.use-case';
 import { GetUserTicketUseCase } from '../../application/use-cases/get-user-ticket.use-case';
@@ -38,6 +42,10 @@ import {
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
+  WaitlistEntitlementExpiredError,
+  WaitlistEntitlementInvalidError,
+  WaitlistEntitlementQuantityExceededError,
+  WaitlistEntitlementRequiredError,
 } from '../../domain/errors';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { serializeOrder } from './order-response.presenter';
@@ -100,6 +108,8 @@ export class OrderController {
         concertId: dto.concertId,
         idempotencyKey: dto.idempotencyKey,
         promoCode: dto.promoCode,
+        waitlistEntitlementId: dto.waitlistEntitlementId,
+        waitingRoomAdmissionToken: dto.waitingRoomAdmissionToken,
         items: dto.items.map((item) => ({
           ticketTypeId: item.ticketTypeId,
           quantity: item.quantity,
@@ -120,7 +130,17 @@ export class OrderController {
       if (
         err instanceof InsufficientTicketInventoryError ||
         err instanceof InventoryReservationConflictError ||
-        err instanceof PerUserTicketLimitExceededError
+        err instanceof PerUserTicketLimitExceededError ||
+        err instanceof WaitlistEntitlementRequiredError ||
+        err instanceof WaitlistEntitlementInvalidError ||
+        err instanceof WaitlistEntitlementExpiredError ||
+        err instanceof WaitlistEntitlementQuantityExceededError
+      ) {
+        throw new ConflictException(err.message);
+      }
+      if (
+        err instanceof WaitingRoomAdmissionRequiredError ||
+        err instanceof WaitingRoomAdmissionInvalidError
       ) {
         throw new ConflictException(err.message);
       }

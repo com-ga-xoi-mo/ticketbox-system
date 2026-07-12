@@ -207,3 +207,95 @@ The system SHALL NOT allow promotional codes to be applied to orders with `order
 #### Scenario: Promo code on resale purchase is rejected
 - **WHEN** the resale purchase flow attempts to set a promo code on a resale order
 - **THEN** the system SHALL reject or ignore the promo code
+
+### Requirement: Checkout requires waitlist entitlement for gated ticket types
+The system SHALL require a valid purchase entitlement before creating a direct-purchase order for any gated ticket type. A ticket type is gated when it has active official waitlist demand OR when the current time is inside its presale gate window recorded on the ticket type (`presaleGateOpensAt <= now < presaleGateClosesAt`). A valid entitlement is an active, unexpired entitlement owned by the requesting user for the gated ticket type whose `source` is `WAITLIST` or `LOTTERY`. The entitlement check SHALL run before inventory mutation and SHALL preserve the existing inventory reservation transaction as the only mechanism that changes `reserved_quantity` and `sold_quantity`. Entitlement consumption SHALL be atomic with direct-purchase order creation and inventory reservation.
+
+#### Scenario: Entitled user creates checkout order
+- **WHEN** an authenticated AUDIENCE user submits `POST /checkout/orders` for a gated ticket type with a valid active entitlement owned by that user
+- **THEN** the system SHALL allow the existing checkout reservation transaction to run
+- **AND** the system SHALL consume the entitlement in the same transaction that creates the pending direct-purchase order
+
+#### Scenario: Lottery winner creates checkout order during presale
+- **WHEN** an authenticated AUDIENCE user submits checkout for a ticket type inside its open presale lottery window with a valid active `LOTTERY` entitlement owned by that user
+- **THEN** the system SHALL allow the reservation transaction to run and SHALL consume the `LOTTERY` entitlement in the same transaction
+
+#### Scenario: Reservation failure does not consume entitlement
+- **WHEN** an authenticated AUDIENCE user submits checkout with a valid active entitlement but the inventory reservation transaction fails before creating the pending order
+- **THEN** the system SHALL NOT mark the entitlement consumed
+- **AND** the system SHALL NOT create an order or mutate inventory for that failed checkout
+
+#### Scenario: Missing entitlement is rejected
+- **WHEN** an authenticated AUDIENCE user submits checkout for a gated ticket type without an entitlement
+- **THEN** the system SHALL reject the request before creating an order, order items, or inventory reservation
+
+#### Scenario: Non-winner rejected during presale lottery window
+- **WHEN** an authenticated AUDIENCE user submits checkout for a ticket type inside its open presale lottery window without a valid `LOTTERY` entitlement
+- **THEN** the system SHALL reject the request before creating an order or mutating inventory
+
+#### Scenario: Entitlement for another user is rejected
+- **WHEN** a checkout request references an entitlement owned by another user
+- **THEN** the system SHALL reject the request before creating an order or mutating inventory
+
+#### Scenario: Requested quantity exceeds entitlement
+- **WHEN** a checkout request uses an entitlement but requests more tickets than the entitlement permits
+- **THEN** the system SHALL reject the request before creating an order or mutating inventory
+
+#### Scenario: Direct checkout remains available when not gated
+- **WHEN** a ticket type has no active waitlist entries, no active waitlist or lottery entitlements, and is not inside an open presale lottery window
+- **THEN** direct checkout SHALL continue to behave according to the existing inventory reservation and per-user limit requirements
+
+#### Scenario: Direct checkout resumes after the presale window ends
+- **WHEN** the presale lottery window for a ticket type has ended and public sale has started
+- **THEN** the ticket type SHALL NOT be lottery-gated and direct checkout SHALL behave according to the existing inventory reservation and per-user limit requirements
+
+#### Scenario: Leftover lottery entitlement does not keep the type gated after the window
+- **WHEN** the presale gate window has closed but one or more `LOTTERY` entitlements are still active
+- **THEN** the ticket type SHALL NOT be lottery-gated on account of those leftover entitlements
+- **AND** a remaining `LOTTERY` entitlement holder MAY still consume it via checkout while it is active
+
+#### Scenario: Resale order remains excluded
+- **WHEN** a resale purchase creates an order with `orderSourceType` of `RESALE`
+- **THEN** the purchase entitlement guard SHALL NOT apply to that resale order
+
+### Requirement: Checkout requires an admission token when the waiting room is active
+The system SHALL require a valid admission token, bound to the requesting user and the concert, before creating a direct-purchase order when that concert's virtual waiting room is active. The client SHALL pass the token in the create-order request body as `waitingRoomAdmissionToken`. The admission check SHALL run before the inventory reservation transaction and SHALL NOT change the reservation transaction itself. When the concert's waiting room is inactive, checkout SHALL NOT require an admission token and SHALL behave as it does today. On successful order creation the admission slot SHALL be released so the next waiting user can be admitted.
+
+#### Scenario: Admitted user checks out while the room is active
+- **WHEN** an authenticated AUDIENCE user submits `POST /checkout/orders` for a concert whose waiting room is active, carrying a valid admission token bound to that user and concert
+- **THEN** the system SHALL allow the existing reservation transaction to run
+- **AND** the system SHALL release the user's admission slot after the order is created
+
+#### Scenario: Duplicate checkout retry returns existing order without requiring a new admission
+- **WHEN** an authenticated AUDIENCE user retries `POST /checkout/orders` with the same idempotency key after an order was already created for that user
+- **THEN** the system SHALL return the existing order
+- **AND** it SHALL NOT require a fresh waiting-room admission token for that duplicate retry
+
+#### Scenario: Missing admission token is rejected while the room is active
+- **WHEN** an authenticated AUDIENCE user submits checkout for a concert whose waiting room is active without a valid admission token
+- **THEN** the system SHALL reject the request before creating an order or reserving inventory and SHALL direct the client to the waiting queue
+
+#### Scenario: Admission token for another user or concert is rejected
+- **WHEN** a checkout request presents an admission token bound to a different user or a different concert
+- **THEN** the system SHALL reject the request before creating an order or reserving inventory
+
+#### Scenario: Checkout is unaffected when the room is inactive
+- **WHEN** a user submits checkout for a concert whose waiting room is inactive
+- **THEN** the system SHALL NOT require an admission token and checkout SHALL behave according to the existing reservation and per-user limit requirements
+
+#### Scenario: Redis waiting-room failure fails open by default
+- **WHEN** the waiting-room active state cannot be read from Redis during checkout and fail-open is enabled
+- **THEN** the system SHALL allow checkout to continue without a waiting-room admission token
+- **AND** it SHALL record the fail-open event for operations visibility
+
+#### Scenario: Checkout attempts feed waiting-room load
+- **WHEN** a user attempts direct checkout for a concert
+- **THEN** the system SHALL increment that concert's waiting-room load counter before evaluating auto-activation
+
+#### Scenario: Admission control does not change the no-oversell transaction
+- **WHEN** the admission token is validated
+- **THEN** the validation SHALL occur outside the inventory reservation transaction and SHALL NOT alter `reserved_quantity` or `sold_quantity`
+
+#### Scenario: Admission composes with entitlement gating
+- **WHEN** a concert's waiting room is active and a requested ticket type is also gated by a waitlist or lottery entitlement
+- **THEN** the system SHALL require both a valid admission token to enter checkout and a valid purchase entitlement to buy the gated ticket type

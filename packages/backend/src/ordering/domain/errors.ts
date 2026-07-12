@@ -94,6 +94,40 @@ export class PerUserTicketLimitExceededError extends Error {
   }
 }
 
+export class WaitlistEntitlementRequiredError extends Error {
+  constructor(public readonly ticketTypeId: string) {
+    super(`Waitlist entitlement is required for ticket type: ${ticketTypeId}`);
+    this.name = 'WaitlistEntitlementRequiredError';
+  }
+}
+
+export class WaitlistEntitlementInvalidError extends Error {
+  constructor(public readonly entitlementId: string) {
+    super(`Waitlist entitlement is invalid: ${entitlementId}`);
+    this.name = 'WaitlistEntitlementInvalidError';
+  }
+}
+
+export class WaitlistEntitlementExpiredError extends Error {
+  constructor(public readonly entitlementId: string) {
+    super(`Waitlist entitlement is expired: ${entitlementId}`);
+    this.name = 'WaitlistEntitlementExpiredError';
+  }
+}
+
+export class WaitlistEntitlementQuantityExceededError extends Error {
+  constructor(
+    public readonly entitlementId: string,
+    public readonly allowedQuantity: number,
+    public readonly requestedQuantity: number,
+  ) {
+    super(
+      `Waitlist entitlement quantity exceeded for ${entitlementId}: allowed=${allowedQuantity}, requested=${requestedQuantity}`,
+    );
+    this.name = 'WaitlistEntitlementQuantityExceededError';
+  }
+}
+
 export class TicketIssuanceOrderNotFoundError extends Error {
   constructor(public readonly orderId: string) {
     super(`Order not found for ticket issuance: ${orderId}`);

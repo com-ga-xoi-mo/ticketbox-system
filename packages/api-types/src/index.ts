@@ -295,6 +295,75 @@ export type {
 } from './audience/support.contract';
 
 export {
+  JoinWaitlistRequestSchema,
+  LeaveWaitlistResponseSchema,
+  PurchaseEntitlementStatusSchema,
+  WaitlistEntitlementSchema,
+  WaitlistEntryStatusSchema,
+  WaitlistStatusResponseSchema,
+} from './audience/waitlist.contract';
+export type {
+  JoinWaitlistRequest,
+  LeaveWaitlistResponse,
+  PurchaseEntitlementStatus,
+  WaitlistEntitlement,
+  WaitlistEntryStatus,
+  WaitlistStatusResponse,
+} from './audience/waitlist.contract';
+
+export {
+  ConfigureWaitingRoomRequestSchema,
+  SetWaitingRoomOverrideRequestSchema,
+  WaitingRoomConfigResponseSchema,
+  WaitingRoomManualOverrideSchema,
+  WaitingRoomSseEventSchema,
+  WaitingRoomStatusResponseSchema,
+  WaitingRoomStatusSchema,
+  WaitingRoomStreamTokenResponseSchema,
+} from './audience/waiting-room.contract';
+export type {
+  ConfigureWaitingRoomRequest,
+  SetWaitingRoomOverrideRequest,
+  WaitingRoomConfigResponse,
+  WaitingRoomManualOverride,
+  WaitingRoomSseEvent,
+  WaitingRoomStatus,
+  WaitingRoomStatusResponse,
+  WaitingRoomStreamTokenResponse,
+} from './audience/waiting-room.contract';
+
+export {
+  ConfigureLotteryRequestSchema,
+  ConfigureLotteryResponseSchema,
+  LotteryConfigStatusSchema,
+  LotteryEntitlementSchema,
+  LotteryEntitlementStatusSchema,
+  LotteryRegistrationListResponseSchema,
+  LotteryRegistrationListItemSchema,
+  LotteryRegistrationStatusSchema,
+  LotteryStatusResponseSchema,
+  RegisterForLotteryRequestSchema,
+  RunLotteryDrawNowResponseSchema,
+  UpdateLotteryTtlRequestSchema,
+  WithdrawLotteryResponseSchema,
+} from './audience/lottery.contract';
+export type {
+  ConfigureLotteryRequest,
+  ConfigureLotteryResponse,
+  LotteryConfigStatus,
+  LotteryEntitlement,
+  LotteryEntitlementStatus,
+  LotteryRegistrationListItem,
+  LotteryRegistrationListResponse,
+  LotteryRegistrationStatus,
+  LotteryStatusResponse,
+  RegisterForLotteryRequest,
+  RunLotteryDrawNowResponse,
+  UpdateLotteryTtlRequest,
+  WithdrawLotteryResponse,
+} from './audience/lottery.contract';
+
+export {
   CreateRefundRequestSchema,
   RefundEligibilityResponseSchema,
   RefundRequestListResponseSchema,

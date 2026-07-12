@@ -30,6 +30,7 @@ export type TicketTypeCatalogItem = {
   saleEndsAt: Date;
   status: string;
   zoneIds: string[];
+  waitlistGated?: boolean;
 };
 
 export type TicketTypeZoneMapping = {
