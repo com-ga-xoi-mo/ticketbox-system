@@ -85,6 +85,7 @@ describe('public concert catalog HTTP contracts', () => {
         saleStartsAt,
         saleEndsAt,
         status: 'ACTIVE',
+        waitlistGated: false,
         zoneIds: [seatingZoneId],
       },
     ],

@@ -84,3 +84,7 @@ press-kit.pdf
 skills-lock.json
 .opencode/
 opencode.json
+
+# MCP Playwright generated files
+.playwright-mcp/
+.playwright-mcp

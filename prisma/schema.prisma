@@ -142,8 +142,36 @@ enum TicketStatus {
   REFUNDED
   LISTED_FOR_RESALE
   TRANSFERRED
+  TRANSFER_PENDING
 
   @@map("ticket_status")
+}
+
+enum TicketTransferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+
+  @@map("ticket_transfer_status")
+}
+
+model TicketTransfer {
+  id             String               @id @default(uuid()) @db.Uuid
+  ticketId       String               @db.Uuid
+  senderId       String               @db.Uuid
+  recipientEmail String
+  tokenHash      String               @unique
+  status         TicketTransferStatus
+  expiresAt      DateTime
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+  sender User   @relation(fields: [senderId], references: [id])
+
+  @@map("ticket_transfers")
 }
 
 enum ConcertReviewStatus {
@@ -515,6 +543,7 @@ model User {
   bankProfile           SellerBankProfile?
   resaleOrdersAsBuyer   ResaleOrder[]            @relation("ResaleOrderBuyer")
   resaleOrdersAsSeller  ResaleOrder[]            @relation("ResaleOrderSeller")
+  ticketTransfers       TicketTransfer[]
   concertReviews        ConcertReview[]           @relation("ConcertReviewUser")
   hiddenConcertReviews  ConcertReview[]           @relation("ConcertReviewHiddenBy")
   waitlistEntries       WaitlistEntry[]
@@ -1011,6 +1040,7 @@ model Ticket {
   supportRequests SupportRequest[]
   refundRequests  RefundRequest[]
   resaleListings  ResaleListing[]
+  ticketTransfers TicketTransfer[]
 
   @@index([userId, status])
   @@index([userId, concertId, status])

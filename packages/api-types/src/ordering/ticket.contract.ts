@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const TICKET_STATUSES = ['ISSUED', 'CHECKED_IN', 'VOIDED', 'REFUNDED', 'LISTED_FOR_RESALE', 'TRANSFERRED'] as const;
+export const TICKET_STATUSES = [
+  'ISSUED',
+  'CHECKED_IN',
+  'VOIDED',
+  'REFUNDED',
+  'LISTED_FOR_RESALE',
+  'TRANSFERRED',
+  'TRANSFER_PENDING',
+] as const;
 
 export const TicketStatusSchema = z.enum(TICKET_STATUSES);
 export type TicketStatus = z.infer<typeof TicketStatusSchema>;
@@ -29,6 +37,13 @@ export const TicketDetailResponseSchema = TicketSummaryResponseSchema.extend({
   resaleMaxPricePercent: z.number().optional(),
   originalPriceVnd: z.number().optional(),
   resaleListingId: z.string().nullable().optional(),
+  isGiftable: z.boolean().optional(),
+  pendingTransfer: z
+    .object({
+      recipientEmail: z.string(),
+      expiresAt: z.union([z.string(), z.date()]),
+    })
+    .optional(),
 });
 export type TicketDetailResponse = z.infer<typeof TicketDetailResponseSchema>;
 

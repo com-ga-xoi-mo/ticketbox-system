@@ -439,3 +439,4 @@ export type {
 } from './location/location-search.contract';
 
 export * from './resale';
+export * from './gifting/transfer.contract';

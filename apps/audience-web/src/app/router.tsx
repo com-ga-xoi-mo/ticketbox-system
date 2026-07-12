@@ -13,29 +13,94 @@ import { NotFoundPage } from '../features/auth/NotFoundPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
 import { PaymentResultPage } from '../features/account/PaymentResultPage';
 
-const AccountPage = lazy(() => import('../features/account/AccountPage').then(m => ({ default: m.AccountPage })));
-const MyOrdersPage = lazy(() => import('../features/account/MyOrdersPage').then(m => ({ default: m.MyOrdersPage })));
-const OrderDetailPage = lazy(() => import('../features/account/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));
-const MyTicketsPage = lazy(() => import('../features/account/MyTicketsPage').then(m => ({ default: m.MyTicketsPage })));
-const TicketDetailPage = lazy(() => import('../features/account/TicketDetailPage').then(m => ({ default: m.TicketDetailPage })));
-const SupportCenterPage = lazy(() => import('../features/account/SupportCenterPage').then(m => ({ default: m.SupportCenterPage })));
-const SupportRequestDetailPage = lazy(() => import('../features/account/SupportRequestDetailPage').then(m => ({ default: m.SupportRequestDetailPage })));
-const RefundRequestDetailPage = lazy(() => import('../features/account/RefundRequestDetailPage').then(m => ({ default: m.RefundRequestDetailPage })));
-const NotificationCenterPage = lazy(() => import('../features/account/NotificationCenterPage').then(m => ({ default: m.NotificationCenterPage })));
-const ResaleInboxPage = lazy(() => import('../features/account/ResaleInboxPage').then(m => ({ default: m.ResaleInboxPage })));
-const ResaleThreadPage = lazy(() => import('../features/account/ResaleThreadPage').then(m => ({ default: m.ResaleThreadPage })));
-const TicketDownloadPage = lazy(() => import('../features/account/TicketDownloadPage').then(m => ({ default: m.TicketDownloadPage })));
-const OrderConfirmationPage = lazy(() => import('../features/account/OrderConfirmationPage').then(m => ({ default: m.OrderConfirmationPage })));
-const ArtistListPage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistListPage })));
-const ArtistProfilePage = lazy(() => import('../features/artists').then(m => ({ default: m.ArtistProfilePage })));
-const FavoritesPage = lazy(() => import('../features/favorites').then(m => ({ default: m.FavoritesPage })));
-const ResalePlatformPage = lazy(() => import('../features/resale/ResalePlatformPage').then(m => ({ default: m.ResalePlatformPage })));
-const ResalePlatformListingDetailPage = lazy(() => import('../features/resale/ResalePlatformListingDetailPage').then(m => ({ default: m.ResalePlatformListingDetailPage })));
-const ResaleListingDetailPage = lazy(() => import('../features/concerts/ResaleListingDetailPage').then(m => ({ default: m.ResaleListingDetailPage })));
-const SellerProfilePage = lazy(() => import('../features/account/SellerProfilePage').then(m => ({ default: m.SellerProfilePage })));
-const TransactionHistoryPage = lazy(() => import('../features/account/TransactionHistoryPage').then(m => ({ default: m.TransactionHistoryPage })));
-const BankProfilePage = lazy(() => import('../features/account/BankProfilePage').then(m => ({ default: m.BankProfilePage })));
-const P2POrderTrackingPage = lazy(() => import('../features/resale/P2POrderTrackingPage').then(m => ({ default: m.P2POrderTrackingPage })));
+const AccountPage = lazy(() =>
+  import('../features/account/AccountPage').then((m) => ({ default: m.AccountPage })),
+);
+const MyOrdersPage = lazy(() =>
+  import('../features/account/MyOrdersPage').then((m) => ({ default: m.MyOrdersPage })),
+);
+const OrderDetailPage = lazy(() =>
+  import('../features/account/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })),
+);
+const MyTicketsPage = lazy(() =>
+  import('../features/account/MyTicketsPage').then((m) => ({ default: m.MyTicketsPage })),
+);
+const TicketDetailPage = lazy(() =>
+  import('../features/account/TicketDetailPage').then((m) => ({ default: m.TicketDetailPage })),
+);
+const SupportCenterPage = lazy(() =>
+  import('../features/account/SupportCenterPage').then((m) => ({ default: m.SupportCenterPage })),
+);
+const SupportRequestDetailPage = lazy(() =>
+  import('../features/account/SupportRequestDetailPage').then((m) => ({
+    default: m.SupportRequestDetailPage,
+  })),
+);
+const RefundRequestDetailPage = lazy(() =>
+  import('../features/account/RefundRequestDetailPage').then((m) => ({
+    default: m.RefundRequestDetailPage,
+  })),
+);
+const NotificationCenterPage = lazy(() =>
+  import('../features/account/NotificationCenterPage').then((m) => ({
+    default: m.NotificationCenterPage,
+  })),
+);
+const ResaleInboxPage = lazy(() =>
+  import('../features/account/ResaleInboxPage').then((m) => ({ default: m.ResaleInboxPage })),
+);
+const ResaleThreadPage = lazy(() =>
+  import('../features/account/ResaleThreadPage').then((m) => ({ default: m.ResaleThreadPage })),
+);
+const TicketDownloadPage = lazy(() =>
+  import('../features/account/TicketDownloadPage').then((m) => ({ default: m.TicketDownloadPage })),
+);
+const OrderConfirmationPage = lazy(() =>
+  import('../features/account/OrderConfirmationPage').then((m) => ({
+    default: m.OrderConfirmationPage,
+  })),
+);
+const ArtistListPage = lazy(() =>
+  import('../features/artists').then((m) => ({ default: m.ArtistListPage })),
+);
+const ArtistProfilePage = lazy(() =>
+  import('../features/artists').then((m) => ({ default: m.ArtistProfilePage })),
+);
+const FavoritesPage = lazy(() =>
+  import('../features/favorites').then((m) => ({ default: m.FavoritesPage })),
+);
+const ResalePlatformPage = lazy(() =>
+  import('../features/resale/ResalePlatformPage').then((m) => ({ default: m.ResalePlatformPage })),
+);
+const ResalePlatformListingDetailPage = lazy(() =>
+  import('../features/resale/ResalePlatformListingDetailPage').then((m) => ({
+    default: m.ResalePlatformListingDetailPage,
+  })),
+);
+const ResaleListingDetailPage = lazy(() =>
+  import('../features/concerts/ResaleListingDetailPage').then((m) => ({
+    default: m.ResaleListingDetailPage,
+  })),
+);
+const SellerProfilePage = lazy(() =>
+  import('../features/account/SellerProfilePage').then((m) => ({ default: m.SellerProfilePage })),
+);
+const TransactionHistoryPage = lazy(() =>
+  import('../features/account/TransactionHistoryPage').then((m) => ({
+    default: m.TransactionHistoryPage,
+  })),
+);
+const BankProfilePage = lazy(() =>
+  import('../features/account/BankProfilePage').then((m) => ({ default: m.BankProfilePage })),
+);
+const P2POrderTrackingPage = lazy(() =>
+  import('../features/resale/P2POrderTrackingPage').then((m) => ({
+    default: m.P2POrderTrackingPage,
+  })),
+);
+const GiftTransferPage = lazy(() =>
+  import('../features/account/GiftTransferPage').then((m) => ({ default: m.GiftTransferPage })),
+);
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<div className="flex h-[50vh] items-center justify-center">Loading...</div>}>
@@ -53,131 +118,247 @@ const ResaleListingRedirect = () => {
   return <Navigate to={`/resale/${listingId}`} replace />;
 };
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
+      path: '/register',
+      element: <RegisterPage />,
+    },
+    {
+      path: '/forgot-password',
+      element: <ForgotPasswordPage />,
+    },
+    {
+      path: '/reset-password',
+      element: <ResetPasswordPage />,
+    },
+    {
+      path: '/access-denied',
+      element: <AccessDeniedPage />,
+    },
+    {
+      element: <PublicLayout />,
+      children: [
+        { path: '/', element: <HomePage /> },
+        { path: '/events', element: <EventListPage /> },
+        { path: '/events/:slug', element: <EventDetailPage /> },
+        {
+          path: '/events/:slug/resale',
+          element: <Navigate to="/resale" replace />,
+        },
+        {
+          path: '/events/:slug/resale/:listingId',
+          element: <ResaleListingRedirect />,
+        },
+        {
+          path: '/resale',
+          element: (
+            <SuspenseWrapper>
+              <ResalePlatformPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/resale/orders/:id',
+          element: (
+            <SuspenseWrapper>
+              <P2POrderTrackingPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/resale/:listingId',
+          element: (
+            <SuspenseWrapper>
+              <ResalePlatformListingDetailPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/sellers/:userId',
+          element: (
+            <SuspenseWrapper>
+              <SellerProfilePage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/artists',
+          element: (
+            <SuspenseWrapper>
+              <ArtistListPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/artists/:slug',
+          element: (
+            <SuspenseWrapper>
+              <ArtistProfilePage />
+            </SuspenseWrapper>
+          ),
+        },
+        { path: '/checkout', element: <CheckoutPage /> },
+        { path: '/orders/:id/result', element: <PaymentResultPage /> },
+        {
+          path: '/transfers/:token',
+          element: (
+            <SuspenseWrapper>
+              <GiftTransferPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/orders',
+          element: <Navigate to="/account/orders" replace />,
+        },
+        {
+          path: '/orders/:id',
+          element: <OrderDetailRedirect />,
+        },
+        {
+          path: '/account',
+          element: (
+            <SuspenseWrapper>
+              <AccountPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/bank-profile',
+          element: (
+            <SuspenseWrapper>
+              <BankProfilePage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/orders',
+          element: (
+            <SuspenseWrapper>
+              <MyOrdersPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/orders/:id',
+          element: (
+            <SuspenseWrapper>
+              <OrderDetailPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/orders/:id/confirmation',
+          element: (
+            <SuspenseWrapper>
+              <OrderConfirmationPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/tickets',
+          element: (
+            <SuspenseWrapper>
+              <MyTicketsPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/tickets/:id',
+          element: (
+            <SuspenseWrapper>
+              <TicketDetailPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/tickets/:id/download',
+          element: (
+            <SuspenseWrapper>
+              <TicketDownloadPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/support',
+          element: (
+            <SuspenseWrapper>
+              <SupportCenterPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/support/requests/:id',
+          element: (
+            <SuspenseWrapper>
+              <SupportRequestDetailPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/support/refunds/:id',
+          element: (
+            <SuspenseWrapper>
+              <RefundRequestDetailPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/notifications',
+          element: (
+            <SuspenseWrapper>
+              <NotificationCenterPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/messages',
+          element: (
+            <SuspenseWrapper>
+              <ResaleInboxPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/messages/:threadId',
+          element: (
+            <SuspenseWrapper>
+              <ResaleThreadPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/account/transactions',
+          element: (
+            <SuspenseWrapper>
+              <TransactionHistoryPage />
+            </SuspenseWrapper>
+          ),
+        },
+        {
+          path: '/me/favorites',
+          element: (
+            <SuspenseWrapper>
+              <FavoritesPage />
+            </SuspenseWrapper>
+          ),
+        },
+        { path: '*', element: <NotFoundPage /> },
+      ],
+    },
+  ],
   {
-    path: '/login',
-    element: <LoginPage />,
+    future: {
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
   },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-  },
-  {
-    path: '/forgot-password',
-    element: <ForgotPasswordPage />,
-  },
-  {
-    path: '/reset-password',
-    element: <ResetPasswordPage />,
-  },
-  {
-    path: '/access-denied',
-    element: <AccessDeniedPage />,
-  },
-  {
-    element: <PublicLayout />,
-    children: [
-      { path: '/', element: <HomePage /> },
-      { path: '/events', element: <EventListPage /> },
-      { path: '/events/:slug', element: <EventDetailPage /> },
-      { 
-        path: '/events/:slug/resale', 
-        element: <Navigate to="/resale" replace /> 
-      },
-      { 
-        path: '/events/:slug/resale/:listingId', 
-        element: <ResaleListingRedirect /> 
-      },
-      { path: '/resale', element: <SuspenseWrapper><ResalePlatformPage /></SuspenseWrapper> },
-      { path: '/resale/orders/:id', element: <SuspenseWrapper><P2POrderTrackingPage /></SuspenseWrapper> },
-      { path: '/resale/:listingId', element: <SuspenseWrapper><ResalePlatformListingDetailPage /></SuspenseWrapper> },
-      { path: '/sellers/:userId', element: <SuspenseWrapper><SellerProfilePage /></SuspenseWrapper> },
-      { path: '/artists', element: <SuspenseWrapper><ArtistListPage /></SuspenseWrapper> },
-      { path: '/artists/:slug', element: <SuspenseWrapper><ArtistProfilePage /></SuspenseWrapper> },
-      { path: '/checkout', element: <CheckoutPage /> },
-      { path: '/orders/:id/result', element: <PaymentResultPage /> },
-      {
-        path: '/orders',
-        element: <Navigate to="/account/orders" replace />,
-      },
-      {
-        path: '/orders/:id',
-        element: <OrderDetailRedirect />,
-      },
-      {
-        path: '/account',
-        element: <SuspenseWrapper><AccountPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/bank-profile',
-        element: <SuspenseWrapper><BankProfilePage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/orders',
-        element: <SuspenseWrapper><MyOrdersPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/orders/:id',
-        element: <SuspenseWrapper><OrderDetailPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/orders/:id/confirmation',
-        element: <SuspenseWrapper><OrderConfirmationPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/tickets',
-        element: <SuspenseWrapper><MyTicketsPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/tickets/:id',
-        element: <SuspenseWrapper><TicketDetailPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/tickets/:id/download',
-        element: <SuspenseWrapper><TicketDownloadPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/support',
-        element: <SuspenseWrapper><SupportCenterPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/support/requests/:id',
-        element: <SuspenseWrapper><SupportRequestDetailPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/support/refunds/:id',
-        element: <SuspenseWrapper><RefundRequestDetailPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/notifications',
-        element: <SuspenseWrapper><NotificationCenterPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/messages',
-        element: <SuspenseWrapper><ResaleInboxPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/messages/:threadId',
-        element: <SuspenseWrapper><ResaleThreadPage /></SuspenseWrapper>
-      },
-      {
-        path: '/account/transactions',
-        element: <SuspenseWrapper><TransactionHistoryPage /></SuspenseWrapper>
-      },
-      {
-        path: '/me/favorites',
-        element: <SuspenseWrapper><FavoritesPage /></SuspenseWrapper>
-      },
-      { path: '*', element: <NotFoundPage /> },
-    ],
-  },
-
-], {
-  future: {
-    v7_relativeSplatPath: true,
-    v7_fetcherPersist: true,
-    v7_normalizeFormMethod: true,
-    v7_partialHydration: true,
-    v7_skipActionErrorRevalidation: true,
-  },
-});
+);

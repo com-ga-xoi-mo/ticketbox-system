@@ -5,9 +5,7 @@ import {
   AdminUpdateConcertSchema,
   ManagementConcertResponseSchema,
 } from './concert-management/management-concert.contract';
-import {
-  PublicConcertDetailResponseSchema,
-} from './catalog/public-concert.contract';
+import { PublicConcertDetailResponseSchema } from './catalog/public-concert.contract';
 import {
   LocationSearchQuerySchema,
   LocationSearchResultSchema,
@@ -32,7 +30,10 @@ const baseCreate = {
 // ---------------------------------------------------------------------------
 describe('OrganizerCreateConcertSchema coordinate validation', () => {
   it('accepts valid coordinate pair', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: 106.700 }).success).toBe(true);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: 106.7 })
+        .success,
+    ).toBe(true);
   });
 
   it('accepts omitted coordinates (both absent → null pair)', () => {
@@ -40,7 +41,10 @@ describe('OrganizerCreateConcertSchema coordinate validation', () => {
   });
 
   it('accepts both coordinates explicitly null', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: null, longitude: null }).success).toBe(true);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: null, longitude: null })
+        .success,
+    ).toBe(true);
   });
 
   it('rejects only latitude provided', () => {
@@ -49,24 +53,36 @@ describe('OrganizerCreateConcertSchema coordinate validation', () => {
   });
 
   it('rejects only longitude provided', () => {
-    const result = OrganizerCreateConcertSchema.safeParse({ ...baseCreate, longitude: 106.700 });
+    const result = OrganizerCreateConcertSchema.safeParse({ ...baseCreate, longitude: 106.7 });
     expect(result.success).toBe(false);
   });
 
   it('rejects latitude out of range (> 90)', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 91, longitude: 106.700 }).success).toBe(false);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 91, longitude: 106.7 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects latitude out of range (< -90)', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: -91, longitude: 106.700 }).success).toBe(false);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: -91, longitude: 106.7 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects longitude out of range (> 180)', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: 181 }).success).toBe(false);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: 181 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects longitude out of range (< -180)', () => {
-    expect(OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: -181 }).success).toBe(false);
+    expect(
+      OrganizerCreateConcertSchema.safeParse({ ...baseCreate, latitude: 10.776, longitude: -181 })
+        .success,
+    ).toBe(false);
   });
 });
 
@@ -83,11 +99,15 @@ describe('OrganizerUpdateConcertSchema coordinate validation', () => {
   });
 
   it('accepts clearing coordinates (both null)', () => {
-    expect(OrganizerUpdateConcertSchema.safeParse({ latitude: null, longitude: null }).success).toBe(true);
+    expect(
+      OrganizerUpdateConcertSchema.safeParse({ latitude: null, longitude: null }).success,
+    ).toBe(true);
   });
 
   it('accepts updating coordinates with a valid pair', () => {
-    expect(OrganizerUpdateConcertSchema.safeParse({ latitude: 21.02, longitude: 105.84 }).success).toBe(true);
+    expect(
+      OrganizerUpdateConcertSchema.safeParse({ latitude: 21.02, longitude: 105.84 }).success,
+    ).toBe(true);
   });
 
   it('rejects only latitude in update', () => {
@@ -104,9 +124,14 @@ describe('OrganizerUpdateConcertSchema coordinate validation', () => {
 // ---------------------------------------------------------------------------
 describe('AdminUpdateConcertSchema coordinate validation', () => {
   it('accepts coordinate pair with moderation fields', () => {
-    expect(AdminUpdateConcertSchema.safeParse({
-      latitude: 10.776, longitude: 106.700, isFeatured: true, displayOrder: 1,
-    }).success).toBe(true);
+    expect(
+      AdminUpdateConcertSchema.safeParse({
+        latitude: 10.776,
+        longitude: 106.7,
+        isFeatured: true,
+        displayOrder: 1,
+      }).success,
+    ).toBe(true);
   });
 
   it('rejects only latitude', () => {
@@ -135,6 +160,8 @@ describe('ManagementConcertResponseSchema coordinate fields', () => {
     eventType: 'CONCERT' as const,
     isFeatured: false,
     displayOrder: 0,
+    resaleEnabled: false,
+    resaleMaxPricePercent: 120,
     seoTitle: null,
     seoDescription: null,
     seoImageUrl: null,
@@ -156,7 +183,13 @@ describe('ManagementConcertResponseSchema coordinate fields', () => {
   });
 
   it('accepts non-null coordinate pair', () => {
-    expect(ManagementConcertResponseSchema.safeParse({ ...baseResponse, latitude: 10.776, longitude: 106.700 }).success).toBe(true);
+    expect(
+      ManagementConcertResponseSchema.safeParse({
+        ...baseResponse,
+        latitude: 10.776,
+        longitude: 106.7,
+      }).success,
+    ).toBe(true);
   });
 
   it('rejects missing latitude field', () => {
@@ -192,7 +225,9 @@ describe('LocationSearchQuerySchema', () => {
   });
 
   it('rejects unknown query fields', () => {
-    expect(LocationSearchQuerySchema.safeParse({ q: 'test venue', extra: 'field' }).success).toBe(false);
+    expect(LocationSearchQuerySchema.safeParse({ q: 'test venue', extra: 'field' }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -221,19 +256,36 @@ describe('LocationSearchResponseSchema', () => {
   });
 
   it('rejects result with missing displayName', () => {
-    expect(LocationSearchResultSchema.safeParse({ latitude: 10.776, longitude: 106.703 }).success).toBe(false);
+    expect(
+      LocationSearchResultSchema.safeParse({ latitude: 10.776, longitude: 106.703 }).success,
+    ).toBe(false);
   });
 
   it('rejects result with out-of-range latitude', () => {
-    expect(LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 91, longitude: 106.703 }).success).toBe(false);
+    expect(
+      LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 91, longitude: 106.703 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects result with out-of-range longitude', () => {
-    expect(LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 10.776, longitude: 181 }).success).toBe(false);
+    expect(
+      LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 10.776, longitude: 181 })
+        .success,
+    ).toBe(false);
   });
 
   it('rejects non-finite coordinates', () => {
-    expect(LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: Infinity, longitude: 106.703 }).success).toBe(false);
-    expect(LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 10.776, longitude: NaN }).success).toBe(false);
+    expect(
+      LocationSearchResultSchema.safeParse({
+        displayName: 'X',
+        latitude: Infinity,
+        longitude: 106.703,
+      }).success,
+    ).toBe(false);
+    expect(
+      LocationSearchResultSchema.safeParse({ displayName: 'X', latitude: 10.776, longitude: NaN })
+        .success,
+    ).toBe(false);
   });
 });

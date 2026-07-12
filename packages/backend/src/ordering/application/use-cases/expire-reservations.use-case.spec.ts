@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OrderStatus } from '../../domain/order-status.enum';
-import {
-  OrderConflictError,
-  PaidOrderExpirationSkippedError,
-} from '../../domain/errors';
+import { OrderConflictError, PaidOrderExpirationSkippedError } from '../../domain/errors';
 import type { IExpiredOrderRepository } from '../../domain/ports/expired-order-repository.port';
 import { ExpireReservationsUseCase } from './expire-reservations.use-case';
 import type { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
@@ -14,6 +11,7 @@ describe('ExpireReservationsUseCase', () => {
   let transitionOrderStatusUseCase: Pick<TransitionOrderStatusUseCase, 'execute'>;
   let useCase: ExpireReservationsUseCase;
   const now = new Date('2026-06-16T10:30:00.000Z');
+  const mockOrder = { items: [] } as never;
 
   beforeEach(() => {
     expiredOrderRepository = {
@@ -33,14 +31,11 @@ describe('ExpireReservationsUseCase', () => {
       'order-1',
       'order-2',
     ]);
-    vi.mocked(transitionOrderStatusUseCase.execute).mockResolvedValue({} as never);
+    vi.mocked(transitionOrderStatusUseCase.execute).mockResolvedValue(mockOrder);
 
     const result = await useCase.execute({ now, limit: 50 });
 
-    expect(expiredOrderRepository.findExpiredPendingOrderIds).toHaveBeenCalledWith(
-      now,
-      50,
-    );
+    expect(expiredOrderRepository.findExpiredPendingOrderIds).toHaveBeenCalledWith(now, 50);
     expect(transitionOrderStatusUseCase.execute).toHaveBeenCalledTimes(2);
     expect(transitionOrderStatusUseCase.execute).toHaveBeenNthCalledWith(1, {
       orderId: 'order-1',
@@ -54,6 +49,7 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 0,
       conflicted: 0,
       failed: 0,
+      releasedItems: [],
     });
   });
 
@@ -64,7 +60,7 @@ describe('ExpireReservationsUseCase', () => {
     ]);
     vi.mocked(transitionOrderStatusUseCase.execute)
       .mockRejectedValueOnce(new OrderConflictError('order-1'))
-      .mockResolvedValueOnce({} as never);
+      .mockResolvedValueOnce(mockOrder);
 
     await expect(useCase.execute({ now })).resolves.toEqual({
       scanned: 2,
@@ -72,13 +68,12 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 0,
       conflicted: 1,
       failed: 0,
+      releasedItems: [],
     });
   });
 
   it('counts a paid reservation guard separately', async () => {
-    vi.mocked(expiredOrderRepository.findExpiredPendingOrderIds).mockResolvedValue([
-      'order-1',
-    ]);
+    vi.mocked(expiredOrderRepository.findExpiredPendingOrderIds).mockResolvedValue(['order-1']);
     vi.mocked(transitionOrderStatusUseCase.execute).mockRejectedValue(
       new PaidOrderExpirationSkippedError('order-1', 'payment-1'),
     );
@@ -89,6 +84,7 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 1,
       conflicted: 0,
       failed: 0,
+      releasedItems: [],
     });
   });
 });
