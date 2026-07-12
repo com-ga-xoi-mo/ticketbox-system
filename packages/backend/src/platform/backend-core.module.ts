@@ -16,6 +16,9 @@ import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
 import { ResaleModule } from '../resale/resale.module';
 import { QueueModule } from './queue/queue.module';
+import { OfficialWaitlistModule } from '../official-waitlist/official-waitlist.module';
+import { PresaleLotteryModule } from '../presale-lottery/presale-lottery.module';
+import { VirtualWaitingRoomModule } from '../virtual-waiting-room/virtual-waiting-room.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { QueueModule } from './queue/queue.module';
     FavoritesModule,
     LocationGeocodingModule,
     ResaleModule,
+    OfficialWaitlistModule,
+    PresaleLotteryModule,
+    VirtualWaitingRoomModule,
   ],
   exports: [
     PlatformConfigModule,
@@ -53,6 +59,9 @@ import { QueueModule } from './queue/queue.module';
     FavoritesModule,
     LocationGeocodingModule,
     ResaleModule,
+    OfficialWaitlistModule,
+    PresaleLotteryModule,
+    VirtualWaitingRoomModule,
   ],
 })
 export class BackendCoreModule {}

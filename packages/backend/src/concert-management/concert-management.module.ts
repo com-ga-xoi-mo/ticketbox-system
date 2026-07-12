@@ -56,6 +56,10 @@ import {
   ASSET_READ_REPOSITORY,
   type AssetReadRepositoryPort,
 } from './domain/ports/asset-read.port';
+import {
+  CONCERT_REVIEW_REPOSITORY,
+  type ConcertReviewRepositoryPort,
+} from './domain/ports/concert-review.port';
 
 // Repositories
 import { PrismaPublicConcertCatalogRepository } from './infrastructure/database/prisma-public-concert-catalog.repository';
@@ -65,6 +69,7 @@ import { PrismaPosterWriteRepository } from './infrastructure/database/prisma-po
 import { PrismaSeatingZoneRepository } from './infrastructure/database/prisma-seating-zone.repository';
 import { PrismaTicketTypeZoneRepository } from './infrastructure/database/prisma-ticket-type-zone.repository';
 import { PrismaAssetReadRepository } from './infrastructure/database/prisma-asset-read.repository';
+import { PrismaConcertReviewRepository } from './infrastructure/database/prisma-concert-review.repository';
 
 // Use Cases
 import { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
@@ -99,6 +104,13 @@ import { GetAssetContentUseCase } from './application/use-cases/get-asset-conten
 import { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
 import { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';
 import { ListTicketTypesWithZoneMappingsUseCase } from './application/use-cases/list-ticket-types-with-zone-mappings.use-case';
+import {
+  CreateConcertReviewUseCase,
+  DeleteMyConcertReviewUseCase,
+  HideConcertReviewUseCase,
+  ListConcertReviewsUseCase,
+  UpdateMyConcertReviewUseCase,
+} from './application/use-cases/concert-review.use-cases';
 
 // Controllers
 import { PublicConcertCatalogController } from './adapters/http/public-concert-catalog.controller';
@@ -110,6 +122,8 @@ import { AdminAnalyticsController } from './adapters/http/admin-analytics.contro
 import { OrganizerAnalyticsController } from './adapters/http/organizer-analytics.controller';
 import { OrganizerSeatingMapController } from './adapters/http/organizer-seating-map.controller';
 import { AssetController } from './adapters/http/asset.controller';
+import { ConcertReviewController } from './adapters/http/concert-review.controller';
+import { AdminConcertReviewController } from './adapters/http/admin-concert-review.controller';
 
 @Module({
   imports: [DatabaseModule, AuthModule],
@@ -123,6 +137,8 @@ import { AssetController } from './adapters/http/asset.controller';
     AdminAnalyticsController,
     OrganizerAnalyticsController,
     AssetController,
+    ConcertReviewController,
+    AdminConcertReviewController,
   ],
   providers: [
     {
@@ -152,6 +168,10 @@ import { AssetController } from './adapters/http/asset.controller';
     {
       provide: ASSET_READ_REPOSITORY,
       useClass: PrismaAssetReadRepository,
+    },
+    {
+      provide: CONCERT_REVIEW_REPOSITORY,
+      useClass: PrismaConcertReviewRepository,
     },
     {
       provide: SvgSanitizer,
@@ -450,6 +470,31 @@ import { AssetController } from './adapters/http/asset.controller';
         ticketTypeZoneRepo: TicketTypeZoneRepositoryPort,
       ) => new ListTicketTypesWithZoneMappingsUseCase(authUseCase, concertRepo, ticketTypeZoneRepo),
     },
+    {
+      provide: ListConcertReviewsUseCase,
+      inject: [CONCERT_REVIEW_REPOSITORY],
+      useFactory: (repo: ConcertReviewRepositoryPort) => new ListConcertReviewsUseCase(repo),
+    },
+    {
+      provide: CreateConcertReviewUseCase,
+      inject: [CONCERT_REVIEW_REPOSITORY],
+      useFactory: (repo: ConcertReviewRepositoryPort) => new CreateConcertReviewUseCase(repo),
+    },
+    {
+      provide: UpdateMyConcertReviewUseCase,
+      inject: [CONCERT_REVIEW_REPOSITORY],
+      useFactory: (repo: ConcertReviewRepositoryPort) => new UpdateMyConcertReviewUseCase(repo),
+    },
+    {
+      provide: DeleteMyConcertReviewUseCase,
+      inject: [CONCERT_REVIEW_REPOSITORY],
+      useFactory: (repo: ConcertReviewRepositoryPort) => new DeleteMyConcertReviewUseCase(repo),
+    },
+    {
+      provide: HideConcertReviewUseCase,
+      inject: [CONCERT_REVIEW_REPOSITORY],
+      useFactory: (repo: ConcertReviewRepositoryPort) => new HideConcertReviewUseCase(repo),
+    },
   ],
 })
 export class ConcertManagementModule {}
@@ -463,6 +508,8 @@ export { AdminConcertController } from './adapters/http/admin-concert.controller
 export { AdminAnalyticsController } from './adapters/http/admin-analytics.controller';
 export { OrganizerAnalyticsController } from './adapters/http/organizer-analytics.controller';
 export { AssetController } from './adapters/http/asset.controller';
+export { ConcertReviewController } from './adapters/http/concert-review.controller';
+export { AdminConcertReviewController } from './adapters/http/admin-concert-review.controller';
 export { GetConcertAvailabilityUseCase } from './application/use-cases/get-concert-availability.use-case';
 export { GetPublicConcertDetailUseCase } from './application/use-cases/get-public-concert-detail.use-case';
 export { ListPublicConcertsUseCase } from './application/use-cases/list-public-concerts.use-case';
@@ -490,3 +537,10 @@ export { GetAssetContentUseCase } from './application/use-cases/get-asset-conten
 export { GetSeatingMapUseCase } from './application/use-cases/get-seating-map.use-case';
 export { ListSeatingZonesUseCase } from './application/use-cases/list-seating-zones.use-case';
 export { ListTicketTypesWithZoneMappingsUseCase } from './application/use-cases/list-ticket-types-with-zone-mappings.use-case';
+export {
+  CreateConcertReviewUseCase,
+  DeleteMyConcertReviewUseCase,
+  HideConcertReviewUseCase,
+  ListConcertReviewsUseCase,
+  UpdateMyConcertReviewUseCase,
+} from './application/use-cases/concert-review.use-cases';

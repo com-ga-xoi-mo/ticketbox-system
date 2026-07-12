@@ -3,10 +3,13 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../identity/auth.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PromotionModule } from '../promotion/promotion.module';
+import { VirtualWaitingRoomModule } from '../virtual-waiting-room/virtual-waiting-room.module';
 import { EnqueuePurchaseConfirmationUseCase } from '../notification/application/use-cases/enqueue-purchase-confirmation.use-case';
 import { PlatformConfigModule } from '../platform/config/platform-config.module';
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
+import { PrismaService } from '../platform/database/prisma.service';
+import { PrismaWaitlistEntitlementReservationAdapter } from '../official-waitlist/infrastructure/database/prisma-waitlist-entitlement-reservation.adapter';
 import { InternalOrderController } from './adapters/http/internal-order.controller';
 import { OrderController } from './adapters/http/order.controller';
 import { InternalApiKeyGuard } from './adapters/http/guards/internal-api-key.guard';
@@ -29,6 +32,14 @@ import {
   INVENTORY_RESERVATION_REPOSITORY,
   type IInventoryReservationRepository,
 } from './domain/ports/inventory-reservation.port';
+import {
+  WAITLIST_ENTITLEMENT_RESERVATION_PORT,
+  type WaitlistEntitlementReservationPort,
+} from './domain/ports/waitlist-entitlement-reservation.port';
+import {
+  WAITING_ROOM_ADMISSION_PORT,
+  type WaitingRoomAdmissionPort,
+} from './domain/ports/waiting-room-admission.port';
 import {
   ORDER_PAID_NOTIFIER,
   type OrderPaidNotifierPort,
@@ -53,7 +64,14 @@ import { PrismaTicketTypePricingRepository } from './infrastructure/database/pri
 import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket-issuing-order-event-publisher';
 
 @Module({
-  imports: [PlatformConfigModule, DatabaseModule, AuthModule, NotificationModule, PromotionModule],
+  imports: [
+    PlatformConfigModule,
+    DatabaseModule,
+    AuthModule,
+    NotificationModule,
+    PromotionModule,
+    VirtualWaitingRoomModule,
+  ],
   controllers: [OrderController, InternalOrderController],
   providers: [
     {
@@ -63,6 +81,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
         INVENTORY_RESERVATION_REPOSITORY,
         TICKET_TYPE_PRICING_REPOSITORY,
         'PromotionValidationPort',
+        WAITING_ROOM_ADMISSION_PORT,
         PlatformConfigService,
       ],
       useFactory: (
@@ -70,6 +89,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
         inventoryReservationRepository: IInventoryReservationRepository,
         ticketTypePricingRepository: TicketTypePricingRepositoryPort,
         promotionValidationPort: any,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
         config: PlatformConfigService,
       ) =>
         new CreateOrderUseCase(
@@ -77,6 +97,7 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
           inventoryReservationRepository,
           ticketTypePricingRepository,
           promotionValidationPort,
+          waitingRoomAdmissionPort,
           {
             serviceFeeVnd: config.serviceFeeVnd,
             reservationTtlMinutes: config.orderReservationTtlMinutes,
@@ -172,7 +193,22 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
       provide: TICKET_TYPE_PRICING_REPOSITORY,
       useClass: PrismaTicketTypePricingRepository,
     },
-    PrismaInventoryReservationRepository,
+    {
+      provide: WAITLIST_ENTITLEMENT_RESERVATION_PORT,
+      useClass: PrismaWaitlistEntitlementReservationAdapter,
+    },
+    {
+      provide: PrismaInventoryReservationRepository,
+      inject: [PrismaService, WAITLIST_ENTITLEMENT_RESERVATION_PORT],
+      useFactory: (
+        prisma: PrismaService,
+        waitlistEntitlementReservation: WaitlistEntitlementReservationPort,
+      ) =>
+        new PrismaInventoryReservationRepository(
+          prisma,
+          waitlistEntitlementReservation,
+        ),
+    },
     {
       provide: INVENTORY_RESERVATION_REPOSITORY,
       useExisting: PrismaInventoryReservationRepository,

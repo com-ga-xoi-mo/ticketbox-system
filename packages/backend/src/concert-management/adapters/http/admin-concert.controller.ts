@@ -43,6 +43,8 @@ import { mapToManagementConcertResponse } from './management-concert.mapper';
 import { mapPosterErrors } from './poster-error.mapper';
 import { mapSeatingMapErrors } from './seating-map-error.mapper';
 import type { UploadedMemoryFile } from './upload-file.type';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 import {
   AdminUpdateConcertSchema,
@@ -89,6 +91,7 @@ export class AdminConcertController {
   }
 
   @Patch('concerts/:id')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async update(
     @Param('id') id: string,
     @Body() body: any,
@@ -132,6 +135,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/publish')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.publishConcertUseCase.execute({
@@ -144,6 +148,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/cancel')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.cancelConcertUseCase.execute({
@@ -189,6 +194,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/ticket-types')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async createTicketType(
     @Param('id') concertId: string,
     @Body() dto: CreateTicketTypeDto,
@@ -213,6 +219,7 @@ export class AdminConcertController {
   }
 
   @Patch('concerts/:id/ticket-types/:typeId')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async updateTicketType(
     @Param('id') concertId: string,
     @Param('typeId') typeId: string,
@@ -240,6 +247,7 @@ export class AdminConcertController {
   }
 
   @Patch('concerts/:id/ticket-types/:typeId/archive')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async archiveTicketType(
     @Param('id') concertId: string,
     @Param('typeId') typeId: string,
@@ -257,6 +265,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/poster')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: Number(process.env.POSTER_IMAGE_MAX_BYTES ?? 5_242_880) },
@@ -305,6 +314,7 @@ export class AdminConcertController {
   }
 
   @Post('concerts/:id/seating-map')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: Number(process.env.SEATING_MAP_SVG_MAX_BYTES ?? 5_242_880) },
@@ -329,6 +339,7 @@ export class AdminConcertController {
   }
 
   @Patch('concerts/:id/seating-zones')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async upsertZones(
     @Param('id') concertId: string,
     @Body() dto: UpsertSeatingZonesDto,
@@ -345,6 +356,7 @@ export class AdminConcertController {
   }
 
   @Put('concerts/:id/ticket-types/:typeId/zone-mappings')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async updateZoneMappings(
     @Param('id') concertId: string,
     @Param('typeId') ticketTypeId: string,

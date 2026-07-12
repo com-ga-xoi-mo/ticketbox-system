@@ -213,3 +213,46 @@ The audience event detail page SHALL display an OpenStreetMap-backed Leaflet map
 - **THEN** it SHALL use `https://tile.openstreetmap.org/{z}/{x}/{y}.png`
 - **AND** the app SHALL preserve normal browser Referer and cache behavior
 - **AND** it SHALL NOT prefetch or provide offline tile downloads
+
+### Requirement: Event detail displays concert reviews
+The audience event detail page SHALL display visible concert reviews and aggregate rating information for the current concert.
+
+#### Scenario: Concert has visible reviews
+- **WHEN** a user views a concert detail page with visible reviews
+- **THEN** the page displays the average rating, review count, and visible review comments
+
+#### Scenario: Concert has no visible reviews
+- **WHEN** a user views a concert detail page with no visible reviews
+- **THEN** the page displays an empty-state message instead of failing
+
+#### Scenario: Hidden reviews are not displayed
+- **WHEN** an admin has hidden a review
+- **THEN** the audience event detail page does not display that review
+- **AND** the hidden review is excluded from the displayed average rating and review count
+
+### Requirement: Eligible audience can manage own concert review
+The audience event detail page SHALL allow an authenticated audience user with an issued ticket for the concert to create, edit, or delete their own review.
+
+#### Scenario: Eligible user sees review form
+- **GIVEN** an authenticated user has at least one issued ticket for the concert
+- **WHEN** the user views the concert detail page
+- **THEN** the page displays a review form
+
+#### Scenario: Ineligible user does not see review form
+- **GIVEN** a user is unauthenticated or has no issued ticket for the concert
+- **WHEN** the user views the concert detail page
+- **THEN** the page does not display a review submission form
+
+#### Scenario: Existing reviewer can edit review
+- **GIVEN** an authenticated user already has a review for the concert
+- **WHEN** the user updates their rating or comment
+- **THEN** the page sends the update request and refreshes the displayed review state
+
+#### Scenario: Existing reviewer can delete review
+- **GIVEN** an authenticated user already has a review for the concert
+- **WHEN** the user deletes their review
+- **THEN** the page removes the user's review from the visible review state
+
+#### Scenario: Review mutation refreshes public summary
+- **WHEN** a user creates, updates, or deletes their review
+- **THEN** the page refreshes the review summary so average rating and review count reflect the latest visible reviews

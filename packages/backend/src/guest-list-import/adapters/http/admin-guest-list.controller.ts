@@ -19,6 +19,8 @@ import { ClaimGuestListImportUseCase } from '../../application/use-cases/claim-g
 import { DiscoverGuestListFilesUseCase } from '../../application/use-cases/discover-guest-list-files.use-case';
 import { GetGuestListBatchesUseCase } from '../../application/use-cases/get-guest-list-batches.use-case';
 import { RequestGuestListImportDto } from './dto/request-guest-list-import.dto';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('admin/concerts/:concertId/guest-list')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -31,6 +33,7 @@ export class AdminGuestListController {
     private readonly authorizeAdmin: AuthorizeAdminActionUseCase,
   ) {}
   @Post('imports')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async requestImport(
     @Param('concertId') concertId: string,
     @Body() dto: RequestGuestListImportDto,
@@ -47,6 +50,7 @@ export class AdminGuestListController {
     return { outcome: result.outcome, batch: result.batch };
   }
   @Post('discover')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   discover(@Request() req: { user: AuthenticatedUser }) {
     this.authorizeAdmin.execute({ userId: req.user.id, roles: req.user.roles });
     return this.discovery.execute();

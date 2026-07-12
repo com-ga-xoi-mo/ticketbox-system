@@ -123,6 +123,7 @@ export const PublicTicketTypeSchema = z
     saleEndsAt: z.string().datetime({ offset: true }),
     status: TicketTypeStatusCodeSchema,
     zoneIds: z.array(z.string().uuid()),
+    waitlistGated: z.boolean().default(false),
   })
   .strict();
 export type PublicTicketType = z.infer<typeof PublicTicketTypeSchema>;
@@ -210,3 +211,68 @@ export type FeaturedConcertParams = z.infer<typeof FeaturedConcertParamsSchema>;
 
 export const PublicConcertCitiesResponseSchema = z.array(z.string());
 export type PublicConcertCitiesResponse = z.infer<typeof PublicConcertCitiesResponseSchema>;
+
+export const ConcertReviewStatusCodeSchema = z.enum(['VISIBLE', 'HIDDEN']);
+export type ConcertReviewStatusCode = z.infer<typeof ConcertReviewStatusCodeSchema>;
+
+export const PublicConcertReviewAuthorSchema = z
+  .object({
+    id: z.string().uuid(),
+    displayName: z.string().min(1),
+  })
+  .strict();
+export type PublicConcertReviewAuthor = z.infer<typeof PublicConcertReviewAuthorSchema>;
+
+export const PublicConcertReviewSchema = z
+  .object({
+    id: z.string().uuid(),
+    concertId: z.string().uuid(),
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().min(1).max(1000),
+    author: PublicConcertReviewAuthorSchema,
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .strict();
+export type PublicConcertReview = z.infer<typeof PublicConcertReviewSchema>;
+
+export const PublicConcertReviewSummarySchema = z
+  .object({
+    averageRating: z.number().min(1).max(5).nullable(),
+    reviewCount: z.number().int().nonnegative(),
+  })
+  .strict();
+export type PublicConcertReviewSummary = z.infer<typeof PublicConcertReviewSummarySchema>;
+
+export const PublicConcertReviewsResponseSchema = z
+  .object({
+    summary: PublicConcertReviewSummarySchema,
+    reviews: z.array(PublicConcertReviewSchema),
+  })
+  .strict();
+export type PublicConcertReviewsResponse = z.infer<typeof PublicConcertReviewsResponseSchema>;
+
+export const CreateConcertReviewRequestSchema = z
+  .object({
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().min(1).max(1000),
+  })
+  .strict();
+export type CreateConcertReviewRequest = z.infer<typeof CreateConcertReviewRequestSchema>;
+
+export const UpdateConcertReviewRequestSchema = CreateConcertReviewRequestSchema;
+export type UpdateConcertReviewRequest = z.infer<typeof UpdateConcertReviewRequestSchema>;
+
+export const DeleteConcertReviewResponseSchema = z
+  .object({
+    deleted: z.literal(true),
+  })
+  .strict();
+export type DeleteConcertReviewResponse = z.infer<typeof DeleteConcertReviewResponseSchema>;
+
+export const HideConcertReviewRequestSchema = z
+  .object({
+    reason: z.string().trim().min(1).max(500).optional(),
+  })
+  .strict();
+export type HideConcertReviewRequest = z.infer<typeof HideConcertReviewRequestSchema>;

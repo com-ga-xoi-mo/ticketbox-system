@@ -70,6 +70,38 @@ export class PlatformConfigService {
     return this.configService.get('ORDER_RESERVATION_TTL_MINUTES');
   }
 
+  get waitlistEntitlementTtlMinutes(): number {
+    return this.configService.get('WAITLIST_ENTITLEMENT_TTL_MINUTES');
+  }
+
+  get lotteryEntitlementTtlMinutes(): number {
+    return this.configService.get('LOTTERY_ENTITLEMENT_TTL_MINUTES');
+  }
+
+  get waitingRoomDefaultMaxConcurrency(): number {
+    return this.configService.get('WAITING_ROOM_DEFAULT_MAX_CONCURRENCY');
+  }
+
+  get waitingRoomDefaultAdmissionTtlSeconds(): number {
+    return this.configService.get('WAITING_ROOM_DEFAULT_ADMISSION_TTL_SECONDS');
+  }
+
+  get waitingRoomDefaultActivateThreshold(): number {
+    return this.configService.get('WAITING_ROOM_DEFAULT_ACTIVATE_THRESHOLD');
+  }
+
+  get waitingRoomDefaultDeactivateThreshold(): number {
+    return this.configService.get('WAITING_ROOM_DEFAULT_DEACTIVATE_THRESHOLD');
+  }
+
+  get waitingRoomDefaultCooldownSeconds(): number {
+    return this.configService.get('WAITING_ROOM_DEFAULT_COOLDOWN_SECONDS');
+  }
+
+  get waitingRoomFailOpen(): boolean {
+    return this.configService.get('WAITING_ROOM_FAIL_OPEN');
+  }
+
   get paymentRepairEnabled(): boolean {
     return this.configService.get('PAYMENT_REPAIR_ENABLED');
   }

@@ -27,6 +27,8 @@ import { mapSeatingMapErrors } from './seating-map-error.mapper';
 import { UpdateZoneMappingsDto } from './dto/update-zone-mappings.dto';
 import { UpsertSeatingZonesDto } from './dto/upsert-seating-zones.dto';
 import type { UploadedMemoryFile } from './upload-file.type';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('organizer/concerts/:id')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,6 +71,7 @@ export class OrganizerSeatingMapController {
   }
 
   @Post('seating-map')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: Number(process.env.SEATING_MAP_SVG_MAX_BYTES ?? 5_242_880) },
@@ -93,6 +96,7 @@ export class OrganizerSeatingMapController {
   }
 
   @Patch('seating-zones')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async upsertZones(
     @Param('id') concertId: string,
     @Body() dto: UpsertSeatingZonesDto,
@@ -109,6 +113,7 @@ export class OrganizerSeatingMapController {
   }
 
   @Put('ticket-types/:typeId/zone-mappings')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async updateZoneMappings(
     @Param('id') concertId: string,
     @Param('typeId') ticketTypeId: string,

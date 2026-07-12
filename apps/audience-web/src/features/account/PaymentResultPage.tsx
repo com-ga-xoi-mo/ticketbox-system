@@ -4,7 +4,7 @@ import { Result, Skeleton } from 'antd';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useConcertList } from '../../shared/api/catalog';
-import { apiGet, apiPost } from '../../shared/api/client';
+import { apiPost } from '../../shared/api/client';
 import { useOrderDetail } from '../../shared/api/orders';
 import { PageError, PageLoading } from '../../shared/ui/PageStates';
 
@@ -38,11 +38,11 @@ export function PaymentResultPage() {
     return () => clearTimeout(timeout);
   }, [id, hasTimedOut, order]);
 
-  // Local fallback when the browser return arrives before the public IPN.
-  // The backend still verifies the provider signature before changing state.
+  // Local fallback for MoMo browser returns. VNPay must be finalized by the backend IPN.
   useEffect(() => {
     if (
       !location.search ||
+      location.search.includes('vnp_') ||
       order?.status !== 'PENDING_PAYMENT' ||
       callbackSyncStarted.current
     ) {
@@ -52,9 +52,7 @@ export function PaymentResultPage() {
     callbackSyncStarted.current = true;
 
     const syncCallback = async () => {
-      if (location.search.includes('vnp_')) {
-        await apiGet(`/payments/vnpay/ipn${location.search}`);
-      } else if (location.search.includes('resultCode=')) {
+      if (location.search.includes('resultCode=')) {
         const params = new URLSearchParams(location.search);
         const payload = Object.fromEntries(params.entries());
 

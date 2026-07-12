@@ -23,10 +23,11 @@ export async function fetchTicketDetail(id: string): Promise<TicketDetailRespons
   return TicketDetailResponseSchema.parse(data);
 }
 
-export function useMyTickets() {
+export function useMyTickets(enabled = true) {
   return useQuery({
     queryKey: ticketKeys.list(),
     queryFn: fetchMyTickets,
+    enabled,
   });
 }
 

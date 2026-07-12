@@ -170,9 +170,11 @@ import { VnpayPaymentGateway } from './infrastructure/vnpay/vnpay-payment-gatewa
     },
     {
       provide: VerifyVnpayReturnUseCase,
-      inject: [PAYMENT_GATEWAY],
-      useFactory: (paymentGateway: PaymentGatewayPort) =>
-        new VerifyVnpayReturnUseCase(paymentGateway),
+      inject: [PAYMENT_GATEWAY, PAYMENT_REPOSITORY],
+      useFactory: (
+        paymentGateway: PaymentGatewayPort,
+        paymentRepository: PaymentRepositoryPort,
+      ) => new VerifyVnpayReturnUseCase(paymentGateway, paymentRepository),
     },
     {
       provide: PAYMENT_REPOSITORY,

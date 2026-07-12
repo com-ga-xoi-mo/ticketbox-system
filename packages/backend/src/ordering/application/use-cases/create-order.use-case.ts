@@ -7,6 +7,7 @@ import { OrderStatus } from '../../domain/order-status.enum';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
 import type { IInventoryReservationRepository } from '../../domain/ports/inventory-reservation.port';
 import type { TicketTypePricingRepositoryPort } from '../../domain/ports/ticket-type-pricing.port';
+import type { WaitingRoomAdmissionPort } from '../../domain/ports/waiting-room-admission.port';
 
 export interface CreateOrderItemCommand {
   ticketTypeId: string;
@@ -17,6 +18,8 @@ import type { PromotionValidationPort } from '../../domain/ports/promotion-valid
 
 export interface CreateOrderCommand {
   promoCode?: string;
+  waitlistEntitlementId?: string;
+  waitingRoomAdmissionToken?: string;
   userId: string;
   concertId: string;
   idempotencyKey: string;
@@ -39,6 +42,7 @@ export class CreateOrderUseCase {
     private readonly inventoryReservationRepository: IInventoryReservationRepository,
     private readonly ticketTypePricingRepository: TicketTypePricingRepositoryPort,
     private readonly promotionValidationPort: PromotionValidationPort,
+    private readonly waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
     options: CreateOrderUseCaseOptions,
   ) {
     this.reservationTtlMinutes = options.reservationTtlMinutes;
@@ -55,6 +59,13 @@ export class CreateOrderUseCase {
     if (existingOrder) {
       return existingOrder;
     }
+
+    await this.waitingRoomAdmissionPort.incrementLoad(command.concertId);
+    await this.waitingRoomAdmissionPort.validate({
+      concertId: command.concertId,
+      userId: command.userId,
+      token: command.waitingRoomAdmissionToken,
+    });
 
     const createdAt = this.now();
     const ticketTypeIds = command.items.map((item) => item.ticketTypeId);
@@ -145,7 +156,18 @@ export class CreateOrderUseCase {
       items,
     });
 
-    return this.inventoryReservationRepository.reserve(order);
+    const createdOrder = await this.inventoryReservationRepository.reserve(order, {
+      waitlistEntitlementId: command.waitlistEntitlementId,
+    });
+    try {
+      await this.waitingRoomAdmissionPort.release({
+        concertId: command.concertId,
+        userId: command.userId,
+      });
+    } catch {
+      // The admission token has a TTL, so an unreleased slot is reclaimed shortly.
+    }
+    return createdOrder;
   }
 
   private addReservationTtl(now: Date): Date {

@@ -84,8 +84,12 @@ export {
   CatalogSearchParamsSchema,
   CatalogSortBySchema,
   CatalogSortDirSchema,
+  ConcertReviewStatusCodeSchema,
+  CreateConcertReviewRequestSchema,
+  DeleteConcertReviewResponseSchema,
   EventTypeCodeSchema,
   FeaturedConcertParamsSchema,
+  HideConcertReviewRequestSchema,
   PublicAssetSchema,
   PublicAvailabilityTicketTypeSchema,
   PublicConcertAvailabilityResponseSchema,
@@ -94,6 +98,10 @@ export {
   PublicConcertDetailResponseSchema,
   PublicConcertListResponseSchema,
   PublicConcertArtistSchema,
+  PublicConcertReviewAuthorSchema,
+  PublicConcertReviewSchema,
+  PublicConcertReviewSummarySchema,
+  PublicConcertReviewsResponseSchema,
   PublicConcertSummarySchema,
   PublicFeaturedConcertListResponseSchema,
   PublicFeaturedConcertSchema,
@@ -102,6 +110,7 @@ export {
   PublicTicketTypeZoneMappingSchema,
   SeatingZoneStatusCodeSchema,
   TicketTypeStatusCodeSchema,
+  UpdateConcertReviewRequestSchema,
 } from './catalog/public-concert.contract';
 export type {
   AssetKindCode,
@@ -109,8 +118,12 @@ export type {
   CatalogSearchParams,
   CatalogSortBy,
   CatalogSortDir,
+  ConcertReviewStatusCode,
+  CreateConcertReviewRequest,
+  DeleteConcertReviewResponse,
   EventTypeCode,
   FeaturedConcertParams,
+  HideConcertReviewRequest,
   PublicAsset,
   PublicAvailabilityTicketType,
   PublicConcertAvailabilityResponse,
@@ -119,6 +132,10 @@ export type {
   PublicConcertDetailResponse,
   PublicConcertListResponse,
   PublicConcertArtist,
+  PublicConcertReview,
+  PublicConcertReviewAuthor,
+  PublicConcertReviewSummary,
+  PublicConcertReviewsResponse,
   PublicConcertSummary,
   PublicFeaturedConcert,
   PublicFeaturedConcertListResponse,
@@ -127,6 +144,7 @@ export type {
   PublicTicketTypeZoneMapping,
   SeatingZoneStatusCode,
   TicketTypeStatusCode,
+  UpdateConcertReviewRequest,
 } from './catalog/public-concert.contract';
 
 export {
@@ -275,6 +293,75 @@ export type {
   SupportRequestStatus,
   SupportRequestStatusHistoryItem,
 } from './audience/support.contract';
+
+export {
+  JoinWaitlistRequestSchema,
+  LeaveWaitlistResponseSchema,
+  PurchaseEntitlementStatusSchema,
+  WaitlistEntitlementSchema,
+  WaitlistEntryStatusSchema,
+  WaitlistStatusResponseSchema,
+} from './audience/waitlist.contract';
+export type {
+  JoinWaitlistRequest,
+  LeaveWaitlistResponse,
+  PurchaseEntitlementStatus,
+  WaitlistEntitlement,
+  WaitlistEntryStatus,
+  WaitlistStatusResponse,
+} from './audience/waitlist.contract';
+
+export {
+  ConfigureWaitingRoomRequestSchema,
+  SetWaitingRoomOverrideRequestSchema,
+  WaitingRoomConfigResponseSchema,
+  WaitingRoomManualOverrideSchema,
+  WaitingRoomSseEventSchema,
+  WaitingRoomStatusResponseSchema,
+  WaitingRoomStatusSchema,
+  WaitingRoomStreamTokenResponseSchema,
+} from './audience/waiting-room.contract';
+export type {
+  ConfigureWaitingRoomRequest,
+  SetWaitingRoomOverrideRequest,
+  WaitingRoomConfigResponse,
+  WaitingRoomManualOverride,
+  WaitingRoomSseEvent,
+  WaitingRoomStatus,
+  WaitingRoomStatusResponse,
+  WaitingRoomStreamTokenResponse,
+} from './audience/waiting-room.contract';
+
+export {
+  ConfigureLotteryRequestSchema,
+  ConfigureLotteryResponseSchema,
+  LotteryConfigStatusSchema,
+  LotteryEntitlementSchema,
+  LotteryEntitlementStatusSchema,
+  LotteryRegistrationListResponseSchema,
+  LotteryRegistrationListItemSchema,
+  LotteryRegistrationStatusSchema,
+  LotteryStatusResponseSchema,
+  RegisterForLotteryRequestSchema,
+  RunLotteryDrawNowResponseSchema,
+  UpdateLotteryTtlRequestSchema,
+  WithdrawLotteryResponseSchema,
+} from './audience/lottery.contract';
+export type {
+  ConfigureLotteryRequest,
+  ConfigureLotteryResponse,
+  LotteryConfigStatus,
+  LotteryEntitlement,
+  LotteryEntitlementStatus,
+  LotteryRegistrationListItem,
+  LotteryRegistrationListResponse,
+  LotteryRegistrationStatus,
+  LotteryStatusResponse,
+  RegisterForLotteryRequest,
+  RunLotteryDrawNowResponse,
+  UpdateLotteryTtlRequest,
+  WithdrawLotteryResponse,
+} from './audience/lottery.contract';
 
 export {
   CreateRefundRequestSchema,

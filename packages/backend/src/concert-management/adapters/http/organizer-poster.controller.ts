@@ -17,6 +17,8 @@ import { Role } from '../../../identity/domain/role.enum';
 import { UploadPosterUseCase } from '../../application/use-cases/upload-poster.use-case';
 import { mapPosterErrors } from './poster-error.mapper';
 import type { UploadedMemoryFile } from './upload-file.type';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('organizer/concerts/:id')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,6 +27,7 @@ export class OrganizerPosterController {
   constructor(private readonly uploadPosterUseCase: UploadPosterUseCase) {}
 
   @Post('poster')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: Number(process.env.POSTER_IMAGE_MAX_BYTES ?? 5_242_880) },

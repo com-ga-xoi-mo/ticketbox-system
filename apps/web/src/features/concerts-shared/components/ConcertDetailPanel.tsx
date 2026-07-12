@@ -19,6 +19,7 @@ interface ConcertDetailPanelProps {
   isCancelling?: boolean;
   publishError?: string | null;
   cancelError?: string | null;
+  extraContent?: React.ReactNode;
 }
 
 export function ConcertDetailPanel({
@@ -31,6 +32,7 @@ export function ConcertDetailPanel({
   isCancelling,
   publishError,
   cancelError,
+  extraContent,
 }: ConcertDetailPanelProps) {
   const { label, variant, dotClass } = mapStatus(concert.status);
   
@@ -298,6 +300,8 @@ export function ConcertDetailPanel({
             </div>
           </div>
         </div>
+
+        {extraContent}
       </div>
 
       {/* Actions */}

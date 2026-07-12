@@ -26,6 +26,8 @@ import { ListOrganizerConcertsUseCase } from '../../application/use-cases/list-o
 import { GetOrganizerConcertUseCase } from '../../application/use-cases/get-organizer-concert.use-case';
 import { UploadBannerUseCase } from '../../application/use-cases/upload-banner.use-case';
 import { mapConcertErrors } from './concert-error.mapper';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 import { mapPosterErrors } from './poster-error.mapper';
 import { mapToManagementConcertResponse } from './management-concert.mapper';
 
@@ -66,6 +68,7 @@ export class OrganizerConcertController {
   }
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async create(@Body() body: any, @Request() req: { user: AuthenticatedUser }) {
     let dto;
     try {
@@ -98,6 +101,7 @@ export class OrganizerConcertController {
   }
 
   @Patch(':id')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async update(
     @Param('id') id: string,
     @Body() body: any,
@@ -137,6 +141,7 @@ export class OrganizerConcertController {
   }
 
   @Post(':id/publish')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async publish(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.publishConcertUseCase.execute({
@@ -149,6 +154,7 @@ export class OrganizerConcertController {
   }
 
   @Post(':id/cancel')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async cancel(@Param('id') id: string, @Request() req: { user: AuthenticatedUser }) {
     return mapConcertErrors(() =>
       this.cancelConcertUseCase.execute({

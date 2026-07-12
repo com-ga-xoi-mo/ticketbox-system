@@ -8,10 +8,12 @@ import {
   Param,
   Post,
   Query,
+  Res,
   Request,
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 
 import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
 import { Role } from '../../../identity/domain/role.enum';
@@ -25,6 +27,7 @@ import {
 } from '../../../ordering/domain/errors';
 import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
 import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
+import { PlatformConfigService } from '../../../platform/config/platform-config.service';
 import { InitiatePaymentUseCase } from '../../application/use-cases/initiate-payment.use-case';
 import { ProcessMomoIpnUseCase } from '../../application/use-cases/process-momo-ipn.use-case';
 import { ProcessSimulatorPaymentCallbackUseCase } from '../../application/use-cases/process-simulator-payment-callback.use-case';
@@ -71,6 +74,7 @@ export class PaymentController {
     private readonly processMomoIpnUseCase: ProcessMomoIpnUseCase,
     private readonly processVnpayIpnUseCase: ProcessVnpayIpnUseCase,
     private readonly verifyVnpayReturnUseCase: VerifyVnpayReturnUseCase,
+    private readonly config: PlatformConfigService,
   ) {}
 
   @Post('orders/:id/payment')
@@ -132,10 +136,10 @@ export class PaymentController {
   }
 
   @Get('payments/vnpay/return')
-  vnpayReturn(@Query() query: Record<string, unknown>) {
+  async vnpayReturn(@Query() query: Record<string, unknown>, @Res() response: Response) {
     try {
-      const result = this.verifyVnpayReturnUseCase.execute(normalizeVnpayQuery(query));
-      return serializeVnpayReturnResult(result);
+      const result = await this.verifyVnpayReturnUseCase.execute(normalizeVnpayQuery(query));
+      return response.redirect(302, this.buildFrontendPaymentResultUrl(result));
     } catch (err: unknown) {
       this.mapPaymentError(err);
     }
@@ -182,6 +186,13 @@ export class PaymentController {
     } catch (err: unknown) {
       this.mapPaymentError(err);
     }
+  }
+
+  private buildFrontendPaymentResultUrl(result: { orderId: string; success: boolean }): string {
+    const url = new URL(`/orders/${result.orderId}/result`, this.config.frontendUrl);
+    url.searchParams.set('provider', 'VNPAY');
+    url.searchParams.set('status', result.success ? 'success' : 'failed');
+    return url.toString();
   }
 
   private mapPaymentError(err: unknown): never {

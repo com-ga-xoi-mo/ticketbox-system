@@ -21,6 +21,8 @@ import { ListTicketTypesWithZoneMappingsUseCase } from '../../application/use-ca
 import { CreateTicketTypeDto } from './dto/create-ticket-type.dto';
 import { UpdateTicketTypeDto } from './dto/update-ticket-type.dto';
 import { mapConcertErrors } from './concert-error.mapper';
+import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
+import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
 
 @Controller('organizer/concerts/:id/ticket-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,6 +50,7 @@ export class OrganizerTicketTypeController {
   }
 
   @Post()
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async create(
     @Param('id') concertId: string,
     @Body() dto: CreateTicketTypeDto,
@@ -72,6 +75,7 @@ export class OrganizerTicketTypeController {
   }
 
   @Patch(':typeId')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async update(
     @Param('id') concertId: string,
     @Param('typeId') typeId: string,
@@ -99,6 +103,7 @@ export class OrganizerTicketTypeController {
   }
 
   @Patch(':typeId/archive')
+  @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async archive(
     @Param('id') concertId: string,
     @Param('typeId') typeId: string,
