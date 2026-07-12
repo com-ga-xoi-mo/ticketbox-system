@@ -22,6 +22,7 @@ export default defineConfig({
       'test/**/*.spec.ts',
       'test/**/*.e2e-spec.ts',
     ],
+    exclude: ['apps/**/e2e/**', 'node_modules/**'],
     passWithNoTests: true,
     coverage: {
       provider: 'v8',

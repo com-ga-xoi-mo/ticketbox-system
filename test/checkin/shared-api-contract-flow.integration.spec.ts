@@ -21,6 +21,8 @@ import { RemoveMyAvatarUseCase } from '../../packages/backend/src/identity/appli
 import { UpdateMyPasswordUseCase } from '../../packages/backend/src/identity/application/use-cases/update-my-password.use-case';
 import { UpdateMyProfileUseCase } from '../../packages/backend/src/identity/application/use-cases/update-my-profile.use-case';
 import { UploadMyAvatarUseCase } from '../../packages/backend/src/identity/application/use-cases/upload-my-avatar.use-case';
+import { ForgotPasswordUseCase } from '../../packages/backend/src/identity/application/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from '../../packages/backend/src/identity/application/use-cases/reset-password.use-case';
 import { Role } from '../../packages/backend/src/identity/domain/role.enum';
 import { JwtAuthGuard } from '../../packages/backend/src/identity/infrastructure/passport/jwt-auth.guard';
 
@@ -85,6 +87,8 @@ describe('shared API contracts across real HTTP routes and mobile client', () =>
           },
         },
         { provide: GoogleSignInUseCase, useValue: { execute: vi.fn() } },
+        { provide: ForgotPasswordUseCase, useValue: { execute: vi.fn() } },
+        { provide: ResetPasswordUseCase, useValue: { execute: vi.fn() } },
         { provide: UpdateMyProfileUseCase, useValue: { execute: vi.fn() } },
         { provide: UpdateMyPasswordUseCase, useValue: { execute: vi.fn() } },
         { provide: UploadMyAvatarUseCase, useValue: { execute: vi.fn() } },
