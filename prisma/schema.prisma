@@ -146,6 +146,13 @@ enum TicketStatus {
   @@map("ticket_status")
 }
 
+enum ConcertReviewStatus {
+  VISIBLE
+  HIDDEN
+
+  @@map("concert_review_status")
+}
+
 enum CheckinAssignmentStatus {
   ACTIVE
   REVOKED
@@ -454,6 +461,8 @@ model User {
   bankProfile           SellerBankProfile?
   resaleOrdersAsBuyer   ResaleOrder[]            @relation("ResaleOrderBuyer")
   resaleOrdersAsSeller  ResaleOrder[]            @relation("ResaleOrderSeller")
+  concertReviews        ConcertReview[]           @relation("ConcertReviewUser")
+  hiddenConcertReviews  ConcertReview[]           @relation("ConcertReviewHiddenBy")
 
   @@map("users")
 }
@@ -592,6 +601,7 @@ model Concert {
   concertArtists   ConcertArtist[]
   favoritedBy      FavoriteConcert[]        @relation("ConcertFavoritedBy")
   resaleListings   ResaleListing[]
+  reviews          ConcertReview[]
 
   @@index([status, startsAt])
   @@index([createdById])
@@ -785,9 +795,33 @@ model Ticket {
   resaleListings  ResaleListing[]
 
   @@index([userId, status])
+  @@index([userId, concertId, status])
   @@index([concertId, status])
   @@index([ticketTypeId])
   @@map("tickets")
+}
+
+model ConcertReview {
+  id             String              @id @default(uuid()) @db.Uuid
+  concertId      String              @map("concert_id") @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  rating         Int
+  comment        String              @db.VarChar(1000)
+  status         ConcertReviewStatus @default(VISIBLE)
+  hiddenAt       DateTime?           @map("hidden_at") @db.Timestamptz(6)
+  hiddenByUserId String?             @map("hidden_by_user_id") @db.Uuid
+  hiddenReason   String?             @map("hidden_reason") @db.VarChar(500)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  concert      Concert @relation(fields: [concertId], references: [id], onDelete: Cascade)
+  user         User    @relation("ConcertReviewUser", fields: [userId], references: [id], onDelete: Cascade)
+  hiddenByUser User?   @relation("ConcertReviewHiddenBy", fields: [hiddenByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([concertId, userId])
+  @@index([concertId, status, createdAt])
+  @@index([userId, concertId])
+  @@map("concert_reviews")
 }
 
 model CheckinStaffAssignment {

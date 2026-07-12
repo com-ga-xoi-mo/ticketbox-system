@@ -1,5 +1,9 @@
 import { get, post, patch, put, postFormData } from '../../../shared/api/client';
-import type { ManagementConcertResponse } from '@ticketbox/api-types';
+import type {
+  HideConcertReviewRequest,
+  ManagementConcertResponse,
+  PublicConcertReviewsResponse,
+} from '@ticketbox/api-types';
 
 export const ADMIN_CONCERTS_PATH = '/admin/concerts';
 
@@ -44,4 +48,16 @@ export async function uploadBanner(id: string, file: File): Promise<{ asset: { p
 
 export async function replaceArtists(id: string, payload: unknown): Promise<void> {
   return put<{ success: boolean }>(`${ADMIN_CONCERTS_PATH}/${id}/artists`, payload).then(() => {});
+}
+
+export async function listConcertReviews(slug: string): Promise<PublicConcertReviewsResponse> {
+  return get<PublicConcertReviewsResponse>(`/concerts/${slug}/reviews`);
+}
+
+export async function hideConcertReview(
+  concertId: string,
+  reviewId: string,
+  payload: HideConcertReviewRequest,
+): Promise<void> {
+  return patch<{ success: boolean }>(`${ADMIN_CONCERTS_PATH}/${concertId}/reviews/${reviewId}/hide`, payload).then(() => {});
 }

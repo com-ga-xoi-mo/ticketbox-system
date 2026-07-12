@@ -12,6 +12,8 @@ import {
   uploadPoster,
   uploadBanner,
   replaceArtists,
+  listConcertReviews,
+  hideConcertReview,
 } from './api';
 
 const adminScope = { role: 'ADMIN' as const, sub: '' };
@@ -126,6 +128,30 @@ export function useReplaceArtistsMutation() {
     onSuccess: (_, { id }) => {
       void queryClient.invalidateQueries({ queryKey: concertKeys.detail(adminScope, id) });
       void queryClient.invalidateQueries({ queryKey: concertKeys.list(adminScope) });
+    },
+  });
+}
+
+export const adminConcertReviewKeys = {
+  list: (concertSlug: string) => ['admin-concert-reviews', concertSlug] as const,
+};
+
+export function useConcertReviews(concertSlug: string | undefined) {
+  return useQuery({
+    queryKey: adminConcertReviewKeys.list(concertSlug ?? ''),
+    queryFn: () => listConcertReviews(concertSlug as string),
+    enabled: !!concertSlug,
+  });
+}
+
+export function useHideConcertReviewMutation(concertId: string, concertSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ reviewId, reason }: { reviewId: string; reason?: string }) =>
+      hideConcertReview(concertId, reviewId, reason ? { reason } : {}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminConcertReviewKeys.list(concertSlug) });
     },
   });
 }

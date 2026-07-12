@@ -85,12 +85,15 @@ export function CheckoutPage() {
     setErrorMsg(null);
     try {
       const idempotencyKey = generateIdempotencyKey();
-      const returnUrl = `${window.location.origin}/orders/${createdOrder.id}/result`;
+      const returnUrl =
+        selectedProvider === 'VNPAY'
+          ? undefined
+          : `${window.location.origin}/orders/${createdOrder.id}/result`;
       
       const res = await initiatePayment(createdOrder.id, {
         idempotencyKey,
         provider: selectedProvider,
-        returnUrl,
+        ...(returnUrl ? { returnUrl } : {}),
       });
 
       if (!res.redirectUrl) {

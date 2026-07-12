@@ -10,6 +10,8 @@ import {
   uploadPoster,
   uploadBanner,
   replaceArtists,
+  listConcertReviews,
+  hideConcertReview,
   ADMIN_CONCERTS_PATH,
 } from './api';
 
@@ -89,5 +91,20 @@ describe('admin concerts api functions', () => {
     const payload = { artists: [{ artistId: 'ar1', displayOrder: 0 }, { artistId: 'ar2', displayOrder: 1 }] };
     await replaceArtists('123', payload);
     expect(client.put).toHaveBeenCalledWith(`${ADMIN_CONCERTS_PATH}/123/artists`, payload);
+  });
+
+  it('listConcertReviews loads public visible reviews by concert slug', async () => {
+    vi.mocked(client.get).mockResolvedValue({ summary: { averageRating: null, reviewCount: 0 }, reviews: [] });
+    await listConcertReviews('demo-concert');
+    expect(client.get).toHaveBeenCalledWith('/concerts/demo-concert/reviews');
+  });
+
+  it('hideConcertReview calls the admin moderation endpoint', async () => {
+    vi.mocked(client.patch).mockResolvedValue({});
+    await hideConcertReview('concert-1', 'review-1', { reason: 'spam' });
+    expect(client.patch).toHaveBeenCalledWith(
+      `${ADMIN_CONCERTS_PATH}/concert-1/reviews/review-1/hide`,
+      { reason: 'spam' },
+    );
   });
 });

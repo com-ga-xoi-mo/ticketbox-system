@@ -8,6 +8,7 @@ import { ConcertDetailPanel } from '../../concerts-shared/components/ConcertDeta
 import { Button } from '../../../shared/ui/button';
 import { Pagination } from '../../../shared/ui/pagination';
 import type { Concert, ConcertStatus } from '../../concerts-shared/types';
+import { AdminConcertReviewsPanel } from './AdminConcertReviewsPanel';
 
 const PAGE_SIZE = 10;
 
@@ -246,6 +247,11 @@ export function ConcertsPage() {
                 isCancelling={cancelMutation.isPending}
                 publishError={publishMutation.error?.message}
                 cancelError={cancelMutation.error?.message}
+                extraContent={
+                  <AdminConcertReviewsPanel
+                    concert={concerts.find((c) => c.id === selectedConcert.id) || selectedConcert}
+                  />
+                }
               />
             </div>
           )}

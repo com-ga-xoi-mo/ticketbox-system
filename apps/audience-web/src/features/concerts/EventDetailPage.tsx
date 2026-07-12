@@ -13,6 +13,7 @@ import { Separator } from '../../components/ui/separator';
 import { FavoriteButton } from '../../shared/ui/FavoriteButton';
 import { VenueMapModal } from './components/VenueMapModal';
 import { SeatingZoneMap } from './components/SeatingZoneMap';
+import { ConcertReviewsSection } from './components/ConcertReviewsSection';
 import { getSaleWindowState } from './utils/ticket-type-status';
 import { getTicketTypesForZone, getZoneLabelsForTicketType } from './utils/seating-zone-mapping';
 import { SeoHead } from '../../shared/ui/seo/SeoHead';
@@ -430,6 +431,8 @@ export function EventDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          <ConcertReviewsSection concert={data} />
         </div>
       </div>
       {/* Venue Map Modal — only rendered when coordinates are available */}
