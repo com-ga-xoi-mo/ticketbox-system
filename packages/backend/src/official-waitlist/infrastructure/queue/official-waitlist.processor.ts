@@ -2,15 +2,10 @@ import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { Job, Queue } from 'bullmq';
 
+import { WatchWaitlistAvailabilityUseCase } from '../../application/use-cases/waitlist.use-cases';
 import {
-  ExpireWaitlistEntitlementsUseCase,
-  GrantWaitlistEntitlementsUseCase,
-  SendWaitlistEntitlementRemindersUseCase,
-} from '../../application/use-cases/waitlist.use-cases';
-import {
-  EXPIRE_WAITLIST_ENTITLEMENTS_JOB,
-  GRANT_WAITLIST_ENTITLEMENTS_JOB,
   OFFICIAL_WAITLIST_QUEUE,
+  WATCH_WAITLIST_AVAILABILITY_JOB,
 } from './official-waitlist-queue.constants';
 
 @Injectable()
@@ -19,9 +14,7 @@ export class OfficialWaitlistProcessor extends WorkerHost implements OnModuleIni
   private readonly logger = new Logger(OfficialWaitlistProcessor.name);
 
   constructor(
-    private readonly grantWaitlistEntitlements: GrantWaitlistEntitlementsUseCase,
-    private readonly expireWaitlistEntitlements: ExpireWaitlistEntitlementsUseCase,
-    private readonly sendWaitlistEntitlementReminders: SendWaitlistEntitlementRemindersUseCase,
+    private readonly watchWaitlistAvailability: WatchWaitlistAvailabilityUseCase,
     @InjectQueue(OFFICIAL_WAITLIST_QUEUE)
     private readonly queue: Queue,
   ) {
@@ -30,10 +23,10 @@ export class OfficialWaitlistProcessor extends WorkerHost implements OnModuleIni
 
   async onModuleInit(): Promise<void> {
     await this.queue.add(
-      EXPIRE_WAITLIST_ENTITLEMENTS_JOB,
+      WATCH_WAITLIST_AVAILABILITY_JOB,
       {},
       {
-        jobId: EXPIRE_WAITLIST_ENTITLEMENTS_JOB,
+        jobId: WATCH_WAITLIST_AVAILABILITY_JOB,
         repeat: { every: 60_000 },
         removeOnComplete: 10,
         removeOnFail: 50,
@@ -42,22 +35,10 @@ export class OfficialWaitlistProcessor extends WorkerHost implements OnModuleIni
   }
 
   async process(job: Job): Promise<unknown> {
-    if (job.name === GRANT_WAITLIST_ENTITLEMENTS_JOB) {
-      const result = await this.grantWaitlistEntitlements.execute({
-        ticketTypeId: job.data.ticketTypeId,
-        releasedQuantity: job.data.quantityReleased,
-      });
-      this.logger.debug(
-        `Waitlist grant job ${job.id} granted ${result.length} entitlements`,
-      );
-      return { granted: result.length };
-    }
-
-    const result = await this.expireWaitlistEntitlements.execute();
-    const reminders = await this.sendWaitlistEntitlementReminders.execute();
+    const result = await this.watchWaitlistAvailability.execute();
     this.logger.debug(
-      `Waitlist expiry job ${job.id} expired=${result.expired}, grantsTriggered=${result.grantsTriggered}, remindersEnqueued=${reminders.enqueued}`,
+      `Waitlist availability job ${job.id} scanned=${result.scanned}, ticketTypes=${result.notifiedTicketTypes}, notifications=${result.notifications}`,
     );
-    return { ...result, remindersEnqueued: reminders.enqueued };
+    return result;
   }
 }

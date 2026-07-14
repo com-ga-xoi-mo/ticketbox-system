@@ -1,59 +1,38 @@
-import type { LotteryEntitlementNotificationContext } from '../../domain/lottery.types';
+import type { LotteryWinnerNotificationContext } from '../../domain/lottery.types';
 
-export type LotteryEntitlementEmailKind = 'grant' | 'expiry-reminder';
-
-export interface LotteryEntitlementEmailContent {
+export interface LotteryWinnerEmailContent {
   subject: string;
   body: string;
   actionUrl: string;
 }
 
-export class LotteryEntitlementEmailComposer {
+export class LotteryWinnerEmailComposer {
   constructor(private readonly ticketAccessBaseUrl: string) {}
 
-  compose(
-    context: LotteryEntitlementNotificationContext,
-    kind: LotteryEntitlementEmailKind,
-  ): LotteryEntitlementEmailContent {
+  compose(context: LotteryWinnerNotificationContext): LotteryWinnerEmailContent {
     const actionUrl = this.buildActionUrl(context);
-    const expiry = context.entitlement.expiresAt.toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      hour12: false,
-    });
-    const title =
-      kind === 'grant'
-        ? 'Bạn đã trúng suất mua vé trong đợt bốc thăm TicketBox'
-        : 'Suất mua vé trúng thăm sắp hết hạn';
-    const intro =
-      kind === 'grant'
-        ? 'Chúc mừng! Bạn đã trúng suất mua vé trong đợt bốc thăm mở bán sớm.'
-        : 'Suất mua vé trúng thăm của bạn sắp hết hạn.';
 
     return {
-      subject: title,
+      subject: 'Bạn đã trúng bốc thăm mua vé TicketBox',
       actionUrl,
       body: [
         `Xin chào ${context.userDisplayName},`,
         '',
-        intro,
+        'Chúc mừng! Bạn đã trúng trong đợt bốc thăm mở bán sớm.',
         '',
         `Sự kiện: ${context.concertTitle}`,
         `Hạng vé: ${context.ticketTypeName} (${context.ticketTypeCode})`,
-        `Số lượng tối đa: ${context.entitlement.quantity}`,
-        `Hạn mua: ${expiry}`,
+        `Số lượng được mua: ${context.wonQuantity}`,
         '',
         `Mở trang mua vé: ${actionUrl}`,
         '',
-        'Suất mua này không giữ vé cứng. Vé chỉ được giữ khi bạn hoàn tất checkout trước khi hết hạn.',
+        'Bạn được mua vé trong suốt đợt presale, cho tới khi mở bán công khai. Thông báo này không tạo slot giữ chỗ riêng và không có đồng hồ hết hạn cá nhân.',
       ].join('\n'),
     };
   }
 
-  private buildActionUrl(context: LotteryEntitlementNotificationContext): string {
+  private buildActionUrl(context: LotteryWinnerNotificationContext): string {
     const base = this.ticketAccessBaseUrl.replace(/\/+$/, '');
-    const params = new URLSearchParams({
-      lotteryEntitlementId: context.entitlement.id,
-    });
-    return `${base}/events/${context.concertSlug}?${params.toString()}`;
+    return `${base}/events/${context.concertSlug}`;
   }
 }

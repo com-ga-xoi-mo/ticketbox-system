@@ -18,7 +18,6 @@ const config: LotteryConfigRecord = {
   registrationClosesAt: new Date('2026-01-02T00:00:00.000Z'),
   drawAt: new Date('2026-01-03T00:00:00.000Z'),
   allocation: 3,
-  entitlementTtlMinutes: 9,
   status: 'SCHEDULED',
   seed: null,
   drawnAt: null,
@@ -30,7 +29,6 @@ function makeController() {
   const getConfig = { execute: vi.fn().mockResolvedValue(config) };
   const runDraw = { execute: vi.fn().mockResolvedValue({ granted: 1, notSelected: 2 }) };
   const listRegistrations = { execute: vi.fn().mockResolvedValue([]) };
-  const updateTtl = { execute: vi.fn().mockResolvedValue({ ...config, entitlementTtlMinutes: 12 }) };
 
   return {
     controller: new OrganizerLotteryController(
@@ -39,17 +37,15 @@ function makeController() {
       getConfig as any,
       runDraw as any,
       listRegistrations as any,
-      updateTtl as any,
     ),
     configure,
     runDraw,
     listRegistrations,
-    updateTtl,
   };
 }
 
 describe('OrganizerLotteryController', () => {
-  it('passes entitlement TTL to the configure use case', async () => {
+  it('configures a lottery without any entitlement TTL', async () => {
     const { controller, configure } = makeController();
 
     const result = await controller.configure({
@@ -59,13 +55,12 @@ describe('OrganizerLotteryController', () => {
       drawAt: '2026-01-03T00:00:00.000Z',
       publicSaleStartsAt: '2026-01-04T00:00:00.000Z',
       allocation: 3,
-      entitlementTtlMinutes: 9,
     });
 
     expect(configure.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ entitlementTtlMinutes: 9 }),
+      expect.objectContaining({ ticketTypeId: TICKET_TYPE_ID, allocation: 3 }),
     );
-    expect(result.entitlementTtlMinutes).toBe(9);
+    expect(result).not.toHaveProperty('entitlementTtlMinutes');
   });
 
   it('runs the draw now through the shared draw use case', async () => {
@@ -77,21 +72,7 @@ describe('OrganizerLotteryController', () => {
     expect(result).toEqual({ ticketTypeId: TICKET_TYPE_ID, granted: 1, notSelected: 2 });
   });
 
-  it('updates entitlement TTL through the dedicated endpoint', async () => {
-    const { controller, updateTtl } = makeController();
-
-    const result = await controller.updateTtl(TICKET_TYPE_ID, {
-      entitlementTtlMinutes: 12,
-    });
-
-    expect(updateTtl.execute).toHaveBeenCalledWith({
-      ticketTypeId: TICKET_TYPE_ID,
-      entitlementTtlMinutes: 12,
-    });
-    expect(result.entitlementTtlMinutes).toBe(12);
-  });
-
-  it('serializes organizer registration list rows', async () => {
+  it('serializes organizer registration list rows with won/purchased quantities', async () => {
     const { controller, listRegistrations } = makeController();
     const rows: LotteryRegistrationListItem[] = [
       {
@@ -100,13 +81,14 @@ describe('OrganizerLotteryController', () => {
         userEmail: 'user@example.com',
         userDisplayName: 'User One',
         desiredQuantity: 2,
-        status: 'REGISTERED',
+        wonQuantity: 2,
+        purchasedQuantity: 1,
+        status: 'WON',
         registeredAt: new Date('2026-01-01T01:00:00.000Z'),
-        wonAt: null,
+        wonAt: new Date('2026-01-03T00:00:00.000Z'),
         notSelectedAt: null,
         withdrawnAt: null,
         fulfilledAt: null,
-        entitlement: null,
       },
     ];
     listRegistrations.execute.mockResolvedValue(rows);
@@ -118,7 +100,9 @@ describe('OrganizerLotteryController', () => {
       registrationId: REGISTRATION_ID,
       userEmail: 'user@example.com',
       desiredQuantity: 2,
-      status: 'REGISTERED',
+      wonQuantity: 2,
+      purchasedQuantity: 1,
+      status: 'WON',
     });
   });
 });

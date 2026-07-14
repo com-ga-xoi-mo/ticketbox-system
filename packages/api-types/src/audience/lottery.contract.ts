@@ -16,14 +16,6 @@ export const LotteryRegistrationStatusSchema = z.enum([
 ]);
 export type LotteryRegistrationStatus = z.infer<typeof LotteryRegistrationStatusSchema>;
 
-export const LotteryEntitlementStatusSchema = z.enum([
-  'ACTIVE',
-  'CONSUMED',
-  'EXPIRED',
-  'REVOKED',
-]);
-export type LotteryEntitlementStatus = z.infer<typeof LotteryEntitlementStatusSchema>;
-
 export const RegisterForLotteryRequestSchema = z.object({
   ticketTypeId: z.string().uuid(),
   desiredQuantity: z.number().int().min(1),
@@ -37,34 +29,21 @@ export const ConfigureLotteryRequestSchema = z.object({
   drawAt: z.string().datetime(),
   publicSaleStartsAt: z.string().datetime(),
   allocation: z.number().int().min(1),
-  entitlementTtlMinutes: z.number().int().min(1).optional(),
 });
 export type ConfigureLotteryRequest = z.infer<typeof ConfigureLotteryRequestSchema>;
-
-export const UpdateLotteryTtlRequestSchema = z.object({
-  entitlementTtlMinutes: z.number().int().min(1),
-});
-export type UpdateLotteryTtlRequest = z.infer<typeof UpdateLotteryTtlRequestSchema>;
-
-export const LotteryEntitlementSchema = z.object({
-  id: z.string().uuid(),
-  status: LotteryEntitlementStatusSchema,
-  quantity: z.number().int().min(1),
-  expiresAt: z.string(),
-  grantedAt: z.string(),
-});
-export type LotteryEntitlement = z.infer<typeof LotteryEntitlementSchema>;
 
 export const LotteryStatusResponseSchema = z.object({
   ticketTypeId: z.string().uuid(),
   registrationId: z.string().uuid().nullable(),
   registrationStatus: LotteryRegistrationStatusSchema.nullable(),
   desiredQuantity: z.number().int().min(1).nullable(),
+  wonQuantity: z.number().int().min(0).nullable(),
+  purchasedQuantity: z.number().int().min(0).nullable(),
+  remainingWonQuantity: z.number().int().min(0).nullable(),
   configStatus: LotteryConfigStatusSchema.nullable(),
   registrationOpensAt: z.string().nullable(),
   registrationClosesAt: z.string().nullable(),
   drawAt: z.string().nullable(),
-  entitlement: LotteryEntitlementSchema.nullable(),
 });
 export type LotteryStatusResponse = z.infer<typeof LotteryStatusResponseSchema>;
 
@@ -81,7 +60,6 @@ export const ConfigureLotteryResponseSchema = z.object({
   registrationClosesAt: z.string(),
   drawAt: z.string(),
   allocation: z.number().int().min(1),
-  entitlementTtlMinutes: z.number().int().min(1),
 });
 export type ConfigureLotteryResponse = z.infer<typeof ConfigureLotteryResponseSchema>;
 
@@ -98,16 +76,15 @@ export const LotteryRegistrationListItemSchema = z.object({
   userEmail: z.string().email(),
   userDisplayName: z.string(),
   desiredQuantity: z.number().int().min(1),
+  wonQuantity: z.number().int().min(0),
+  purchasedQuantity: z.number().int().min(0),
+  remainingWonQuantity: z.number().int().min(0),
   status: LotteryRegistrationStatusSchema,
   registeredAt: z.string(),
   wonAt: z.string().nullable(),
   notSelectedAt: z.string().nullable(),
   withdrawnAt: z.string().nullable(),
   fulfilledAt: z.string().nullable(),
-  entitlement: LotteryEntitlementSchema.extend({
-    orderId: z.string().uuid().nullable(),
-    consumedAt: z.string().nullable(),
-  }).nullable(),
 });
 export type LotteryRegistrationListItem = z.infer<
   typeof LotteryRegistrationListItemSchema

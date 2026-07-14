@@ -7,9 +7,10 @@ let unauthorizedHandler: UnauthorizedHandler | null = null;
 
 export class ApiError extends Error {
   constructor(
-    public readonly status: number,
-    public readonly body: unknown,
     message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly body: unknown = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -29,21 +30,48 @@ function buildHeaders(): HeadersInit {
   return headers;
 }
 
-function extractErrorMessage(body: string, status: number): string {
+function extractError(
+  body: string,
+  status: number,
+): { message: string; code?: string; body: unknown } {
+  let parsedBody: unknown = null;
+  let resolvedCode: string | undefined;
   try {
-    const parsed: unknown = JSON.parse(body);
-    if (parsed && typeof parsed === 'object' && 'message' in parsed) {
-      const message = (parsed as { message: unknown }).message;
-      if (Array.isArray(message)) return message.join('; ');
-      if (typeof message === 'string' && message) return message;
+    parsedBody = JSON.parse(body) as unknown;
+    if (parsedBody && typeof parsedBody === 'object') {
+      const { message, code } = parsedBody as { message?: unknown; code?: unknown };
+      resolvedCode = typeof code === 'string' && code ? code : undefined;
+      if (Array.isArray(message)) {
+        return { message: message.join('; '), code: resolvedCode, body: parsedBody };
+      }
+      if (typeof message === 'string' && message) {
+        return { message, code: resolvedCode, body: parsedBody };
+      }
     }
   } catch {
     // Non-JSON body: never surface it raw, fall through to a generic message.
   }
-  if (status === 403) return 'You do not have permission to perform this action.';
-  if (status === 404) return 'The requested resource was not found.';
-  if (status === 409) return 'This conflicts with existing data. Please adjust and retry.';
-  return `Request failed: ${status}`;
+  if (status === 403) {
+    return {
+      message: 'You do not have permission to perform this action.',
+      code: resolvedCode,
+      body: parsedBody,
+    };
+  }
+  if (status === 404) {
+    return {
+      message: 'The requested resource was not found.',
+      code: resolvedCode,
+      body: parsedBody,
+    };
+  }
+  if (status === 409)
+    return {
+      message: 'This conflicts with existing data. Please adjust and retry.',
+      code: resolvedCode,
+      body: parsedBody,
+    };
+  return { message: `Request failed: ${status}`, code: resolvedCode, body: parsedBody };
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -54,13 +82,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    let parsedBody: unknown;
-    try {
-      parsedBody = JSON.parse(body);
-    } catch {
-      parsedBody = null;
-    }
-    throw new ApiError(res.status, parsedBody, extractErrorMessage(body, res.status));
+    const error = extractError(body, res.status);
+    throw new ApiError(error.message, res.status, error.code, error.body);
   }
   return res.json() as Promise<T>;
 }

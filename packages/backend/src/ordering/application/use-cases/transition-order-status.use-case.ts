@@ -4,6 +4,7 @@ import { OrderStatus } from '../../domain/order-status.enum';
 import type { IInventoryAdjustmentRepository } from '../../domain/ports/inventory-adjustment.port';
 import type { IOrderEventPublisher } from '../../domain/ports/order-event-publisher.port';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
+import type { WaitingRoomAdmissionPort } from '../../domain/ports/waiting-room-admission.port';
 
 export interface TransitionOrderStatusCommand {
   orderId: string;
@@ -18,6 +19,7 @@ export class TransitionOrderStatusUseCase {
     private readonly orderRepository: IOrderRepository,
     private readonly orderEventPublisher: IOrderEventPublisher,
     private readonly inventoryAdjustmentRepository?: IInventoryAdjustmentRepository,
+    private readonly waitingRoomAdmissionPort?: WaitingRoomAdmissionPort,
   ) {}
 
   async execute(command: TransitionOrderStatusCommand): Promise<Order> {
@@ -60,6 +62,20 @@ export class TransitionOrderStatusUseCase {
 
     await this.orderEventPublisher.publishAll(order.domainEvents);
     order.clearEvents();
+
+    if (
+      this.waitingRoomAdmissionPort &&
+      [OrderStatus.CANCELLED, OrderStatus.EXPIRED, OrderStatus.FAILED].includes(updatedOrder.status)
+    ) {
+      try {
+        await this.waitingRoomAdmissionPort.release({
+          concertId: updatedOrder.concertId,
+          userId: updatedOrder.userId,
+        });
+      } catch {
+        // Ignore failure, slot will naturally expire
+      }
+    }
 
     return updatedOrder;
   }

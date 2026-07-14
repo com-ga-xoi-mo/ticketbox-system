@@ -42,10 +42,8 @@ import {
   TicketTypeInactiveError,
   TicketTypeNotFoundError,
   TicketTypeSaleWindowError,
-  WaitlistEntitlementExpiredError,
-  WaitlistEntitlementInvalidError,
-  WaitlistEntitlementQuantityExceededError,
-  WaitlistEntitlementRequiredError,
+  PresaleAccessRequiredError,
+  PresaleAccessQuantityExceededError,
 } from '../../domain/errors';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { serializeOrder } from './order-response.presenter';
@@ -108,7 +106,6 @@ export class OrderController {
         concertId: dto.concertId,
         idempotencyKey: dto.idempotencyKey,
         promoCode: dto.promoCode,
-        waitlistEntitlementId: dto.waitlistEntitlementId,
         waitingRoomAdmissionToken: dto.waitingRoomAdmissionToken,
         items: dto.items.map((item) => ({
           ticketTypeId: item.ticketTypeId,
@@ -131,10 +128,8 @@ export class OrderController {
         err instanceof InsufficientTicketInventoryError ||
         err instanceof InventoryReservationConflictError ||
         err instanceof PerUserTicketLimitExceededError ||
-        err instanceof WaitlistEntitlementRequiredError ||
-        err instanceof WaitlistEntitlementInvalidError ||
-        err instanceof WaitlistEntitlementExpiredError ||
-        err instanceof WaitlistEntitlementQuantityExceededError
+        err instanceof PresaleAccessRequiredError ||
+        err instanceof PresaleAccessQuantityExceededError
       ) {
         throw new ConflictException(err.message);
       }

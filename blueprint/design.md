@@ -357,30 +357,58 @@ Rel(csv, worker, "Scheduled file import")
 
 ### High-Level Architecture Flow
 
-```text
-Customer Web/Admin Web/React Native Check-in App
-        |
-        v
-Backend API middleware
-  - auth/session
-  - RBAC
-  - Redis token bucket rate limit
-  - idempotency check for unsafe operations
-        |
-        v
-Application use cases by bounded context
-        |
-        +--> PostgreSQL transaction for source-of-truth writes
-        +--> Redis for cache, counters, idempotency, circuit breaker
-        +--> Object storage for PDF/CSV/SVG/image assets
-        +--> Queue for async worker jobs
-        |
-        v
-External adapters
-  - payment simulator
-  - email provider
-  - AI provider
-  - CSV file source
+```mermaid
+flowchart TD
+    %% Clients
+    Clients[Customer Web / Admin Web / Check-in App]
+    
+    %% API Middleware Layer
+    subgraph Middleware [Backend API Middleware]
+        direction TB
+        Auth[Auth & Session]
+        RBAC[Role-Based Access Control]
+        RateLimit[Redis Token Bucket Rate Limit]
+        Idempotency[Idempotency Check]
+    end
+    
+    %% Application Layer
+    subgraph AppLogic [Application Use Cases]
+        BoundedContexts[Bounded Contexts<br>Concert, Ordering, Payment, Checkin, etc.]
+    end
+    
+    %% Infrastructure Layer
+    subgraph Infrastructure [Infrastructure & Storage]
+        direction LR
+        DB[(PostgreSQL)]
+        RedisCache[(Redis)]
+        Storage[(Object Storage)]
+        Queue[[BullMQ Worker Queue]]
+    end
+    
+    %% External Adapters
+    subgraph External [External Adapters]
+        Payment[Payment Simulator]
+        Email[Email Provider]
+        AI[AI Model Provider]
+        CSV[Sponsor CSV Drop]
+    end
+    
+    %% Connections
+    Clients -->|HTTPS/JSON| Auth
+    Auth --> RBAC
+    RBAC --> RateLimit
+    RateLimit --> Idempotency
+    Idempotency --> BoundedContexts
+    
+    BoundedContexts -->|SQL Transactions| DB
+    BoundedContexts -->|Cache, Breaker, Counters| RedisCache
+    BoundedContexts -->|Upload/Download| Storage
+    BoundedContexts -->|Enqueue Jobs| Queue
+    
+    BoundedContexts -->|Redirect / Callback| Payment
+    Queue -.->|Delivery| Email
+    Queue -.->|Process PDF| AI
+    Queue -.->|Scheduled Import| CSV
 ```
 
 ### Critical Business Flows

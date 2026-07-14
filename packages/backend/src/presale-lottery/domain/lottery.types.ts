@@ -10,12 +10,6 @@ export type LotteryRegistrationStatus =
   | 'NOT_SELECTED'
   | 'WITHDRAWN';
 
-export type PurchaseEntitlementStatus =
-  | 'ACTIVE'
-  | 'CONSUMED'
-  | 'EXPIRED'
-  | 'REVOKED';
-
 export interface LotteryConfigRecord {
   id: string;
   ticketTypeId: string;
@@ -24,7 +18,6 @@ export interface LotteryConfigRecord {
   registrationClosesAt: Date;
   drawAt: Date;
   allocation: number;
-  entitlementTtlMinutes: number;
   status: LotteryConfigStatus;
   seed: string | null;
   drawnAt: Date | null;
@@ -36,27 +29,14 @@ export interface LotteryRegistrationRecord {
   concertId: string;
   ticketTypeId: string;
   desiredQuantity: number;
+  wonQuantity: number;
+  purchasedQuantity: number;
   status: LotteryRegistrationStatus;
   registeredAt: Date;
   wonAt: Date | null;
   notSelectedAt: Date | null;
   withdrawnAt: Date | null;
   fulfilledAt: Date | null;
-}
-
-export interface LotteryEntitlementRecord {
-  id: string;
-  lotteryRegistrationId: string | null;
-  userId: string;
-  concertId: string;
-  ticketTypeId: string;
-  orderId: string | null;
-  status: PurchaseEntitlementStatus;
-  quantity: number;
-  grantedAt: Date;
-  expiresAt: Date;
-  consumedAt: Date | null;
-  revokedAt: Date | null;
 }
 
 export interface LotteryStatusRecord {
@@ -66,9 +46,7 @@ export interface LotteryStatusRecord {
     drawAt: Date;
     registrationOpensAt: Date;
     registrationClosesAt: Date;
-    entitlementTtlMinutes: number;
   } | null;
-  entitlement: LotteryEntitlementRecord | null;
 }
 
 export interface TicketTypeLotteryInfo {
@@ -83,14 +61,17 @@ export interface TicketTypeLotteryInfo {
   saleEndsAt: Date;
 }
 
-export interface LotteryEntitlementNotificationContext {
-  entitlement: LotteryEntitlementRecord;
+export interface LotteryWinnerNotificationContext {
+  registrationId: string;
+  userId: string;
   userEmail: string;
   userDisplayName: string;
+  concertId: string;
   concertTitle: string;
   concertSlug: string;
   ticketTypeName: string;
   ticketTypeCode: string;
+  wonQuantity: number;
 }
 
 export interface LotteryNotSelectedNotificationContext {
@@ -109,11 +90,12 @@ export interface LotteryRegistrationListItem {
   userEmail: string;
   userDisplayName: string;
   desiredQuantity: number;
+  wonQuantity: number;
+  purchasedQuantity: number;
   status: LotteryRegistrationStatus;
   registeredAt: Date;
   wonAt: Date | null;
   notSelectedAt: Date | null;
   withdrawnAt: Date | null;
   fulfilledAt: Date | null;
-  entitlement: LotteryEntitlementRecord | null;
 }

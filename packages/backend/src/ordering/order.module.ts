@@ -9,7 +9,7 @@ import { PlatformConfigModule } from '../platform/config/platform-config.module'
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
 import { PrismaService } from '../platform/database/prisma.service';
-import { PrismaWaitlistEntitlementReservationAdapter } from '../official-waitlist/infrastructure/database/prisma-waitlist-entitlement-reservation.adapter';
+import { PrismaPresaleAccessReservationAdapter } from '../presale-lottery/infrastructure/database/prisma-presale-access-reservation.adapter';
 import { InternalOrderController } from './adapters/http/internal-order.controller';
 import { OrderController } from './adapters/http/order.controller';
 import { InternalApiKeyGuard } from './adapters/http/guards/internal-api-key.guard';
@@ -33,9 +33,9 @@ import {
   type IInventoryReservationRepository,
 } from './domain/ports/inventory-reservation.port';
 import {
-  WAITLIST_ENTITLEMENT_RESERVATION_PORT,
-  type WaitlistEntitlementReservationPort,
-} from './domain/ports/waitlist-entitlement-reservation.port';
+  PRESALE_ACCESS_RESERVATION_PORT,
+  type PresaleAccessReservationPort,
+} from './domain/ports/presale-access-reservation.port';
 import {
   WAITING_ROOM_ADMISSION_PORT,
   type WaitingRoomAdmissionPort,
@@ -124,14 +124,16 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
     },
     {
       provide: IssueTicketsForPaidOrderUseCase,
-      inject: [TICKET_REPOSITORY, QrTicketTokenService],
+      inject: [TICKET_REPOSITORY, QrTicketTokenService, WAITING_ROOM_ADMISSION_PORT],
       useFactory: (
         ticketRepository: TicketRepositoryPort,
         qrTicketTokenService: QrTicketTokenService,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
       ) =>
         new IssueTicketsForPaidOrderUseCase(
           ticketRepository,
           qrTicketTokenService,
+          waitingRoomAdmissionPort,
         ),
     },
     {
@@ -150,16 +152,18 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
     },
     {
       provide: TransitionOrderStatusUseCase,
-      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER, INVENTORY_ADJUSTMENT_REPOSITORY],
+      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER, INVENTORY_ADJUSTMENT_REPOSITORY, WAITING_ROOM_ADMISSION_PORT],
       useFactory: (
         orderRepository: IOrderRepository,
         orderEventPublisher: IOrderEventPublisher,
         inventoryAdjustmentRepository: IInventoryAdjustmentRepository,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
       ) =>
         new TransitionOrderStatusUseCase(
           orderRepository,
           orderEventPublisher,
           inventoryAdjustmentRepository,
+          waitingRoomAdmissionPort,
         ),
     },
     {
@@ -194,19 +198,19 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
       useClass: PrismaTicketTypePricingRepository,
     },
     {
-      provide: WAITLIST_ENTITLEMENT_RESERVATION_PORT,
-      useClass: PrismaWaitlistEntitlementReservationAdapter,
+      provide: PRESALE_ACCESS_RESERVATION_PORT,
+      useClass: PrismaPresaleAccessReservationAdapter,
     },
     {
       provide: PrismaInventoryReservationRepository,
-      inject: [PrismaService, WAITLIST_ENTITLEMENT_RESERVATION_PORT],
+      inject: [PrismaService, PRESALE_ACCESS_RESERVATION_PORT],
       useFactory: (
         prisma: PrismaService,
-        waitlistEntitlementReservation: WaitlistEntitlementReservationPort,
+        presaleAccessReservation: PresaleAccessReservationPort,
       ) =>
         new PrismaInventoryReservationRepository(
           prisma,
-          waitlistEntitlementReservation,
+          presaleAccessReservation,
         ),
     },
     {

@@ -2,27 +2,26 @@
 
 ## Purpose
 
-Defines the presale lottery capability for primary-sale ticket types: organizer configuration, audience registration, deterministic draw execution, winner entitlements, notifications, and worker behavior.
+Defines the presale lottery capability for primary-sale ticket types: organizer configuration, audience registration, deterministic draw execution, recorded winner quantities, whole-window winner purchasing, notifications, and worker behavior. Winners buy across the entire presale window (capped by their won quantity) rather than within a per-winner entitlement countdown.
 
 ## Requirements
 
 ### Requirement: Organizer configures a presale lottery for a ticket type
-The system SHALL allow an authorized organizer to enable a presale lottery on a primary-sale ticket type by configuring a registration window, a draw time, a lottery allocation, and an entitlement TTL in minutes. The system SHALL reject a configuration whose timestamps are incoherent, whose allocation exceeds available primary inventory, or whose entitlement TTL is not positive.
+The system SHALL allow an authorized organizer to enable a presale lottery on a primary-sale ticket type by configuring a registration window, a draw time, and a lottery allocation. The system SHALL reject a configuration whose timestamps are incoherent or whose allocation exceeds available primary inventory. The lottery SHALL NOT configure any per-winner entitlement TTL, because winners buy across the whole presale window rather than within a personal countdown.
 
 #### Scenario: Organizer enables a lottery
-- **WHEN** an authorized organizer configures a lottery on a primary-sale ticket type with `registrationOpensAt`, `registrationClosesAt`, `drawAt`, `allocation`, and optional `entitlementTtlMinutes`
+- **WHEN** an authorized organizer configures a lottery on a primary-sale ticket type with `registrationOpensAt`, `registrationClosesAt`, `drawAt`, and `allocation`
 - **THEN** the system SHALL create a lottery configuration in `SCHEDULED` status bound to that ticket type
-- **AND** the system SHALL persist `entitlementTtlMinutes`, defaulting to 15 when omitted
 - **AND** the system SHALL record a presale gate window on the ticket type so checkout is gated for the entire presale, from the start of the ticket's sale (`saleStartsAt`) until public sale starts (`publicSaleStartsAt`)
 
 #### Scenario: Non-winner cannot buy during the presale before the draw
 - **WHEN** a lottery is configured and its presale gate window is open but the draw has not run yet
-- **THEN** direct checkout for that ticket type SHALL be rejected for every user, because the presale is gated from the start of sale and no one holds a winning entitlement yet
+- **THEN** direct checkout for that ticket type SHALL be rejected for every user, because the presale is gated from the start of sale and no winner has been selected yet
 
 #### Scenario: Manual early draw does not open the sale to non-winners
 - **WHEN** an organizer runs the draw early before `drawAt` via manual draw
-- **THEN** the draw SHALL grant entitlements to winners without changing the presale gate window
-- **AND** non-winners SHALL remain blocked from direct checkout for the whole presale, while winners MAY check out using their entitlement
+- **THEN** the draw SHALL record winners without changing the presale gate window
+- **AND** non-winners SHALL remain blocked from direct checkout for the whole presale, while winners MAY check out as winners
 
 #### Scenario: Reconfigure after cancel is allowed
 - **WHEN** an organizer configures a lottery on a ticket type whose existing lottery configuration is `CANCELLED`
@@ -31,18 +30,6 @@ The system SHALL allow an authorized organizer to enable a presale lottery on a 
 #### Scenario: Reconfigure after draw is rejected
 - **WHEN** an organizer attempts to configure a lottery on a ticket type whose configuration is `DRAWING` or `COMPLETED`
 - **THEN** the system SHALL reject the request and SHALL NOT alter the existing configuration or its draw outcome
-
-#### Scenario: Organizer updates TTL before draw
-- **WHEN** an authorized organizer updates `entitlementTtlMinutes` for a `SCHEDULED` lottery before the draw starts
-- **THEN** the system SHALL persist the new TTL for future winner entitlements
-
-#### Scenario: TTL update after draw is rejected
-- **WHEN** an authorized organizer attempts to update `entitlementTtlMinutes` after the lottery is `DRAWING` or `COMPLETED`
-- **THEN** the system SHALL reject the update and SHALL NOT change already-granted entitlement expiry timestamps
-
-#### Scenario: Invalid TTL is rejected
-- **WHEN** an organizer configures a lottery with `entitlementTtlMinutes` less than 1
-- **THEN** the system SHALL reject the configuration without creating or updating the lottery
 
 #### Scenario: Cancelling a lottery clears the gate window
 - **WHEN** an authorized organizer cancels a `SCHEDULED` lottery configuration
@@ -91,38 +78,38 @@ The system SHALL allow an authenticated AUDIENCE user to withdraw an active lott
 - **THEN** the system SHALL reject the withdrawal and SHALL preserve the draw outcome
 
 ### Requirement: Lottery registration status is visible to the audience user
-The system SHALL expose the authenticated user's lottery status for a ticket type, including registration status, draw status, and active winner entitlement details with expiry when granted.
+The system SHALL expose the authenticated user's lottery status for a ticket type, including registration status and draw status. For a winner the status SHALL include the won quantity and how much of it has already been purchased; it SHALL NOT include any purchase entitlement or expiry, because winners buy across the whole presale window.
 
 #### Scenario: Registered user sees pending status
 - **WHEN** an authenticated user requests lottery status for a ticket type where they have a `REGISTERED` entry and the draw has not run
 - **THEN** the system SHALL return the registration status and the scheduled draw time
 
-#### Scenario: Winner sees entitlement expiry
+#### Scenario: Winner sees remaining purchasable quantity
 - **WHEN** an authenticated user requests lottery status after the draw selected them
-- **THEN** the system SHALL return the `WON` status, the granted entitlement quantity, and the entitlement expiry timestamp
+- **THEN** the system SHALL return the `WON` status, the won quantity, and the remaining quantity they may still purchase during the presale window
 
 #### Scenario: Non-winner sees not-selected status
 - **WHEN** an authenticated user requests lottery status after the draw did not select them
 - **THEN** the system SHALL return the `NOT_SELECTED` status
 
 ### Requirement: Organizer can inspect lottery registrations
-The system SHALL allow an authorized organizer or admin to list registrations for a lottery-enabled ticket type, including user identity, requested quantity, registration status, timestamps, and entitlement outcome summary.
+The system SHALL allow an authorized organizer or admin to list registrations for a lottery-enabled ticket type, including user identity, requested quantity, registration status, timestamps, and winner outcome (won quantity and purchased quantity).
 
 #### Scenario: Organizer views registration list
 - **WHEN** an authorized organizer requests the registration list for a configured lottery ticket type
 - **THEN** the system SHALL return registrations ordered by registration time
-- **AND** each row SHALL include user display name, email, desired quantity, status, registered time, result timestamps, fulfillment timestamp, and linked entitlement status, expiry, and order id when present
+- **AND** each row SHALL include user display name, email, desired quantity, status, registered time, result timestamps, and for winners the won and purchased quantities
 
 #### Scenario: Registration list rejects unauthorized user
 - **WHEN** a non-organizer audience user requests the registration list
-- **THEN** the system SHALL reject the request without exposing other users' registration data
+- **THEN** the system SHALL reject the request
 
 ### Requirement: Draw selects winners fairly and deterministically
-The system SHALL run the lottery draw at `drawAt` and select winners from `REGISTERED` registrations using a recorded seed so that the same seed and registrant set always yield the same winners. The draw SHALL grant winners in the deterministic order until the lottery `allocation` of ticket units is exhausted, respecting each registrant's desired quantity and remaining `max_per_user` allowance. Granting winner entitlements SHALL NOT mutate `ticket_types.reserved_quantity` or `ticket_types.sold_quantity`.
+The system SHALL run the lottery draw at `drawAt` and select winners from `REGISTERED` registrations using a recorded seed so that the same seed and registrant set always yield the same winners. The draw SHALL select winners in the deterministic order until the lottery `allocation` of ticket units is exhausted, respecting each registrant's desired quantity and remaining `max_per_user` allowance. For each winner the draw SHALL record the won quantity on the registration and SHALL NOT create any purchase entitlement, reserve inventory, or mutate `ticket_types.reserved_quantity` or `ticket_types.sold_quantity`.
 
 #### Scenario: Draw selects winners up to allocation
 - **WHEN** the draw worker runs for a ticket type with more requested ticket units than the `allocation`
-- **THEN** the system SHALL grant winners in deterministic order until the `allocation` is exhausted and SHALL mark the remaining registrations `NOT_SELECTED`
+- **THEN** the system SHALL select winners in deterministic order until the `allocation` is exhausted and SHALL mark the remaining registrations `NOT_SELECTED`
 
 #### Scenario: Draw is deterministic for a recorded seed
 - **WHEN** the draw is re-run with the same recorded seed and the same registrant snapshot
@@ -130,36 +117,36 @@ The system SHALL run the lottery draw at `drawAt` and select winners from `REGIS
 
 #### Scenario: Draw respects per-user allowance
 - **WHEN** a winning registration's desired quantity exceeds the user's remaining `max_per_user` allowance
-- **THEN** the system SHALL grant an entitlement for at most the remaining allowance
+- **THEN** the system SHALL record a won quantity of at most the remaining allowance
 
 #### Scenario: Draw does not reserve inventory
-- **WHEN** the draw grants winner entitlements
+- **WHEN** the draw selects winners
 - **THEN** the system SHALL NOT increment `reserved_quantity` and SHALL NOT decrement available inventory except through the existing checkout reservation transaction
 
-#### Scenario: Draw does not grant beyond available inventory
-- **WHEN** the draw evaluates how many ticket units to grant
-- **THEN** it SHALL grant at most the smaller of the configured `allocation` and the available primary inventory after subtracting active unconsumed entitlement quantities
+#### Scenario: Draw does not select beyond available inventory
+- **WHEN** the draw evaluates how many ticket units to award
+- **THEN** it SHALL award at most the smaller of the configured `allocation` and the available primary inventory
 
 #### Scenario: Draw is idempotent
 - **WHEN** the draw worker runs more than once for a lottery already in `COMPLETED` status
-- **THEN** the system SHALL NOT grant additional entitlements or re-select winners
+- **THEN** the system SHALL NOT award additional winners or re-select winners
 
 #### Scenario: Withdrawn registrations are excluded
 - **WHEN** the draw selects winners
 - **THEN** the system SHALL skip `WITHDRAWN` registrations
 
 ### Requirement: Organizer can run a draw manually
-The system SHALL allow an authorized organizer or admin to trigger a `SCHEDULED` lottery draw immediately. Manual draw SHALL use the same deterministic draw use case, lock, audit record, entitlement grant logic, and notification behavior as the scheduled worker.
+The system SHALL allow an authorized organizer or admin to trigger a `SCHEDULED` lottery draw immediately. Manual draw SHALL use the same deterministic draw use case, lock, audit record, winner-recording logic, and notification behavior as the scheduled worker.
 
 #### Scenario: Organizer runs draw now
 - **WHEN** an authorized organizer triggers manual draw for a `SCHEDULED` lottery
 - **THEN** the system SHALL run the same draw logic used by the scheduled worker
-- **AND** the system SHALL return granted and not-selected counts
+- **AND** the system SHALL return won and not-selected counts
 - **AND** the system SHALL persist the same draw audit record and winner/non-winner status changes
 
 #### Scenario: Manual draw is idempotent after completion
 - **WHEN** an authorized organizer triggers manual draw for a lottery already in `COMPLETED` status
-- **THEN** the system SHALL NOT create additional entitlements or change the recorded outcome
+- **THEN** the system SHALL NOT award additional winners or change the recorded outcome
 - **AND** the system SHALL return a no-op result
 
 #### Scenario: Manual draw rejects unauthorized user
@@ -174,43 +161,47 @@ The system SHALL persist a draw audit record containing the seed, the registrant
 - **THEN** the system SHALL persist a draw record with the seed, ordered winners, and allocation consumed
 - **AND** the system SHALL transition the lottery configuration to `COMPLETED`
 
-### Requirement: Winner entitlement has a bounded lifecycle
-The system SHALL grant each winner a purchase entitlement with `source` of `LOTTERY` bound to one user, concert, ticket type, maximum quantity, and expiry timestamp. Entitlement TTL SHALL come from the lottery config's `entitlementTtlMinutes`, defaulting to 15 minutes. The system SHALL reuse the existing purchase entitlement lifecycle for expiry.
+### Requirement: Lottery winners buy across the whole presale window
+The system SHALL allow a lottery winner to purchase up to their won quantity at any time during the presale gate window (from the draw until `publicSaleStartsAt`), with no per-winner slot or expiry. The system SHALL track each winner's purchased quantity and SHALL prevent a winner from purchasing more than their won quantity across one or more orders. Enforcement SHALL be atomic with the reservation transaction.
 
-#### Scenario: Winner entitlement uses per-lottery TTL
-- **WHEN** a draw grants a winner entitlement for a lottery configured with `entitlementTtlMinutes`
-- **THEN** the entitlement `expiresAt` SHALL equal the grant time plus the configured TTL
+#### Scenario: Winner buys any time during the presale window
+- **WHEN** a winner submits checkout for the won ticket type at any point while the presale gate window is open
+- **THEN** the system SHALL allow the purchase up to the winner's remaining won quantity
 
-#### Scenario: Winner entitlement expires unused
-- **WHEN** a winner's `LOTTERY` entitlement reaches its expiry timestamp without being consumed
-- **THEN** the system SHALL mark it expired
+#### Scenario: Winner cannot exceed their won quantity
+- **WHEN** a winner attempts to buy more than their remaining won quantity, in one order or across multiple orders
+- **THEN** the system SHALL reject the excess before creating an order or reserving inventory
 
-#### Scenario: Winner entitlement is consumed by checkout
-- **WHEN** a winner successfully creates a direct-purchase pending order using the entitlement
-- **THEN** the system SHALL mark the entitlement consumed
-- **AND** the system SHALL mark the linked lottery registration fulfilled via the entitlement's `lotteryRegistrationId`
+#### Scenario: Purchased quantity is recorded atomically
+- **WHEN** a winner's order is created inside the reservation transaction
+- **THEN** the system SHALL increment the winner's purchased quantity in the same transaction and SHALL mark the registration fulfilled when the won quantity is fully used
+
+#### Scenario: Winners compete only with other winners and inventory suffices
+- **WHEN** all winners buy within the presale window
+- **THEN** every winner SHALL be able to buy their won quantity, because total won quantity does not exceed allocation and non-winners are blocked during the window
 
 ### Requirement: Lottery draw notifies registrants
-The system SHALL create an in-app notification and enqueue an email notification for each winner when the draw grants an entitlement, and SHALL notify non-winners that they were not selected. Winner notifications SHALL include the entitlement expiry and an action URL to the relevant checkout flow.
+The system SHALL create an in-app notification and enqueue an email notification for each winner when the draw records them, and SHALL notify non-winners that they were not selected. Winner notifications SHALL tell the winner they may buy during the presale window and SHALL include an action URL to the relevant checkout flow; they SHALL NOT reference a reserved slot or an expiry countdown.
 
-#### Scenario: Winner receives grant notification
-- **WHEN** the draw grants an entitlement to a user
-- **THEN** the system SHALL persist an in-app notification with the entitlement expiry and an action URL
+#### Scenario: Winner receives win notification
+- **WHEN** the draw records a user as a winner
+- **THEN** the system SHALL persist an in-app notification telling the user they may buy during the presale window with an action URL
 - **AND** the action URL SHALL use the audience event slug rather than the internal concert identifier
 
-#### Scenario: Winner receives grant email
-- **WHEN** the draw grants an entitlement to a user with an email address
-- **THEN** the system SHALL enqueue an email notification containing the concert name, ticket type, entitlement quantity, expiry time, and action URL
+#### Scenario: Winner receives win email
+- **WHEN** the draw records a winner with an email address
+- **THEN** the system SHALL enqueue an email notification containing the concert name, ticket type, won quantity, and action URL
 - **AND** the email subject and body SHALL use Vietnamese text with proper diacritics
 - **AND** the email delivery queue job SHALL use a BullMQ-safe custom job ID and configured retry/backoff options
+- **AND** the content SHALL NOT reference a reserved slot or a personal expiry countdown
 
 #### Scenario: Non-winner receives not-selected notification
 - **WHEN** the draw marks a registration `NOT_SELECTED`
 - **THEN** the system SHALL notify that user that they were not selected in the draw
 
 #### Scenario: Notification failure does not roll back the draw
-- **WHEN** notification creation fails after the draw grants an entitlement
-- **THEN** the entitlement and draw outcome SHALL remain and the failure SHALL be reported for retry or investigation
+- **WHEN** notification creation fails after the draw records winners
+- **THEN** the draw outcome SHALL remain and the failure SHALL be reported for retry or investigation
 
 ### Requirement: Lottery draw worker runs in worker scope
 The system SHALL run the scheduled lottery draw processor in the backend worker application scope and SHALL NOT start the lottery draw processor in the API application.
@@ -225,8 +216,8 @@ The presale lottery SHALL NOT listen to resale listing state changes, create res
 
 #### Scenario: Resale listing becomes active
 - **WHEN** a resale listing transitions to active
-- **THEN** the presale lottery SHALL NOT treat that listing as lottery inventory or grant an entitlement from it
+- **THEN** the presale lottery SHALL NOT treat that listing as lottery inventory or record a winner from it
 
 #### Scenario: No admission token behavior
-- **WHEN** the presale lottery grants a winner entitlement
+- **WHEN** the presale lottery records a winner
 - **THEN** the system SHALL NOT issue an admission queue token or virtual waiting-room position

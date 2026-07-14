@@ -22,9 +22,8 @@ import type {
 } from '../../domain/ports/inventory-adjustment.port';
 import type { IInventoryReservationRepository } from '../../domain/ports/inventory-reservation.port';
 import type {
-  InventoryReservationOptions,
 } from '../../domain/ports/inventory-reservation.port';
-import type { WaitlistEntitlementReservationPort } from '../../domain/ports/waitlist-entitlement-reservation.port';
+import type { PresaleAccessReservationPort } from '../../domain/ports/presale-access-reservation.port';
 
 interface LockedTicketTypeRecord {
   id: string;
@@ -76,10 +75,10 @@ export class PrismaInventoryReservationRepository
 {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly waitlistEntitlementReservation?: WaitlistEntitlementReservationPort<Prisma.TransactionClient>,
+    private readonly presaleAccessReservation?: PresaleAccessReservationPort<Prisma.TransactionClient>,
   ) {}
 
-  async reserve(order: Order, options: InventoryReservationOptions = {}): Promise<Order> {
+  async reserve(order: Order): Promise<Order> {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const existingOrder = await tx.order.findUnique({
@@ -156,10 +155,9 @@ export class PrismaInventoryReservationRepository
           include: { items: { include: { ticketType: true } } },
         });
 
-        await this.waitlistEntitlementReservation?.validateAndConsumeForReservation(
+        await this.presaleAccessReservation?.validateAndRecordForReservation(
           tx,
           {
-            entitlementId: options.waitlistEntitlementId,
             userId: order.userId,
             concertId: order.concertId,
             orderId: createdOrder.id,

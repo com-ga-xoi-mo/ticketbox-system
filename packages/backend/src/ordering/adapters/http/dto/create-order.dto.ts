@@ -33,10 +33,6 @@ export class CreateOrderDto {
   @IsOptional()
   promoCode?: string;
 
-  @IsUUID()
-  @IsOptional()
-  waitlistEntitlementId?: string;
-
   @IsString()
   @IsOptional()
   waitingRoomAdmissionToken?: string;

@@ -10,6 +10,7 @@ import { Pagination } from '../../../shared/ui/pagination';
 import type { Concert, ConcertStatus } from '../../concerts-shared/types';
 import { AdminConcertReviewsPanel } from './AdminConcertReviewsPanel';
 import { GuestListEntryAction } from '../guest-list/GuestListEntryAction';
+import { ArtistBioPanel } from '../../artist-bio/ArtistBioPanel';
 
 const PAGE_SIZE = 10;
 
@@ -261,6 +262,7 @@ export function ConcertsPage() {
                   extraContent={
                     <>
                       <GuestListEntryAction concertId={selectedConcert.id} />
+                      <ArtistBioPanel concertId={selectedConcert.id} role="ADMIN" />
                       <AdminConcertReviewsPanel
                         concert={
                           concerts.find((c) => c.id === selectedConcert.id) || selectedConcert

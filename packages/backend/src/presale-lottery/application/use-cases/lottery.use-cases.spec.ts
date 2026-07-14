@@ -7,7 +7,6 @@ import {
 } from '../../domain/errors';
 import type {
   LotteryConfigRecord,
-  LotteryEntitlementRecord,
   LotteryRegistrationRecord,
   LotteryStatusRecord,
   TicketTypeLotteryInfo,
@@ -22,8 +21,7 @@ import {
   ConfigureLotteryUseCase,
   RegisterForLotteryUseCase,
   RunLotteryDrawUseCase,
-  UpdateLotteryTtlUseCase,
-  type LotteryGrantNotifier,
+  type LotteryDrawNotifier,
 } from './lottery.use-cases';
 
 const TICKET_TYPE_ID = 'tt-1';
@@ -53,7 +51,6 @@ function makeConfig(overrides: Partial<LotteryConfigRecord> = {}): LotteryConfig
     registrationClosesAt: new Date('2026-01-10T00:00:00Z'),
     drawAt: new Date('2026-01-11T00:00:00Z'),
     allocation: 2,
-    entitlementTtlMinutes: 15,
     status: 'SCHEDULED',
     seed: null,
     drawnAt: null,
@@ -61,11 +58,28 @@ function makeConfig(overrides: Partial<LotteryConfigRecord> = {}): LotteryConfig
   };
 }
 
+function makeRegistration(id: string, userId: string): LotteryRegistrationRecord {
+  return {
+    id,
+    userId,
+    concertId: CONCERT_ID,
+    ticketTypeId: TICKET_TYPE_ID,
+    desiredQuantity: 1,
+    wonQuantity: 0,
+    purchasedQuantity: 0,
+    status: 'REGISTERED',
+    registeredAt: new Date('2026-01-05T00:00:00Z'),
+    wonAt: null,
+    notSelectedAt: null,
+    withdrawnAt: null,
+    fulfilledAt: null,
+  };
+}
+
 class FakeRepository implements PresaleLotteryRepositoryPort {
   config: LotteryConfigRecord | null = makeConfig();
   ticketType: TicketTypeLotteryInfo = makeTicketType();
   registrations: LotteryRegistrationRecord[] = [];
-  activeEntitlementUnits = 0;
   committed: CommitDrawInput | null = null;
   lastCreateConfigInput: CreateLotteryConfigInput | null = null;
 
@@ -82,19 +96,10 @@ class FakeRepository implements PresaleLotteryRepositoryPort {
       registrationClosesAt: input.registrationClosesAt,
       drawAt: input.drawAt,
       allocation: input.allocation,
-      entitlementTtlMinutes: input.entitlementTtlMinutes,
       status: 'SCHEDULED',
       seed: null,
       drawnAt: null,
     });
-    return this.config;
-  }
-  async updateConfigTtl(input: {
-    entitlementTtlMinutes: number;
-  }): Promise<LotteryConfigRecord | null> {
-    this.config = this.config
-      ? { ...this.config, entitlementTtlMinutes: input.entitlementTtlMinutes }
-      : null;
     return this.config;
   }
   async cancelConfig(): Promise<LotteryConfigRecord | null> {
@@ -125,6 +130,8 @@ class FakeRepository implements PresaleLotteryRepositoryPort {
       concertId: input.concertId,
       ticketTypeId: input.ticketTypeId,
       desiredQuantity: input.desiredQuantity,
+      wonQuantity: 0,
+      purchasedQuantity: 0,
       status: 'REGISTERED',
       registeredAt: input.registeredAt,
       wonAt: null,
@@ -139,10 +146,7 @@ class FakeRepository implements PresaleLotteryRepositoryPort {
     throw new Error('not used');
   }
   async getStatus(): Promise<LotteryStatusRecord> {
-    return { registration: null, config: null, entitlement: null };
-  }
-  async sumActiveEntitlementQuantity() {
-    return this.activeEntitlementUnits;
+    return { registration: null, config: null };
   }
   async listRegisteredForDraw() {
     return this.registrations.filter((r) => r.status === 'REGISTERED');
@@ -158,31 +162,12 @@ class FakeRepository implements PresaleLotteryRepositoryPort {
     this.config = { ...this.config, status: 'DRAWING' };
     return this.config;
   }
-  async commitDraw(input: CommitDrawInput): Promise<LotteryEntitlementRecord[]> {
+  async commitDraw(input: CommitDrawInput): Promise<string[]> {
     this.committed = input;
     this.config = this.config ? { ...this.config, status: 'COMPLETED', seed: input.seed } : null;
-    return input.winners.map((w, index) => ({
-      id: `ent-${index + 1}`,
-      lotteryRegistrationId: w.registrationId,
-      userId: w.userId,
-      concertId: input.concertId,
-      ticketTypeId: input.ticketTypeId,
-      orderId: null,
-      status: 'ACTIVE',
-      quantity: w.quantity,
-      grantedAt: input.now,
-      expiresAt: new Date(input.now.getTime() + input.ttlMinutes * 60_000),
-      consumedAt: null,
-      revokedAt: null,
-    }));
+    return input.winners.map((w) => w.registrationId);
   }
-  async listActiveEntitlementsExpiringSoon() {
-    return [];
-  }
-  async expireEntitlements() {
-    return 0;
-  }
-  async findEntitlementNotificationContext() {
+  async findWinnerNotificationContext() {
     return null;
   }
   async findNotSelectedNotificationContext() {
@@ -190,14 +175,11 @@ class FakeRepository implements PresaleLotteryRepositoryPort {
   }
 }
 
-class RecordingNotifier implements LotteryGrantNotifier {
-  granted = 0;
+class RecordingNotifier implements LotteryDrawNotifier {
+  winners = 0;
   notSelected = 0;
-  async notifyEntitlementGranted() {
-    this.granted += 1;
-  }
-  async notifyEntitlementExpiringSoon() {
-    /* noop */
+  async notifyWinner() {
+    this.winners += 1;
   }
   async notifyNotSelected() {
     this.notSelected += 1;
@@ -255,7 +237,7 @@ describe('ConfigureLotteryUseCase', () => {
     repo = new FakeRepository();
   });
 
-  it('defaults entitlement TTL to 15 minutes', async () => {
+  it('creates a lottery configuration with presale gate window', async () => {
     const useCase = new ConfigureLotteryUseCase(repo);
     const config = await useCase.execute({
       ticketTypeId: TICKET_TYPE_ID,
@@ -265,23 +247,8 @@ describe('ConfigureLotteryUseCase', () => {
       publicSaleStartsAt: new Date('2026-01-12T00:00:00Z'),
       allocation: 2,
     });
-    expect(config.entitlementTtlMinutes).toBe(15);
+    expect(config.status).toBe('SCHEDULED');
     expect(repo.lastCreateConfigInput?.saleStartsAt).toEqual(repo.ticketType.saleStartsAt);
-  });
-
-  it('rejects an invalid entitlement TTL', async () => {
-    const useCase = new ConfigureLotteryUseCase(repo);
-    await expect(
-      useCase.execute({
-        ticketTypeId: TICKET_TYPE_ID,
-        registrationOpensAt: new Date('2026-01-01T00:00:00Z'),
-        registrationClosesAt: new Date('2026-01-10T00:00:00Z'),
-        drawAt: new Date('2026-01-11T00:00:00Z'),
-        publicSaleStartsAt: new Date('2026-01-12T00:00:00Z'),
-        allocation: 2,
-        entitlementTtlMinutes: 0,
-      }),
-    ).rejects.toBeTruthy();
   });
 
   it('rejects config updates after the draw started or completed', async () => {
@@ -296,7 +263,6 @@ describe('ConfigureLotteryUseCase', () => {
           drawAt: new Date('2026-01-11T00:00:00Z'),
           publicSaleStartsAt: new Date('2026-01-12T00:00:00Z'),
           allocation: 2,
-          entitlementTtlMinutes: 20,
         }),
       ).rejects.toBeInstanceOf(LotteryConfigInvalidError);
     }
@@ -316,41 +282,11 @@ describe('ConfigureLotteryUseCase', () => {
       drawAt: new Date('2026-01-10T00:00:00Z'),
       publicSaleStartsAt: new Date('2026-01-12T00:00:00Z'),
       allocation: 3,
-      entitlementTtlMinutes: 20,
     });
 
     expect(config.status).toBe('SCHEDULED');
     expect(config.seed).toBeNull();
     expect(config.drawnAt).toBeNull();
-    expect(config.entitlementTtlMinutes).toBe(20);
-  });
-});
-
-describe('UpdateLotteryTtlUseCase', () => {
-  let repo: FakeRepository;
-
-  beforeEach(() => {
-    repo = new FakeRepository();
-  });
-
-  it('updates TTL while scheduled', async () => {
-    const useCase = new UpdateLotteryTtlUseCase(repo);
-    const config = await useCase.execute({
-      ticketTypeId: TICKET_TYPE_ID,
-      entitlementTtlMinutes: 12,
-    });
-    expect(config.entitlementTtlMinutes).toBe(12);
-  });
-
-  it('rejects TTL update after completion', async () => {
-    repo.config = makeConfig({ status: 'COMPLETED' });
-    const useCase = new UpdateLotteryTtlUseCase(repo);
-    await expect(
-      useCase.execute({
-        ticketTypeId: TICKET_TYPE_ID,
-        entitlementTtlMinutes: 12,
-      }),
-    ).rejects.toBeInstanceOf(LotteryConfigInvalidError);
   });
 });
 
@@ -368,8 +304,7 @@ describe('RunLotteryDrawUseCase', () => {
     ];
   });
 
-  it('grants up to allocation and notifies winners + non-winners', async () => {
-    repo.config = makeConfig({ entitlementTtlMinutes: 7 });
+  it('records wonQuantity on winners and notifies winners + non-winners', async () => {
     const useCase = new RunLotteryDrawUseCase(repo, notifier);
     const result = await useCase.execute({
       ticketTypeId: TICKET_TYPE_ID,
@@ -378,10 +313,12 @@ describe('RunLotteryDrawUseCase', () => {
 
     expect(result.granted).toBe(2);
     expect(result.notSelected).toBe(1);
-    expect(notifier.granted).toBe(2);
+    expect(notifier.winners).toBe(2);
     expect(notifier.notSelected).toBe(1);
     expect(repo.config?.status).toBe('COMPLETED');
-    expect(repo.committed?.ttlMinutes).toBe(7);
+    // Draw commit should not reference TTL
+    expect(repo.committed).toBeDefined();
+    expect(repo.committed?.winners).toHaveLength(2);
   });
 
   it('is idempotent when the config is already completed', async () => {
@@ -389,22 +326,6 @@ describe('RunLotteryDrawUseCase', () => {
     const useCase = new RunLotteryDrawUseCase(repo, notifier);
     const result = await useCase.execute({ ticketTypeId: TICKET_TYPE_ID });
     expect(result.granted).toBe(0);
-    expect(notifier.granted).toBe(0);
+    expect(notifier.winners).toBe(0);
   });
 });
-
-function makeRegistration(id: string, userId: string): LotteryRegistrationRecord {
-  return {
-    id,
-    userId,
-    concertId: CONCERT_ID,
-    ticketTypeId: TICKET_TYPE_ID,
-    desiredQuantity: 1,
-    status: 'REGISTERED',
-    registeredAt: new Date('2026-01-05T00:00:00Z'),
-    wonAt: null,
-    notSelectedAt: null,
-    withdrawnAt: null,
-    fulfilledAt: null,
-  };
-}

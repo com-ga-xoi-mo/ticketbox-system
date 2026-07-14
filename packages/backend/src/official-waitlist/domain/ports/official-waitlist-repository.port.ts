@@ -1,7 +1,7 @@
 import type {
-  PurchaseEntitlementRecord,
   TicketTypeWaitlistInfo,
-  WaitlistEntitlementNotificationContext,
+  WaitlistRecoveryNotificationContext,
+  WaitlistTicketAvailabilityMarkerRecord,
   WaitlistEntryRecord,
   WaitlistStatusRecord,
 } from '../waitlist.types';
@@ -16,16 +16,6 @@ export interface CreateWaitlistEntryInput {
   joinedAt: Date;
 }
 
-export interface GrantEntitlementInput {
-  entryId: string;
-  userId: string;
-  concertId: string;
-  ticketTypeId: string;
-  quantity: number;
-  grantedAt: Date;
-  expiresAt: Date;
-}
-
 export interface OfficialWaitlistRepositoryPort {
   findTicketType(ticketTypeId: string): Promise<TicketTypeWaitlistInfo | null>;
   countAlreadyReservedOrSoldByUser(input: {
@@ -37,35 +27,28 @@ export interface OfficialWaitlistRepositoryPort {
     ticketTypeId: string;
   }): Promise<WaitlistEntryRecord | null>;
   createEntry(input: CreateWaitlistEntryInput): Promise<WaitlistEntryRecord>;
-  cancelEntryAndRevokeEntitlement(input: {
+  cancelEntry(input: {
     userId: string;
     ticketTypeId: string;
     now: Date;
-  }): Promise<{
-    entry: WaitlistEntryRecord | null;
-    revokedEntitlementId: string | null;
-  }>;
+  }): Promise<WaitlistEntryRecord | null>;
   getStatus(input: {
     userId: string;
     concertId: string;
     ticketTypeId: string;
     now: Date;
   }): Promise<WaitlistStatusRecord>;
-  hasActiveGate(ticketTypeId: string): Promise<boolean>;
-  sumActiveEntitlementQuantity(ticketTypeId: string, now: Date): Promise<number>;
-  listNextWaitingEntries(input: {
+  listTicketTypesWithActiveSubscribers(limit: number): Promise<string[]>;
+  getOrCreateAvailabilityMarker(
+    ticketTypeId: string,
+  ): Promise<WaitlistTicketAvailabilityMarkerRecord>;
+  updateAvailabilityMarker(input: {
     ticketTypeId: string;
-    limit: number;
-  }): Promise<WaitlistEntryRecord[]>;
-  grantEntitlement(input: GrantEntitlementInput): Promise<PurchaseEntitlementRecord>;
-  findEntitlementNotificationContext(
-    entitlementId: string,
-  ): Promise<WaitlistEntitlementNotificationContext | null>;
-  listActiveEntitlementsExpiringSoon(input: {
-    now: Date;
-    reminderWindowEndsAt: Date;
-    limit: number;
-  }): Promise<PurchaseEntitlementRecord[]>;
-  expireEntitlements(now: Date): Promise<Array<{ ticketTypeId: string; quantity: number }>>;
+    markerState: 'AVAILABLE' | 'SOLD_OUT' | 'NOTIFIED';
+    lastNotifiedAt?: Date | null;
+  }): Promise<void>;
+  listActiveSubscriberNotificationContexts(input: {
+    ticketTypeId: string;
+  }): Promise<WaitlistRecoveryNotificationContext[]>;
   withTicketTypeLock<T>(ticketTypeId: string, work: () => Promise<T>): Promise<T>;
 }

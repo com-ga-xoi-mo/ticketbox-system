@@ -48,6 +48,11 @@ export interface WaitingRoomStorePort {
     concertId: string;
     userId: string;
   }): Promise<void>;
+  consumeAndHoldSlot(input: {
+    concertId: string;
+    userId: string;
+    holdTtlMinutes: number;
+  }): Promise<void>;
   incrementLoad(concertId: string): Promise<number>;
   updateLoadState(input: UpdateLoadStateInput): Promise<WaitingRoomLoadSnapshot>;
   readLoadState(concertId: string): Promise<WaitingRoomLoadSnapshot>;

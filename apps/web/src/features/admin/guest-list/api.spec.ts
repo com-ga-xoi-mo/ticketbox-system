@@ -81,7 +81,7 @@ describe('guest-list Admin API', () => {
       status: 'FAILED',
       message: 'Batch failed',
     } as const;
-    http.get.mockRejectedValue(new ApiError(422, body, body.message));
+    http.get.mockRejectedValue(new ApiError(body.message, 422, undefined, body));
     await expect(getGuestListReport(concertId, batchId)).rejects.toMatchObject({
       name: 'GuestListReportUnavailableError',
       detail: body,

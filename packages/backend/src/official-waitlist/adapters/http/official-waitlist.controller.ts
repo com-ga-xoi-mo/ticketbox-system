@@ -86,7 +86,6 @@ export class OfficialWaitlistController {
       });
       return {
         entryId: result.entry?.id ?? null,
-        revokedEntitlementId: result.revokedEntitlementId,
         status: result.entry?.status ?? null,
       };
     } catch (error: unknown) {
