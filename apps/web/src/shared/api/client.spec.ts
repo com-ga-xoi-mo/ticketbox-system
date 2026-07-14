@@ -74,4 +74,15 @@ describe('api client', () => {
     expect(call[1].method).toBe('PATCH');
     expect(call[1].body).toBe(JSON.stringify({ foo: 'bar' }));
   });
+
+  it('preserves structured non-success JSON for feature-specific handling', async () => {
+    const body = { error: 'BATCH_NOT_COMPLETED', status: 'FAILED', message: 'Not completed' };
+    mockFetch(422, body);
+    await expect(get('/report')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 422,
+      body,
+      message: 'Not completed',
+    } satisfies Partial<{ name: string; status: number; body: unknown; message: string }>);
+  });
 });

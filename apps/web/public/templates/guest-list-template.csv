@@ -1,0 +1,3 @@
+guest_name,email,phone,external_ref,action
+Nguyen Van An,an.vip@example.com,,SPONSOR-001,UPSERT
+Tran Thu Binh,,0901234567,SPONSOR-002,UPSERT

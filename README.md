@@ -186,7 +186,17 @@ Required headers are `guest_name,email,phone,external_ref`; optional `action` is
 
 The queue job is `guest_list.import_requested` with a deterministic batch job ID. Scheduled reconciliation repairs a database-commit/enqueue-failure window. Processing leases allow expired jobs to be reclaimed, and same-concert batches apply in monotonic claim order. Reports are stored under `GUEST_LIST_STORAGE_PATH/reports/`.
 
-Admin fallback endpoints can request imports, trigger discovery, inspect batches, and retrieve reports under `admin/concerts/:concertId/guest-list`. CHECKIN_STAFF VIP lookup is `POST /guest-list/lookup`; it requires the exact active assignment ID for the same concert/gate and does not alter `POST /checkin/scan`.
+ADMIN users manage a selected concert at:
+
+```text
+http://localhost:5173/admin/concerts/<concertId>/guest-list
+```
+
+Open **Quản lý buổi biểu diễn**, select a concert, then choose **Quản lý Guest List**. The page validates a non-empty `.csv` up to 5 MiB, uploads it through the existing JSON Base64 API, polls only while a batch is pending or processing, and shows counters, batch failures, immutable row evidence, and a downloadable JSON report. A canonical template is source-controlled at `apps/web/public/templates/guest-list-template.csv` and is available from the page.
+
+The page deliberately has no **Discover** or **Quét inbox** action. Scheduled worker discovery through `GUEST_LIST_DISCOVERY_CRON` remains the primary one-way sponsor integration and operates independently of the web app. The Admin upload is an explicit operational fallback; it does not replace inbox discovery or change checksum idempotency.
+
+CHECKIN_STAFF VIP lookup is `POST /guest-list/lookup`. The mobile app exposes it in the **VIP** tab and always uses the currently selected active assignment for the same concert/gate. VIP lookup is online-only: it is not written to the offline scan queue or ticket cache, it does not issue a ticket/QR, and it does not record admission or alter `POST /checkin/scan`.
 
 Configure discovery schedule, inbox/archive/storage paths, file/row limits, retry/backoff, and lease duration through the `GUEST_LIST_*` values in `.env.example`. For recovery, leave a pending batch intact and let reconciliation recreate its deterministic job; expired processing leases are reclaimed automatically.
 
@@ -211,10 +221,10 @@ npm run verify:checkin-mobile
 ```
 
 The mobile app uses `EXPO_PUBLIC_API_BASE_URL` for the backend API base URL and
-defaults to `http://localhost:3000`. The current mobile slice provides staff
-login/session handling, assignment loading boundaries, and QR scan workflow
-state. Backend scan endpoints and offline sync are implemented by later
-OpenSpec changes.
+defaults to `http://localhost:3000`. It provides staff login/session handling,
+assignment selection, QR scanning, offline scan synchronization, ticket-cache
+refresh, and online VIP lookup by email, phone, or external reference. The VIP
+tab is intentionally separate from the QR scan and Sync workflows.
 
 ## Verification
 

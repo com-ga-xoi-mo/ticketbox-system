@@ -3,8 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { Icon, Surface, Text, TouchableRipple } from 'react-native-paper';
 
 import { ui } from '../../theme/paper-theme';
+import { APP_TABS, type AppTab } from './bottom-tab-state';
 
-export type AppTab = 'scan' | 'sync';
+export type { AppTab } from './bottom-tab-state';
 
 export interface BottomTabBarProps {
   readonly tab: AppTab;
@@ -12,15 +13,10 @@ export interface BottomTabBarProps {
   readonly onChange: (tab: AppTab) => void;
 }
 
-const TABS: ReadonlyArray<{ key: AppTab; label: string; icon: string }> = [
-  { key: 'scan', label: 'Scan', icon: 'line-scan' },
-  { key: 'sync', label: 'Sync', icon: 'sync' },
-];
-
 export function BottomTabBar({ tab, syncBadge, onChange }: BottomTabBarProps): React.JSX.Element {
   return (
     <Surface style={styles.bar} elevation={2}>
-      {TABS.map((item) => {
+      {APP_TABS.map((item) => {
         const active = item.key === tab;
         const color = active ? ui.primary : ui.textMuted;
         return (

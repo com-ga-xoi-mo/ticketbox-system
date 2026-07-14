@@ -9,8 +9,8 @@ export default defineConfig({
   plugins: [swc.vite()],
   resolve: {
     alias: [
-      { find: '@ticketbox/backend', replacement: backendEntry },
       { find: /^@ticketbox\/backend\/(.*)$/, replacement: `${backendSrc}/$1` },
+      { find: '@ticketbox/backend', replacement: backendEntry },
     ],
   },
   test: {

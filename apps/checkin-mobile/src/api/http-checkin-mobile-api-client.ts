@@ -12,6 +12,9 @@ import {
   type BatchSyncResponse,
   type TicketCacheDeltaResponse,
   type TicketCacheFullResponse,
+  VipLookupRequestSchema,
+  VipLookupResponseSchema,
+  type VipLookupRequest,
 } from '@ticketbox/api-types';
 import { z } from 'zod';
 
@@ -20,6 +23,7 @@ import type {
   MobileSession,
   OnlineScanResult,
   TicketCacheRequest,
+  VipLookupResult,
 } from './checkin-mobile-api.types';
 
 export interface FetchResponseLike {
@@ -162,6 +166,46 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     );
   }
 
+  async lookupVipGuest(accessToken: string, request: VipLookupRequest): Promise<VipLookupResult> {
+    const parsedRequest = VipLookupRequestSchema.safeParse(request);
+    if (!parsedRequest.success) {
+      return {
+        status: 'request-error',
+        httpStatus: 400,
+        message: 'Invalid VIP lookup request',
+      };
+    }
+    try {
+      return await this.request(
+        '/guest-list/lookup',
+        { method: 'POST', body: JSON.stringify(parsedRequest.data) },
+        VipLookupResponseSchema,
+        accessToken,
+      );
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        if (error.status === 401 || error.status === 403) {
+          return {
+            status: 'unauthorized',
+            httpStatus: error.status,
+            message: error.message,
+          };
+        }
+        if (error.status >= 500) {
+          return { status: 'service-error', httpStatus: error.status, message: error.message };
+        }
+        return { status: 'request-error', httpStatus: error.status, message: error.message };
+      }
+      if (error instanceof ApiResponseValidationError) {
+        return { status: 'invalid-response', message: error.message };
+      }
+      return {
+        status: 'transport-error',
+        message: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
   private async request<TSchema extends z.ZodTypeAny>(
     path: string,
     init: RequestInit,
@@ -178,10 +222,7 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new ApiTransportError('Request timed out')),
-        5_000,
-      );
+      timeoutId = setTimeout(() => reject(new ApiTransportError('Request timed out')), 5_000);
     });
 
     let response: FetchResponseLike;

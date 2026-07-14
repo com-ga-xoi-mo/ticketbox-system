@@ -14,7 +14,10 @@ import { SelfAccountPage } from '../features/account/SelfAccountPage';
 import { ConcertsPage as OrganizerConcertsPage } from '../features/organizer/concerts/ConcertsPage';
 import { ConcertEditPage as OrganizerConcertEditPage } from '../features/organizer/concerts/ConcertEditPage';
 import { ConcertCreatePage as OrganizerConcertCreatePage } from '../features/organizer/concerts/ConcertCreatePage';
-import { OrganizerVenueMapsList, OrganizerVenueMapEditor } from '../features/organizer/venue-maps/pages';
+import {
+  OrganizerVenueMapsList,
+  OrganizerVenueMapEditor,
+} from '../features/organizer/venue-maps/pages';
 import { AdminAssignmentsPage } from '../features/admin/assignments/AdminAssignmentsPage';
 import { ProtectedRoute } from '../shared/auth/ProtectedRoute';
 import { ShellLayout } from '../shared/ui/ShellLayout';
@@ -22,6 +25,7 @@ import { useAuth } from '../shared/auth/AuthContext';
 import { redirectFor } from '../shared/auth/role-access';
 
 import { AdminResaleDisputesPage } from '../features/admin/resale-disputes/AdminResaleDisputesPage';
+import { AdminGuestListPage } from '../features/admin/guest-list/AdminGuestListPage';
 
 function RootRedirect() {
   const { session } = useAuth();
@@ -118,6 +122,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: '/admin/concerts/:id/guest-list',
+        element: (
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminGuestListPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/admin/venue-maps',
         element: (
           <ProtectedRoute allowedRoles={['ADMIN']}>
@@ -208,4 +220,3 @@ export const router = createBrowserRouter([
     element: <Navigate to="/" replace />,
   },
 ]);
-

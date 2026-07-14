@@ -8,6 +8,7 @@ import {
   UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
+import type { AdminGuestListUploadRequest } from '@ticketbox/api-types';
 import { GuestListBatchNotCompletedError } from '../../domain/errors';
 import { AuthorizeAdminActionUseCase } from '../../../identity/application/use-cases/authorize-admin-action.use-case';
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
@@ -18,9 +19,15 @@ import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth
 import { ClaimGuestListImportUseCase } from '../../application/use-cases/claim-guest-list-import.use-case';
 import { DiscoverGuestListFilesUseCase } from '../../application/use-cases/discover-guest-list-files.use-case';
 import { GetGuestListBatchesUseCase } from '../../application/use-cases/get-guest-list-batches.use-case';
-import { RequestGuestListImportDto } from './dto/request-guest-list-import.dto';
+import { AdminGuestListUploadRequestPipe } from './dto/admin-guest-list-upload.pipe';
 import { RateLimited } from '../../../platform/rate-limiting/rate-limit.decorator';
 import { RateLimitPolicy } from '../../../platform/rate-limiting/rate-limit-policy';
+import {
+  toAdminGuestListUploadResponse,
+  toGuestListBatchNotCompletedError,
+  toGuestListReport,
+  toPublicGuestListBatch,
+} from './admin-guest-list.mapper';
 
 @Controller('admin/concerts/:concertId/guest-list')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,7 +43,7 @@ export class AdminGuestListController {
   @RateLimited(RateLimitPolicy.ADMIN_WRITE)
   async requestImport(
     @Param('concertId') concertId: string,
-    @Body() dto: RequestGuestListImportDto,
+    @Body(AdminGuestListUploadRequestPipe) dto: AdminGuestListUploadRequest,
     @Request() req: { user: AuthenticatedUser },
   ) {
     this.authorizeAdmin.execute({ userId: req.user.id, roles: req.user.roles });
@@ -47,7 +54,7 @@ export class AdminGuestListController {
       content: Buffer.from(dto.contentBase64, 'base64'),
       uploadedById: req.user.id,
     });
-    return { outcome: result.outcome, batch: result.batch };
+    return toAdminGuestListUploadResponse(result);
   }
   @Post('discover')
   @RateLimited(RateLimitPolicy.ADMIN_WRITE)
@@ -56,16 +63,20 @@ export class AdminGuestListController {
     return this.discovery.execute();
   }
   @Get('imports')
-  list(@Param('concertId') concertId: string, @Request() req: { user: AuthenticatedUser }) {
-    return this.batches.list({ userId: req.user.id, roles: req.user.roles }, concertId);
+  async list(@Param('concertId') concertId: string, @Request() req: { user: AuthenticatedUser }) {
+    return (await this.batches.list({ userId: req.user.id, roles: req.user.roles }, concertId)).map(
+      toPublicGuestListBatch,
+    );
   }
   @Get('imports/:batchId')
-  get(
+  async get(
     @Param('concertId') concertId: string,
     @Param('batchId') batchId: string,
     @Request() req: { user: AuthenticatedUser },
   ) {
-    return this.batches.get({ userId: req.user.id, roles: req.user.roles }, concertId, batchId);
+    return toPublicGuestListBatch(
+      await this.batches.get({ userId: req.user.id, roles: req.user.roles }, concertId, batchId),
+    );
   }
   @Get('imports/:batchId/report')
   async report(
@@ -74,22 +85,20 @@ export class AdminGuestListController {
     @Request() req: { user: AuthenticatedUser },
   ) {
     try {
-      return JSON.parse(
-        (
-          await this.batches.report(
-            { userId: req.user.id, roles: req.user.roles },
-            concertId,
-            batchId,
-          )
-        ).toString('utf8'),
+      return toGuestListReport(
+        JSON.parse(
+          (
+            await this.batches.report(
+              { userId: req.user.id, roles: req.user.roles },
+              concertId,
+              batchId,
+            )
+          ).toString('utf8'),
+        ),
       );
     } catch (error) {
       if (error instanceof GuestListBatchNotCompletedError) {
-        throw new UnprocessableEntityException({
-          error: 'BATCH_NOT_COMPLETED',
-          status: error.batchStatus,
-          message: error.message,
-        });
+        throw new UnprocessableEntityException(toGuestListBatchNotCompletedError(error));
       }
       throw error;
     }

@@ -19,7 +19,16 @@ const batch: GuestListBatchRecord = {
   importSequence: 1,
   status: GuestListBatchStatus.PENDING,
   processingAttempt: 0,
+  totalRows: 0,
+  validRows: 0,
+  invalidRows: 0,
+  duplicateRows: 0,
+  importedRows: 0,
+  updatedRows: 0,
+  cancelledRows: 0,
+  conflictRows: 0,
   createdAt: new Date(),
+  updatedAt: new Date(),
 };
 
 describe('guest-list import use cases', () => {
@@ -206,18 +215,18 @@ describe('GetGuestListBatchesUseCase.report', () => {
     });
   });
 
-  it.each([
-    GuestListBatchStatus.COMPLETED,
-    GuestListBatchStatus.COMPLETED_WITH_ERRORS,
-  ])('returns report content for %s batch', async (status) => {
-    repository.findBatch.mockResolvedValue({
-      id: batchId,
-      concertId,
-      status,
-      reportStorageKey: 'reports/batch.json',
-    });
-    const result = await useCase.report(actor, concertId, batchId);
-    expect(storage.get).toHaveBeenCalledWith('reports/batch.json');
-    expect(result).toEqual(Buffer.from('{"totalRows":1}'));
-  });
+  it.each([GuestListBatchStatus.COMPLETED, GuestListBatchStatus.COMPLETED_WITH_ERRORS])(
+    'returns report content for %s batch',
+    async (status) => {
+      repository.findBatch.mockResolvedValue({
+        id: batchId,
+        concertId,
+        status,
+        reportStorageKey: 'reports/batch.json',
+      });
+      const result = await useCase.report(actor, concertId, batchId);
+      expect(storage.get).toHaveBeenCalledWith('reports/batch.json');
+      expect(result).toEqual(Buffer.from('{"totalRows":1}'));
+    },
+  );
 });

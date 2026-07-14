@@ -33,12 +33,23 @@ export interface GuestListBatchRecord {
   importSequence: number;
   status: GuestListBatchStatus;
   processingAttempt: number;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  importedRows: number;
+  updatedRows: number;
+  cancelledRows: number;
+  conflictRows: number;
   leaseOwner?: string;
   leaseExpiresAt?: Date;
   reportStorageKey?: string;
   failureCode?: string;
   failureMessage?: string;
+  startedAt?: Date;
+  completedAt?: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ActiveGuestRecord extends GuestIdentity {

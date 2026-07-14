@@ -8,12 +8,16 @@ import type {
   BatchSyncResponse,
   TicketCacheDeltaResponse,
   TicketCacheFullResponse,
+  VipLookupRequest,
+  VipLookupResponse,
+  VipLookupType,
 } from '@ticketbox/api-types';
 
 export type StaffProfile = StaffProfileResponse;
 export type { LoginRequest, OnlineScanRequest, StaffAssignment };
 export type { BatchSyncRequest, BatchSyncResponse };
 export type { TicketCacheFullResponse, TicketCacheDeltaResponse };
+export type { VipLookupRequest, VipLookupResponse, VipLookupType };
 
 export interface TicketCacheRequest {
   assignmentId: string;
@@ -65,5 +69,27 @@ export interface TicketCacheApiClient {
   ): Promise<TicketCacheFullResponse | TicketCacheDeltaResponse>;
 }
 
+export type VipLookupFailure =
+  | {
+      readonly status: 'unauthorized';
+      readonly httpStatus: 401 | 403;
+      readonly message: string;
+    }
+  | { readonly status: 'request-error'; readonly httpStatus: number; readonly message: string }
+  | { readonly status: 'service-error'; readonly httpStatus: number; readonly message: string }
+  | { readonly status: 'transport-error'; readonly message: string }
+  | { readonly status: 'invalid-response'; readonly message: string };
+
+export type VipLookupResult = VipLookupResponse | VipLookupFailure;
+
+export interface VipLookupApiClient {
+  lookupVipGuest(accessToken: string, request: VipLookupRequest): Promise<VipLookupResult>;
+}
+
 export interface CheckinMobileApiClient
-  extends AuthApiClient, AssignmentApiClient, CheckinApiClient, TicketCacheApiClient {}
+  extends
+    AuthApiClient,
+    AssignmentApiClient,
+    CheckinApiClient,
+    TicketCacheApiClient,
+    VipLookupApiClient {}

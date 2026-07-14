@@ -445,12 +445,23 @@ function mapBatch(batch: any): GuestListBatchRecord {
     importSequence: batch.importSequence,
     status: batch.status,
     processingAttempt: batch.processingAttempt,
+    totalRows: batch.totalRows,
+    validRows: batch.validRows,
+    invalidRows: batch.invalidRows,
+    duplicateRows: batch.duplicateRows,
+    importedRows: batch.importedRows,
+    updatedRows: batch.updatedRows,
+    cancelledRows: batch.cancelledRows,
+    conflictRows: batch.conflictRows,
     leaseOwner: batch.leaseOwner ?? undefined,
     leaseExpiresAt: batch.leaseExpiresAt ?? undefined,
     reportStorageKey: batch.reportStorageKey ?? undefined,
     failureCode: batch.failureCode ?? undefined,
     failureMessage: batch.failureMessage ?? undefined,
+    startedAt: batch.startedAt ?? undefined,
+    completedAt: batch.completedAt ?? undefined,
     createdAt: batch.createdAt,
+    updatedAt: batch.updatedAt,
   };
 }
 

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { CameraView } from 'expo-camera';
+import { CameraView, type BarcodeScanningResult } from 'expo-camera';
 
 import type { ScanWorkflowState } from './scan-workflow';
 import { canSubmitScan } from './scanner-screen-state';
@@ -42,7 +42,7 @@ export function QrCameraScanner({
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={
           ready
-            ? ({ data }) => {
+            ? ({ data }: BarcodeScanningResult) => {
                 if (handlingRef.current) return;
                 handlingRef.current = true;
                 onDecodedPayload(data);

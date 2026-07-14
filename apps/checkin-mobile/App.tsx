@@ -29,8 +29,17 @@ import { shouldShowSyncControls } from './src/features/offline-queue/sync-panel-
 import { expoLocalIdProvider } from './src/features/offline-queue/local-id-provider';
 import { OfflineQueueBootstrap } from './src/features/offline-queue/offline-queue-bootstrap';
 import { TicketCacheRepository } from './src/features/ticket-cache/ticket-cache.repository';
-import { CacheDownloadService, type CacheDownloadStatus } from './src/features/ticket-cache/cache-download.service';
+import {
+  CacheDownloadService,
+  type CacheDownloadStatus,
+} from './src/features/ticket-cache/cache-download.service';
 import { shouldRefreshCache } from './src/features/ticket-cache/cache-refresh-state';
+import type { StaffAssignment } from './src/api/checkin-mobile-api.types';
+import { VipLookupScreen } from './src/features/vip-lookup/VipLookupScreen';
+import {
+  VipLookupController,
+  type VipLookupState,
+} from './src/features/vip-lookup/vip-lookup-state';
 
 const env = getMobileEnv();
 
@@ -53,6 +62,7 @@ export default function App(): React.JSX.Element {
   });
   const [cacheStatus, setCacheStatus] = useState<CacheDownloadStatus>('idle');
   const [online, setOnline] = useState(true);
+  const [vipLookupState, setVipLookupState] = useState<VipLookupState>({ status: 'idle' });
   const ticketCacheRepoRef = useRef<TicketCacheRepository | null>(null);
   const cacheDownloadServiceRef = useRef<CacheDownloadService | null>(null);
   const authStateRef = useRef(authState);
@@ -63,6 +73,7 @@ export default function App(): React.JSX.Element {
     [apiClient, sessionStore],
   );
   const assignmentController = useMemo(() => new AssignmentController(apiClient), [apiClient]);
+  const vipLookupController = useMemo(() => new VipLookupController(apiClient), [apiClient]);
   const offlineBootstrap = useMemo(() => new OfflineQueueBootstrap(), []);
   useEffect(() => {
     authStateRef.current = authState;
@@ -105,10 +116,18 @@ export default function App(): React.JSX.Element {
         expoLocalIdProvider,
         cacheRepo,
       );
-      service = new SyncService(queue, apiClient, network, () => {
-        const current = authStateRef.current;
-        return current.status === 'authenticated' ? current.session : null;
-      }, Math.random, () => new Date(), cacheRepo);
+      service = new SyncService(
+        queue,
+        apiClient,
+        network,
+        () => {
+          const current = authStateRef.current;
+          return current.status === 'authenticated' ? current.session : null;
+        },
+        Math.random,
+        () => new Date(),
+        cacheRepo,
+      );
       unsubscribeSync = service.subscribe((state) => {
         setSyncState(state);
         void refreshQueue(queue, authStateRef.current);
@@ -173,11 +192,12 @@ export default function App(): React.JSX.Element {
       if (!active) return;
       setAuthState(restored.auth);
       setAssignmentState(restored.assignments);
-      const nextRoute = restored.auth.status !== 'authenticated'
-        ? 'auth'
-        : restored.assignments.status === 'loaded'
-          ? 'scanner'
-          : 'assignments';
+      const nextRoute =
+        restored.auth.status !== 'authenticated'
+          ? 'auth'
+          : restored.assignments.status === 'loaded'
+            ? 'scanner'
+            : 'assignments';
       setRoute(nextRoute);
 
       if (nextRoute === 'scanner' && restored.assignments.status === 'loaded') {
@@ -206,10 +226,7 @@ export default function App(): React.JSX.Element {
     }
   }
 
-  async function triggerCacheDownload(
-    assignment: { assignmentId: string; concertId: string; gate?: string; concertTitle: string; startsAt: string; status: 'ACTIVE' },
-    auth: AuthState,
-  ): Promise<void> {
+  async function triggerCacheDownload(assignment: StaffAssignment, auth: AuthState): Promise<void> {
     if (auth.status !== 'authenticated' || !cacheDownloadServiceRef.current) return;
     setCacheStatus('downloading');
     await cacheDownloadServiceRef.current.download(assignment, auth.session);
@@ -253,6 +270,7 @@ export default function App(): React.JSX.Element {
       setAssignmentState({ status: 'idle' });
       setCacheStatus('idle');
       setTab('scan');
+      setVipLookupState(vipLookupController.reset());
       if (scanWorkflow) setScanState(scanWorkflow.reset());
       setRoute('auth');
     });
@@ -316,6 +334,7 @@ export default function App(): React.JSX.Element {
                 onSelect={(assignmentId) => {
                   const next = assignmentController.select(assignmentState, assignmentId);
                   setAssignmentState(next);
+                  setVipLookupState(vipLookupController.reset());
                   if (next.status === 'loaded') {
                     void triggerCacheDownload(next.selected, authState);
                   }
@@ -327,7 +346,9 @@ export default function App(): React.JSX.Element {
             {route === 'scanner' && tab === 'scan' ? (
               <View style={styles.tabContent}>
                 {cacheStatus === 'unavailable' ? (
-                  <Text style={styles.warn}>⚠ Offline cache unavailable — scans will be queued</Text>
+                  <Text style={styles.warn}>
+                    ⚠ Offline cache unavailable — scans will be queued
+                  </Text>
                 ) : null}
                 {assignmentState.status === 'loaded' ? (
                   <ScannerScreen
@@ -366,6 +387,28 @@ export default function App(): React.JSX.Element {
 
             {route === 'scanner' && tab === 'sync' ? (
               <View style={styles.tabContent}>{syncPanel}</View>
+            ) : null}
+
+            {route === 'scanner' && tab === 'vip' && assignmentState.status === 'loaded' ? (
+              <View style={styles.tabContent}>
+                <VipLookupScreen
+                  assignment={assignmentState.selected}
+                  online={online}
+                  state={vipLookupState}
+                  onReset={() => setVipLookupState(vipLookupController.reset())}
+                  onSubmit={(input) => {
+                    if (authState.status !== 'authenticated') return;
+                    setVipLookupState({ status: 'submitting' });
+                    void vipLookupController
+                      .lookup(input, {
+                        session: authState.session,
+                        assignment: assignmentState.selected,
+                        online,
+                      })
+                      .then(setVipLookupState);
+                  }}
+                />
+              </View>
             ) : null}
           </ScrollView>
 
