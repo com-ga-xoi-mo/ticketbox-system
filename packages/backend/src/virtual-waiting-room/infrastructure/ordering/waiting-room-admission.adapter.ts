@@ -4,6 +4,7 @@ import type { WaitingRoomAdmissionPort } from '../../../ordering/domain/ports/wa
 import { PlatformConfigService } from '../../../platform/config/platform-config.service';
 import { IncrementWaitingRoomLoadUseCase } from '../../application/use-cases/increment-waiting-room-load.use-case';
 import { ReleaseAdmissionSlotUseCase } from '../../application/use-cases/release-admission-slot.use-case';
+import { ConsumeAndHoldSlotUseCase } from '../../application/use-cases/consume-and-hold-slot.use-case';
 import { ValidateAdmissionUseCase } from '../../application/use-cases/validate-admission.use-case';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class WaitingRoomAdmissionAdapter implements WaitingRoomAdmissionPort {
     private readonly incrementWaitingRoomLoad: IncrementWaitingRoomLoadUseCase,
     private readonly validateAdmission: ValidateAdmissionUseCase,
     private readonly releaseAdmissionSlot: ReleaseAdmissionSlotUseCase,
+    private readonly consumeAndHoldSlotUseCase: ConsumeAndHoldSlotUseCase,
     private readonly config: PlatformConfigService,
   ) {}
 
@@ -32,6 +34,14 @@ export class WaitingRoomAdmissionAdapter implements WaitingRoomAdmissionPort {
 
   async release(input: { concertId: string; userId: string }): Promise<void> {
     await this.releaseAdmissionSlot.execute(input);
+  }
+
+  async consumeAndHoldSlot(input: {
+    concertId: string;
+    userId: string;
+    holdTtlMinutes: number;
+  }): Promise<void> {
+    await this.consumeAndHoldSlotUseCase.execute(input);
   }
 }
 

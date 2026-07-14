@@ -13,6 +13,7 @@ import type {
   TicketRepositoryPort,
 } from '../../domain/ports/ticket-repository.port';
 import { IssueTicketsForPaidOrderUseCase } from './issue-tickets-for-paid-order.use-case';
+import type { WaitingRoomAdmissionPort } from '../../domain/ports/waiting-room-admission.port';
 
 const issuedAt = new Date('2026-06-16T10:30:00.000Z');
 
@@ -23,6 +24,15 @@ function buildRepository(
     issueTicketsForPaidOrder: vi.fn(handler),
     findByUserId: vi.fn(),
     findByUserIdAndId: vi.fn(),
+  };
+}
+
+function buildWaitingRoomAdmissionPort(): WaitingRoomAdmissionPort {
+  return {
+    incrementLoad: vi.fn(),
+    validate: vi.fn(),
+    release: vi.fn(),
+    consumeAndHoldSlot: vi.fn(),
   };
 }
 
@@ -57,7 +67,8 @@ describe('IssueTicketsForPaidOrderUseCase', () => {
           }),
       );
     });
-    const useCase = new IssueTicketsForPaidOrderUseCase(repository, tokenService);
+    const waitingRoomPort = buildWaitingRoomAdmissionPort();
+    const useCase = new IssueTicketsForPaidOrderUseCase(repository, tokenService, waitingRoomPort);
 
     const result = await useCase.execute({ orderId: 'order-1', issuedAt });
 
@@ -70,6 +81,10 @@ describe('IssueTicketsForPaidOrderUseCase', () => {
       expect(issuedTicket.ticket.qrTokenHash).toMatch(/^[a-f0-9]{64}$/);
       expect(issuedTicket.ticket.qrTokenHash).not.toBe(issuedTicket.qrPayload);
     }
+    expect(waitingRoomPort.release).toHaveBeenCalledWith({
+      concertId: 'concert-1',
+      userId: 'user-1',
+    });
   });
 
   it('returns existing fully issued tickets without requiring new ticket plans', async () => {
@@ -88,13 +103,18 @@ describe('IssueTicketsForPaidOrderUseCase', () => {
         issuedAt,
       }),
     ]);
-    const useCase = new IssueTicketsForPaidOrderUseCase(repository, tokenService);
+    const waitingRoomPort = buildWaitingRoomAdmissionPort();
+    const useCase = new IssueTicketsForPaidOrderUseCase(repository, tokenService, waitingRoomPort);
 
     const result = await useCase.execute({ orderId: 'order-1' });
 
     expect(result).toHaveLength(1);
     expect(result[0].ticket.id).toBe('ticket-1');
     expect(result[0].qrPayload).toContain('.');
+    expect(waitingRoomPort.release).toHaveBeenCalledWith({
+      concertId: 'concert-1',
+      userId: 'user-1',
+    });
   });
 
   it('rejects non-paid orders before creating plans', async () => {
