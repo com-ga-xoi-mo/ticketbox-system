@@ -53,6 +53,7 @@ function buildWaitingRoomAdmissionPort(): WaitingRoomAdmissionPort {
     incrementLoad: vi.fn(async () => undefined),
     validate: vi.fn(async () => undefined),
     release: vi.fn(async () => undefined),
+    consumeAndHoldSlot: vi.fn(async () => undefined),
   };
 }
 
@@ -115,9 +116,10 @@ describe('CreateOrderUseCase', () => {
       userId: 'user-1',
       token: undefined,
     });
-    expect(waitingRoomAdmissionPort.release).toHaveBeenCalledWith({
+    expect(waitingRoomAdmissionPort.consumeAndHoldSlot).toHaveBeenCalledWith({
       concertId: 'concert-1',
       userId: 'user-1',
+      holdTtlMinutes: 15,
     });
   });
 
@@ -179,7 +181,7 @@ describe('CreateOrderUseCase', () => {
     expect(inventoryReservationRepository.reserve).not.toHaveBeenCalled();
     expect(waitingRoomAdmissionPort.incrementLoad).not.toHaveBeenCalled();
     expect(waitingRoomAdmissionPort.validate).not.toHaveBeenCalled();
-    expect(waitingRoomAdmissionPort.release).not.toHaveBeenCalled();
+    expect(waitingRoomAdmissionPort.consumeAndHoldSlot).not.toHaveBeenCalled();
   });
 
   it('rejects before reserving inventory when waiting-room admission fails', async () => {
@@ -201,7 +203,7 @@ describe('CreateOrderUseCase', () => {
     expect(inventoryReservationRepository.reserve).not.toHaveBeenCalled();
   });
 
-  it('validates the supplied waiting-room token before reserving and releases the admitted slot', async () => {
+  it('validates the supplied waiting-room token before reserving and consumes the admitted slot', async () => {
     vi.mocked(orderRepository.findByUserIdAndIdempotencyKey).mockResolvedValue(null);
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
@@ -229,9 +231,10 @@ describe('CreateOrderUseCase', () => {
       token: 'admission-token-1',
     });
     expect(inventoryReservationRepository.reserve).toHaveBeenCalledTimes(1);
-    expect(waitingRoomAdmissionPort.release).toHaveBeenCalledWith({
+    expect(waitingRoomAdmissionPort.consumeAndHoldSlot).toHaveBeenCalledWith({
       concertId: 'concert-1',
       userId: 'user-1',
+      holdTtlMinutes: 15,
     });
   });
 
@@ -283,10 +286,10 @@ describe('CreateOrderUseCase', () => {
     ).rejects.toThrow('Waiting room admission token is invalid');
 
     expect(inventoryReservationRepository.reserve).not.toHaveBeenCalled();
-    expect(waitingRoomAdmissionPort.release).not.toHaveBeenCalled();
+    expect(waitingRoomAdmissionPort.consumeAndHoldSlot).not.toHaveBeenCalled();
   });
 
-  it('does not fail checkout if waiting-room slot release fails after reservation succeeds', async () => {
+  it('does not fail checkout if waiting-room slot consumeAndHoldSlot fails after reservation succeeds', async () => {
     vi.mocked(orderRepository.findByUserIdAndIdempotencyKey).mockResolvedValue(null);
     vi.mocked(
       ticketTypePricingRepository.findPricingByConcertAndTicketTypeIds,
@@ -298,8 +301,8 @@ describe('CreateOrderUseCase', () => {
         unitPriceVnd: 150000,
       },
     ]);
-    vi.mocked(waitingRoomAdmissionPort.release).mockRejectedValue(
-      new Error('Redis release failed'),
+    vi.mocked(waitingRoomAdmissionPort.consumeAndHoldSlot).mockRejectedValue(
+      new Error('Redis consumeAndHoldSlot failed'),
     );
 
     const result = await useCase.execute({

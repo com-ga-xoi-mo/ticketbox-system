@@ -124,14 +124,16 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
     },
     {
       provide: IssueTicketsForPaidOrderUseCase,
-      inject: [TICKET_REPOSITORY, QrTicketTokenService],
+      inject: [TICKET_REPOSITORY, QrTicketTokenService, WAITING_ROOM_ADMISSION_PORT],
       useFactory: (
         ticketRepository: TicketRepositoryPort,
         qrTicketTokenService: QrTicketTokenService,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
       ) =>
         new IssueTicketsForPaidOrderUseCase(
           ticketRepository,
           qrTicketTokenService,
+          waitingRoomAdmissionPort,
         ),
     },
     {
@@ -150,16 +152,18 @@ import { TicketIssuingOrderEventPublisher } from './infrastructure/events/ticket
     },
     {
       provide: TransitionOrderStatusUseCase,
-      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER, INVENTORY_ADJUSTMENT_REPOSITORY],
+      inject: [ORDER_REPOSITORY, ORDER_EVENT_PUBLISHER, INVENTORY_ADJUSTMENT_REPOSITORY, WAITING_ROOM_ADMISSION_PORT],
       useFactory: (
         orderRepository: IOrderRepository,
         orderEventPublisher: IOrderEventPublisher,
         inventoryAdjustmentRepository: IInventoryAdjustmentRepository,
+        waitingRoomAdmissionPort: WaitingRoomAdmissionPort,
       ) =>
         new TransitionOrderStatusUseCase(
           orderRepository,
           orderEventPublisher,
           inventoryAdjustmentRepository,
+          waitingRoomAdmissionPort,
         ),
     },
     {

@@ -23,10 +23,13 @@ export interface IssueTicketsForPaidOrderCommand {
   issuedAt?: Date;
 }
 
+import type { WaitingRoomAdmissionPort } from '../../domain/ports/waiting-room-admission.port';
+
 export class IssueTicketsForPaidOrderUseCase {
   constructor(
     private readonly ticketRepository: TicketRepositoryPort,
     private readonly qrTicketTokenService: QrTicketTokenService,
+    private readonly waitingRoomAdmissionPort?: WaitingRoomAdmissionPort,
   ) {}
 
   async execute(command: IssueTicketsForPaidOrderCommand): Promise<IssuedTicketResult[]> {
@@ -35,6 +38,17 @@ export class IssueTicketsForPaidOrderUseCase {
       orderId: command.orderId,
       createTickets: (order) => this.createTicketPlans(order, issuedAt),
     });
+
+    if (tickets.length > 0 && this.waitingRoomAdmissionPort) {
+      try {
+        await this.waitingRoomAdmissionPort.release({
+          concertId: tickets[0]!.concertId,
+          userId: tickets[0]!.userId,
+        });
+      } catch {
+        // Ignore failure, admission TTL handles it eventually
+      }
+    }
 
     return tickets.map((ticket) => ({
       ticket,

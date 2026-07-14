@@ -10,6 +10,7 @@ import { OrderStatus } from '../../domain/order-status.enum';
 import type { IInventoryAdjustmentRepository } from '../../domain/ports/inventory-adjustment.port';
 import type { IOrderEventPublisher } from '../../domain/ports/order-event-publisher.port';
 import type { IOrderRepository } from '../../domain/ports/order-repository.port';
+import type { WaitingRoomAdmissionPort } from '../../domain/ports/waiting-room-admission.port';
 import { TransitionOrderStatusUseCase } from './transition-order-status.use-case';
 
 function buildOrder(status = OrderStatus.PENDING_PAYMENT, userId = 'user-1'): Order {
@@ -48,16 +49,27 @@ function buildInventoryAdjustmentRepository(): IInventoryAdjustmentRepository {
   };
 }
 
+function buildWaitingRoomAdmissionPort(): WaitingRoomAdmissionPort {
+  return {
+    incrementLoad: vi.fn(),
+    validate: vi.fn(),
+    release: vi.fn(),
+    consumeAndHoldSlot: vi.fn(),
+  };
+}
+
 describe('TransitionOrderStatusUseCase', () => {
   let orderRepository: IOrderRepository;
   let eventPublisher: IOrderEventPublisher;
+  let waitingRoomAdmissionPort: WaitingRoomAdmissionPort;
   let useCase: TransitionOrderStatusUseCase;
   const occurredAt = new Date('2026-06-16T10:30:00.000Z');
 
   beforeEach(() => {
     orderRepository = buildRepository();
     eventPublisher = buildEventPublisher();
-    useCase = new TransitionOrderStatusUseCase(orderRepository, eventPublisher);
+    waitingRoomAdmissionPort = buildWaitingRoomAdmissionPort();
+    useCase = new TransitionOrderStatusUseCase(orderRepository, eventPublisher, undefined, waitingRoomAdmissionPort);
   });
 
   it.each([
@@ -143,6 +155,39 @@ describe('TransitionOrderStatusUseCase', () => {
     ]);
   });
 
+  it.each([
+    OrderStatus.CANCELLED,
+    OrderStatus.EXPIRED,
+    OrderStatus.FAILED,
+  ])('releases the waiting room slot when order transitions to %s', async (nextStatus) => {
+    vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder());
+
+    await useCase.execute({
+      userId: 'user-1',
+      orderId: 'order-1',
+      status: nextStatus,
+      occurredAt,
+    });
+
+    expect(waitingRoomAdmissionPort.release).toHaveBeenCalledWith({
+      concertId: 'concert-1',
+      userId: 'user-1',
+    });
+  });
+
+  it('does not release the waiting room slot when order transitions to PAID', async () => {
+    vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder());
+
+    await useCase.execute({
+      userId: 'user-1',
+      orderId: 'order-1',
+      status: OrderStatus.PAID,
+      occurredAt,
+    });
+
+    expect(waitingRoomAdmissionPort.release).not.toHaveBeenCalled();
+  });
+
   it('propagates optimistic lock conflicts from the repository', async () => {
     vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder());
     vi.mocked(orderRepository.updateStatus).mockRejectedValue(
@@ -173,6 +218,7 @@ describe('TransitionOrderStatusUseCase', () => {
         orderRepository,
         eventPublisher,
         inventoryAdjustmentRepository,
+        waitingRoomAdmissionPort,
       );
       vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder());
 
@@ -206,6 +252,7 @@ describe('TransitionOrderStatusUseCase', () => {
       orderRepository,
       eventPublisher,
       inventoryAdjustmentRepository,
+      waitingRoomAdmissionPort,
     );
     vi.mocked(orderRepository.findById).mockResolvedValue(buildOrder(OrderStatus.PAID));
 

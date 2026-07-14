@@ -154,6 +154,25 @@ export class RedisWaitingRoomStore implements WaitingRoomStorePort {
     await multi.exec();
   }
 
+  async consumeAndHoldSlot(input: {
+    concertId: string;
+    userId: string;
+    holdTtlMinutes: number;
+  }): Promise<void> {
+    const reverseKey = this.userAdmissionKey(input.concertId, input.userId);
+    const token = await this.redis.get(reverseKey);
+    const multi = this.redis.multi();
+    
+    if (token) {
+      multi.del(reverseKey).del(this.admissionKey(token));
+    }
+    
+    const expiresAt = Date.now() + input.holdTtlMinutes * 60 * 1000;
+    multi.zadd(this.activeKey(input.concertId), 'XX', expiresAt, input.userId);
+    
+    await multi.exec();
+  }
+
   async incrementLoad(concertId: string): Promise<number> {
     const key = this.loadCounterKey(concertId);
     const count = await this.redis.incr(key);

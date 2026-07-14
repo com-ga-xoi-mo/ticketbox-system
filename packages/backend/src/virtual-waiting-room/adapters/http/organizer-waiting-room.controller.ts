@@ -2,11 +2,13 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
   Put,
   Patch,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,6 +18,11 @@ import {
 
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
+import type { AuthenticatedUser } from '../../../identity/domain/authenticated-user.interface';
+import {
+  ConcertNotFoundError,
+  ForbiddenConcertOwnershipError,
+} from '../../../identity/domain/errors';
 import { Role } from '../../../identity/domain/role.enum';
 import { JwtAuthGuard } from '../../../identity/infrastructure/passport/jwt-auth.guard';
 import { ConfigureWaitingRoomUseCase } from '../../application/use-cases/configure-waiting-room.use-case';
@@ -38,24 +45,40 @@ export class OrganizerWaitingRoomController {
   ) {}
 
   @Get()
-  async get(@Param('concertId') concertId: string) {
-    const config = await this.getWaitingRoomConfig.execute(concertId);
-    if (!config) {
-      throw new NotFoundException('Waiting room config not found');
+  async get(
+    @Param('concertId') concertId: string,
+    @Request() req: { user: AuthenticatedUser },
+  ) {
+    try {
+      const config = await this.getWaitingRoomConfig.execute({
+        concertId,
+        ...this.actorInput(req.user),
+      });
+      if (!config) {
+        throw new NotFoundException('Waiting room config not found');
+      }
+      return serializeWaitingRoomConfig(config);
+    } catch (error: unknown) {
+      return this.mapError(error);
     }
-    return serializeWaitingRoomConfig(config);
   }
 
   @Put()
   async configure(
     @Param('concertId') concertId: string,
     @Body() body: unknown,
+    @Request() req: { user: AuthenticatedUser },
   ) {
-    const dto = ConfigureWaitingRoomRequestSchema.parse(body);
     try {
+      const parsed = ConfigureWaitingRoomRequestSchema.safeParse(body);
+      if (!parsed.success) {
+        throw new BadRequestException('Invalid request body');
+      }
+      const dto = parsed.data;
       const config = await this.configureWaitingRoom.execute({
         concertId,
         ...dto,
+        ...this.actorInput(req.user),
       });
       return serializeWaitingRoomConfig(config);
     } catch (error: unknown) {
@@ -67,12 +90,18 @@ export class OrganizerWaitingRoomController {
   async override(
     @Param('concertId') concertId: string,
     @Body() body: unknown,
+    @Request() req: { user: AuthenticatedUser },
   ) {
-    const dto = SetWaitingRoomOverrideRequestSchema.parse(body);
     try {
+      const parsed = SetWaitingRoomOverrideRequestSchema.safeParse(body);
+      if (!parsed.success) {
+        throw new BadRequestException('Invalid request body');
+      }
+      const dto = parsed.data;
       const config = await this.setWaitingRoomOverride.execute({
         concertId,
         manualOverride: dto.manualOverride,
+        ...this.actorInput(req.user),
       });
       return serializeWaitingRoomConfig(config);
     } catch (error: unknown) {
@@ -81,6 +110,12 @@ export class OrganizerWaitingRoomController {
   }
 
   private mapError(error: unknown): never {
+    if (error instanceof ForbiddenConcertOwnershipError) {
+      throw new ForbiddenException(error.message);
+    }
+    if (error instanceof ConcertNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
     if (error instanceof WaitingRoomConcertNotFoundError) {
       throw new NotFoundException(error.message);
     }
@@ -89,5 +124,11 @@ export class OrganizerWaitingRoomController {
     }
     throw error;
   }
-}
 
+  private actorInput(user: AuthenticatedUser) {
+    return {
+      actor: { userId: user.id, roles: user.roles },
+      allowAdminOverride: user.roles.includes(Role.ADMIN),
+    };
+  }
+}

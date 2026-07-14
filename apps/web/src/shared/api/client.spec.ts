@@ -18,7 +18,7 @@ global.localStorage = {
 };
 
 // Import after shim
-const { post, get, patch, registerUnauthorizedHandler } = await import('./client');
+const { ApiError, post, get, patch, registerUnauthorizedHandler } = await import('./client');
 const { setToken } = await import('../auth/token-storage');
 
 function mockFetch(status: number, body: unknown) {
@@ -87,5 +87,23 @@ describe('api client', () => {
       code: 'ARTIST_BIO_STATUS_TRANSITION',
       message: 'Invalid transition',
     });
+  });
+
+  it('preserves a safe HTTP status on non-2xx responses', async () => {
+    mockFetch(404, { message: 'Not found' });
+
+    await expect(get('/missing')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 404,
+      message: 'Not found',
+    } satisfies Partial<InstanceType<typeof ApiError>>);
+  });
+
+  it('keeps JSON request methods compatible when they fail', async () => {
+    mockFetch(409, { message: 'Conflict' });
+    await expect(post('/test', { value: 1 })).rejects.toBeInstanceOf(ApiError);
+
+    mockFetch(400, { message: 'Invalid input' });
+    await expect(patch('/test', { value: 1 })).rejects.toMatchObject({ status: 400 });
   });
 });
