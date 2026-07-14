@@ -8,6 +8,7 @@ import { ConcertDetailPanel } from '../../concerts-shared/components/ConcertDeta
 import { Button } from '../../../shared/ui/button';
 import { Pagination } from '../../../shared/ui/pagination';
 import type { Concert, ConcertStatus } from '../../concerts-shared/types';
+import { ArtistBioPanel } from '../../artist-bio/ArtistBioPanel';
 
 const PAGE_SIZE = 10;
 
@@ -92,7 +93,9 @@ export function ConcertsPage() {
           className="size-10 animate-spin rounded-full border-b-2 border-t-2 border-primary"
           aria-hidden="true"
         />
-        <p className="mt-4 font-mono text-sm text-on-surface-variant">Đang tải danh sách sự kiện…</p>
+        <p className="mt-4 font-mono text-sm text-on-surface-variant">
+          Đang tải danh sách sự kiện…
+        </p>
       </div>
     );
   }
@@ -103,12 +106,16 @@ export function ConcertsPage() {
         <span className="material-symbols-outlined mb-4 text-4xl text-error" aria-hidden="true">
           error
         </span>
-        <h3 className="font-display text-lg font-bold text-on-surface">Không thể tải danh sách sự kiện</h3>
+        <h3 className="font-display text-lg font-bold text-on-surface">
+          Không thể tải danh sách sự kiện
+        </h3>
         <p className="mt-2 max-w-sm text-sm text-on-surface-variant">
           {error?.message || 'Đã xảy ra lỗi khi lấy dữ liệu sự kiện từ máy chủ.'}
         </p>
         <Button onClick={() => refetch()} className="mt-6">
-          <span className="material-symbols-outlined text-sm" aria-hidden="true">refresh</span>
+          <span className="material-symbols-outlined text-sm" aria-hidden="true">
+            refresh
+          </span>
           Thử lại
         </Button>
       </div>
@@ -199,7 +206,9 @@ export function ConcertsPage() {
                     >
                       <option value="ALL">Thành phố: Tất cả</option>
                       {uniqueCities.map((city) => (
-                        <option key={city} value={city}>{city}</option>
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
                       ))}
                     </select>
                     <span className="material-symbols-outlined pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">
@@ -209,7 +218,11 @@ export function ConcertsPage() {
 
                   {/* Reset filters */}
                   <button
-                    onClick={() => { setSearchQuery(''); setSelectedStatus('ALL'); setSelectedCity('ALL'); }}
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedStatus('ALL');
+                      setSelectedCity('ALL');
+                    }}
                     className="flex size-8 shrink-0 items-center justify-center rounded-md text-on-surface-variant transition-colors hover:bg-white/10 hover:text-white"
                     title="Xóa bộ lọc"
                   >
@@ -219,50 +232,50 @@ export function ConcertsPage() {
               </div>
 
               {/* Table — horizontally scrollable when narrow (detail panel open) */}
-            <div className="min-h-0 flex-1 overflow-auto">
-              {filteredConcerts.length === 0 ? (
-                <div className="p-12 text-center text-sm font-semibold text-on-surface-variant">
-                  Không có sự kiện nào khớp với bộ lọc hiện tại.
-                </div>
-              ) : (
-                <ConcertTable
-                  concerts={paginatedConcerts}
-                  onSelect={setSelectedConcert}
-                  selectedId={selectedConcert?.id}
-                />
-              )}
-            </div>
+              <div className="min-h-0 flex-1 overflow-auto">
+                {filteredConcerts.length === 0 ? (
+                  <div className="p-12 text-center text-sm font-semibold text-on-surface-variant">
+                    Không có sự kiện nào khớp với bộ lọc hiện tại.
+                  </div>
+                ) : (
+                  <ConcertTable
+                    concerts={paginatedConcerts}
+                    onSelect={setSelectedConcert}
+                    selectedId={selectedConcert?.id}
+                  />
+                )}
+              </div>
 
-            {/* Pagination */}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredConcerts.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-
-          {/* Detail panel */}
-          {selectedConcert && (
-            <div className="w-[400px] shrink-0">
-              <ConcertDetailPanel
-                concert={concerts.find((c) => c.id === selectedConcert.id) || selectedConcert}
-                onClose={() => setSelectedConcert(null)}
-                onEdit={() => navigate(`/organizer/concerts/${selectedConcert.id}/edit`)}
-                onPublish={handlePublishConcert}
-                onCancel={handleCancelConcert}
-                isPublishing={publishMutation.isPending}
-                isCancelling={cancelMutation.isPending}
-                publishError={publishMutation.error?.message}
-                cancelError={cancelMutation.error?.message}
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredConcerts.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
               />
             </div>
-          )}
-        </div>
+
+            {/* Detail panel */}
+            {selectedConcert && (
+              <div className="w-[400px] shrink-0">
+                <ConcertDetailPanel
+                  concert={concerts.find((c) => c.id === selectedConcert.id) || selectedConcert}
+                  onClose={() => setSelectedConcert(null)}
+                  onEdit={() => navigate(`/organizer/concerts/${selectedConcert.id}/edit`)}
+                  onPublish={handlePublishConcert}
+                  onCancel={handleCancelConcert}
+                  isPublishing={publishMutation.isPending}
+                  isCancelling={cancelMutation.isPending}
+                  publishError={publishMutation.error?.message}
+                  cancelError={cancelMutation.error?.message}
+                  extraContent={<ArtistBioPanel concertId={selectedConcert.id} role="ORGANIZER" />}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
-
     </div>
   );
 }
