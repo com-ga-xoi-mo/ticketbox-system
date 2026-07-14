@@ -41,6 +41,17 @@ export type {
 } from './artist/management-artist.contract';
 
 export {
+  ArtistBioStatusSchema,
+  UploadArtistBioPressKitRequestSchema,
+  ArtistBioResponseSchema,
+} from './artist-bio/artist-bio.contract';
+export type {
+  ArtistBioStatus,
+  UploadArtistBioPressKitRequest,
+  ArtistBioResponse,
+} from './artist-bio/artist-bio.contract';
+
+export {
   LoginRequestSchema,
   GoogleLoginRequestSchema,
   ForgotPasswordRequestSchema,

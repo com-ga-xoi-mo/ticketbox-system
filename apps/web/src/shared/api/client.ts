@@ -5,6 +5,17 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void {
   unauthorizedHandler = handler;
 }
@@ -18,21 +29,23 @@ function buildHeaders(): HeadersInit {
   return headers;
 }
 
-function extractErrorMessage(body: string, status: number): string {
+function extractError(body: string, status: number): { message: string; code?: string } {
   try {
     const parsed: unknown = JSON.parse(body);
     if (parsed && typeof parsed === 'object' && 'message' in parsed) {
-      const message = (parsed as { message: unknown }).message;
-      if (Array.isArray(message)) return message.join('; ');
-      if (typeof message === 'string' && message) return message;
+      const { message, code } = parsed as { message: unknown; code?: unknown };
+      const resolvedCode = typeof code === 'string' && code ? code : undefined;
+      if (Array.isArray(message)) return { message: message.join('; '), code: resolvedCode };
+      if (typeof message === 'string' && message) return { message, code: resolvedCode };
     }
   } catch {
     // Non-JSON body: never surface it raw, fall through to a generic message.
   }
-  if (status === 403) return 'You do not have permission to perform this action.';
-  if (status === 404) return 'The requested resource was not found.';
-  if (status === 409) return 'This conflicts with existing data. Please adjust and retry.';
-  return `Request failed: ${status}`;
+  if (status === 403) return { message: 'You do not have permission to perform this action.' };
+  if (status === 404) return { message: 'The requested resource was not found.' };
+  if (status === 409)
+    return { message: 'This conflicts with existing data. Please adjust and retry.' };
+  return { message: `Request failed: ${status}` };
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -43,7 +56,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(extractErrorMessage(body, res.status));
+    const error = extractError(body, res.status);
+    throw new ApiError(error.message, res.status, error.code);
   }
   return res.json() as Promise<T>;
 }
