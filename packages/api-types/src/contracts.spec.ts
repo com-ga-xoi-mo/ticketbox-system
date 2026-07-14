@@ -32,15 +32,15 @@ import {
   TicketResendResponseSchema,
   VipLookupRequestSchema,
   VipLookupResponseSchema,
-  PublicTopArtistSchema,
-  PublicArtistSummarySchema,
-  PublicArtistTimelineEventSchema,
   PublicArtistProfileSchema,
   PublicArtistListResponseSchema,
   TopArtistListResponseSchema,
   ArtistSearchParamsSchema,
   ArtistFollowResponseSchema,
   ArtistFavoriteResponseSchema,
+  ArtistBioResponseSchema,
+  ArtistBioStatusSchema,
+  UploadArtistBioPressKitRequestSchema,
 } from './index';
 
 const assignmentId = '11111111-1111-4111-8111-111111111111';
@@ -111,7 +111,14 @@ describe('artist contracts', () => {
   };
 
   it('validates artist list response', () => {
-    expect(PublicArtistListResponseSchema.safeParse({ items: [artistSummary], total: 1, limit: 10, offset: 0 }).success).toBe(true);
+    expect(
+      PublicArtistListResponseSchema.safeParse({
+        items: [artistSummary],
+        total: 1,
+        limit: 10,
+        offset: 0,
+      }).success,
+    ).toBe(true);
   });
 
   it('validates top artist list response', () => {
@@ -127,8 +134,71 @@ describe('artist contracts', () => {
   });
 
   it('validates engagement responses', () => {
-    expect(ArtistFollowResponseSchema.safeParse({ artistId: assignmentId, following: true }).success).toBe(true);
-    expect(ArtistFavoriteResponseSchema.safeParse({ artistId: assignmentId, favorited: false }).success).toBe(true);
+    expect(
+      ArtistFollowResponseSchema.safeParse({ artistId: assignmentId, following: true }).success,
+    ).toBe(true);
+    expect(
+      ArtistFavoriteResponseSchema.safeParse({ artistId: assignmentId, favorited: false }).success,
+    ).toBe(true);
+  });
+});
+
+describe('artist bio contracts', () => {
+  const response = {
+    id: assignmentId,
+    concertId,
+    pressKitAssetId: assetId,
+    status: 'READY_FOR_REVIEW',
+    generatedBio: 'Generated artist bio',
+    publishedBio: null,
+    provider: 'local-deterministic',
+    errorMessage: null,
+    retryCount: 1,
+    maxAttempts: 3,
+    lastAttemptedAt: timestamp,
+    nextRetryAt: null,
+    requestedById: assignmentId,
+    reviewedById: null,
+    publishedAt: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+
+  it('validates every status and the complete response shape', () => {
+    for (const status of [
+      'DRAFT',
+      'PROCESSING',
+      'READY_FOR_REVIEW',
+      'PUBLISHED',
+      'FAILED',
+      'REJECTED',
+    ]) {
+      expect(ArtistBioStatusSchema.safeParse(status).success).toBe(true);
+    }
+    expect(ArtistBioResponseSchema.safeParse(response).success).toBe(true);
+  });
+
+  it('validates upload payloads and rejects malformed response values', () => {
+    expect(
+      UploadArtistBioPressKitRequestSchema.safeParse({
+        originalName: 'press-kit.pdf',
+        contentType: 'application/pdf',
+        contentBase64: 'JVBERi0=',
+      }).success,
+    ).toBe(true);
+    expect(
+      UploadArtistBioPressKitRequestSchema.safeParse({
+        originalName: '',
+        contentType: 'application/pdf',
+        contentBase64: '',
+      }).success,
+    ).toBe(false);
+    expect(ArtistBioResponseSchema.safeParse({ ...response, id: 'not-a-uuid' }).success).toBe(
+      false,
+    );
+    expect(ArtistBioResponseSchema.safeParse({ ...response, createdAt: 'tomorrow' }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -233,8 +303,9 @@ describe('public concert catalog contracts', () => {
 
   it('rejects malformed public catalog payloads', () => {
     expect(PublicConcertListResponseSchema.safeParse({ concerts: [summary] }).success).toBe(false);
-    expect(PublicConcertListResponseSchema.safeParse([{ ...summary, startsAt: new Date() }]).success)
-      .toBe(false);
+    expect(
+      PublicConcertListResponseSchema.safeParse([{ ...summary, startsAt: new Date() }]).success,
+    ).toBe(false);
     expect(
       PublicConcertDetailResponseSchema.safeParse({
         ...summary,
@@ -523,18 +594,24 @@ describe('batch sync contracts', () => {
     });
     expect(
       BatchSyncRequestSchema.safeParse({
-        events: Array.from({ length: 100 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+        events: Array.from({ length: 100 }, (_, index) => ({
+          ...event,
+          localId: `local-${index}`,
+        })),
       }).success,
     ).toBe(true);
-    expect(
-      BatchSyncRequestSchema.safeParse({ events: [event], since: timestamp }).success,
-    ).toBe(true);
+    expect(BatchSyncRequestSchema.safeParse({ events: [event], since: timestamp }).success).toBe(
+      true,
+    );
   });
 
   it('rejects invalid batch request boundaries and fields', () => {
     const invalidRequests: unknown[] = [
       {
-        events: Array.from({ length: 101 }, (_, index) => ({ ...event, localId: `local-${index}` })),
+        events: Array.from({ length: 101 }, (_, index) => ({
+          ...event,
+          localId: `local-${index}`,
+        })),
       },
       { events: [event, { ...event, localId: 'local-1' }] },
       { events: [{ ...event, localId: '   ' }] },
@@ -574,7 +651,13 @@ describe('batch sync contracts', () => {
   });
 
   it('accepts response with cacheUpdates and without', () => {
-    const accepted = { localId: '1', status: 'accepted', message: 'OK', ticketId, checkedInAt: timestamp };
+    const accepted = {
+      localId: '1',
+      status: 'accepted',
+      message: 'OK',
+      ticketId,
+      checkedInAt: timestamp,
+    };
     expect(BatchSyncResponseSchema.safeParse({ results: [accepted] }).success).toBe(true);
     expect(
       BatchSyncResponseSchema.safeParse({
@@ -607,7 +690,9 @@ describe('ticket cache contracts', () => {
         syncedAt: timestamp,
       }).success,
     ).toBe(true);
-    expect(TicketCacheFullResponseSchema.safeParse({ entries: [], syncedAt: timestamp }).success).toBe(true);
+    expect(
+      TicketCacheFullResponseSchema.safeParse({ entries: [], syncedAt: timestamp }).success,
+    ).toBe(true);
   });
 
   it('validates delta cache response', () => {
@@ -685,7 +770,9 @@ describe('auth contracts', () => {
   it('rejects invalid and unknown auth fields', () => {
     expect(LoginRequestSchema.safeParse({ email: 'bad', password: '' }).success).toBe(false);
     expect(LoginResponseSchema.safeParse({ accessToken: 'jwt', profile: {} }).success).toBe(false);
-    expect(GoogleLoginRequestSchema.safeParse({ credential: '', email: 'bad' }).success).toBe(false);
+    expect(GoogleLoginRequestSchema.safeParse({ credential: '', email: 'bad' }).success).toBe(
+      false,
+    );
     expect(
       StaffProfileResponseSchema.safeParse({
         id: assignmentId,
@@ -818,9 +905,7 @@ describe('online scan contracts', () => {
   });
 });
 
-import {
-  OrganizerCreateConcertSchema,
-} from './concert-management/management-concert.contract';
+import { OrganizerCreateConcertSchema } from './concert-management/management-concert.contract';
 import { ReplaceConcertArtistsRequestSchema as ReplaceSchema } from './concert-management/replace-artists.contract';
 
 describe('management concert contracts', () => {

@@ -74,4 +74,18 @@ describe('api client', () => {
     expect(call[1].method).toBe('PATCH');
     expect(call[1].body).toBe(JSON.stringify({ foo: 'bar' }));
   });
+
+  it('preserves coded error details', async () => {
+    mockFetch(409, {
+      statusCode: 409,
+      code: 'ARTIST_BIO_STATUS_TRANSITION',
+      message: 'Invalid transition',
+    });
+    await expect(get('/artist-bio')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 409,
+      code: 'ARTIST_BIO_STATUS_TRANSITION',
+      message: 'Invalid transition',
+    });
+  });
 });
