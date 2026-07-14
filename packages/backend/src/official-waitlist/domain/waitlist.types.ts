@@ -1,17 +1,8 @@
 export type WaitlistEntryStatus =
   | 'WAITING'
-  | 'GRANTED'
-  | 'FULFILLED'
-  | 'CANCELLED'
-  | 'EXPIRED';
+  | 'CANCELLED';
 
-export type PurchaseEntitlementStatus =
-  | 'ACTIVE'
-  | 'CONSUMED'
-  | 'EXPIRED'
-  | 'REVOKED';
-
-export type PurchaseEntitlementSource = 'WAITLIST' | 'LOTTERY';
+export type WaitlistAvailabilityMarker = 'AVAILABLE' | 'SOLD_OUT' | 'NOTIFIED';
 
 export interface WaitlistEntryRecord {
   id: string;
@@ -21,30 +12,11 @@ export interface WaitlistEntryRecord {
   desiredQuantity: number;
   status: WaitlistEntryStatus;
   joinedAt: Date;
-  grantedAt: Date | null;
-  fulfilledAt: Date | null;
   cancelledAt: Date | null;
-  expiredAt: Date | null;
 }
 
-export interface PurchaseEntitlementRecord {
-  id: string;
-  waitlistEntryId: string | null;
-  userId: string;
-  concertId: string;
-  ticketTypeId: string;
-  orderId: string | null;
-  source: PurchaseEntitlementSource;
-  status: PurchaseEntitlementStatus;
-  quantity: number;
-  grantedAt: Date;
-  expiresAt: Date;
-  consumedAt: Date | null;
-  revokedAt: Date | null;
-}
-
-export interface WaitlistEntitlementNotificationContext {
-  entitlement: PurchaseEntitlementRecord;
+export interface WaitlistRecoveryNotificationContext {
+  entry: WaitlistEntryRecord;
   userEmail: string;
   userDisplayName: string;
   concertTitle: string;
@@ -55,8 +27,6 @@ export interface WaitlistEntitlementNotificationContext {
 
 export interface WaitlistStatusRecord {
   entry: WaitlistEntryRecord | null;
-  queuePosition: number | null;
-  entitlement: PurchaseEntitlementRecord | null;
 }
 
 export interface TicketTypeWaitlistInfo {
@@ -69,4 +39,10 @@ export interface TicketTypeWaitlistInfo {
   status: string;
   saleStartsAt: Date;
   saleEndsAt: Date;
+}
+
+export interface WaitlistTicketAvailabilityMarkerRecord {
+  ticketTypeId: string;
+  markerState: WaitlistAvailabilityMarker;
+  lastNotifiedAt: Date | null;
 }

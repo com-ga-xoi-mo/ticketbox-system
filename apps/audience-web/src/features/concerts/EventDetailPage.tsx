@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, Clock, ListChecks, MapPin, Minus, Plus, RotateCcw, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
+import { CalendarDays, ListChecks, MapPin, Minus, Plus, RotateCcw, ShieldCheck, Ticket, UserRound, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { fetchConcertDetail, catalogKeys } from '../../shared/api/catalog';
 import { fetchWaitlistStatus, joinWaitlist, leaveWaitlist, waitlistKeys } from '../../shared/api/waitlist';
-import { fetchLotteryConfig, fetchLotteryRegistrations, fetchLotteryStatus, registerForLottery, runLotteryDrawNow, updateLotteryTtl, withdrawFromLottery, lotteryKeys } from '../../shared/api/lottery';
+import { fetchLotteryConfig, fetchLotteryRegistrations, fetchLotteryStatus, registerForLottery, runLotteryDrawNow, withdrawFromLottery, lotteryKeys } from '../../shared/api/lottery';
 import { useRequireAuth } from '../../shared/hooks/useRequireAuth';
-import { useCountdown } from '../../shared/hooks/useCountdown';
 import { useAuth } from '../../shared/auth/AuthContext';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency';
 import { PageLoading, PageError, PageUnavailable, PageSoldOut } from '../../shared/ui/PageStates';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
 import { Separator } from '../../components/ui/separator';
 import { FavoriteButton } from '../../shared/ui/FavoriteButton';
 import { VenueMapModal } from './components/VenueMapModal';
@@ -57,7 +55,6 @@ function TicketWaitlistControls({
   ticketType: PublicConcertDetailResponse['ticketTypes'][number];
   desiredQuantity: number;
 }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated, redirectToLogin } = useRequireAuth();
   const statusQuery = useQuery({
@@ -86,9 +83,6 @@ function TicketWaitlistControls({
         queryKey: waitlistKeys.status(concert.id, ticketType.id),
       }),
   });
-  const entitlement = statusQuery.data?.entitlement ?? null;
-  const countdown = useCountdown(entitlement?.expiresAt ?? null);
-
   const handleJoin = () => {
     if (!isAuthenticated) {
       redirectToLogin();
@@ -97,46 +91,13 @@ function TicketWaitlistControls({
     joinMutation.mutate();
   };
 
-  const handleCheckout = () => {
-    if (!entitlement) return;
-    navigate('/checkout', {
-      state: {
-        concertId: concert.id,
-        concertSlug: concert.slug,
-        concertTitle: concert.title,
-        quantities: [[ticketType.id, entitlement.quantity]],
-        waitlistEntitlementId: entitlement.id,
-        idempotencyKey: generateIdempotencyKey(),
-      },
-    });
-  };
-
-  if (entitlement && !countdown.isExpired) {
-    return (
-      <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span className="font-semibold text-primary">Đến lượt mua vé</span>
-          <span className="inline-flex items-center gap-1 font-mono text-primary">
-            <Clock className="size-3.5" />
-            {countdown.formatted}
-          </span>
-        </div>
-        <Button className="mt-3 w-full rounded-full" onClick={handleCheckout}>
-          Mua vé bằng lượt chờ
-        </Button>
-      </div>
-    );
-  }
-
   if (statusQuery.data?.status === 'WAITING') {
     return (
       <div className="mt-3 rounded-xl border bg-muted/40 p-3 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span>Đang trong danh sách chờ</span>
-          {statusQuery.data.queuePosition && (
-            <Badge variant="secondary">#{statusQuery.data.queuePosition}</Badge>
-          )}
-        </div>
+        <span>Bạn sẽ được thông báo khi vé quay lại</span>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Waitlist không giữ chỗ — khi có vé bạn hãy vào mua như bình thường.
+        </p>
         <Button
           variant="outline"
           className="mt-3 w-full rounded-full"
@@ -196,8 +157,7 @@ function TicketLotteryControls({
   });
 
   const data = statusQuery.data ?? null;
-  const entitlement = data?.entitlement ?? null;
-  const countdown = useCountdown(entitlement?.expiresAt ?? null);
+  const remainingWon = data?.remainingWonQuantity ?? 0;
 
   const handleRegister = () => {
     if (!isAuthenticated) {
@@ -208,14 +168,13 @@ function TicketLotteryControls({
   };
 
   const handleCheckout = () => {
-    if (!entitlement) return;
+    if (remainingWon <= 0) return;
     navigate('/checkout', {
       state: {
         concertId: concert.id,
         concertSlug: concert.slug,
         concertTitle: concert.title,
-        quantities: [[ticketType.id, entitlement.quantity]],
-        waitlistEntitlementId: entitlement.id,
+        quantities: [[ticketType.id, remainingWon]],
         idempotencyKey: generateIdempotencyKey(),
       },
     });
@@ -224,16 +183,16 @@ function TicketLotteryControls({
   // No lottery configured for this ticket type.
   if (!data || !data.configStatus) return null;
 
-  if (entitlement && !countdown.isExpired) {
+  if (data.registrationStatus === 'WON' && remainingWon > 0) {
     return (
       <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-semibold text-primary">Bạn đã trúng suất mua vé</span>
-          <span className="inline-flex items-center gap-1 font-mono text-primary">
-            <Clock className="size-3.5" />
-            {countdown.formatted}
-          </span>
+          <span className="font-semibold text-primary">Bạn đã trúng bốc thăm</span>
+          <Badge variant="secondary">Được mua: {remainingWon} vé</Badge>
         </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Bạn được mua trong đợt presale — không giữ chỗ, không đếm ngược.
+        </p>
         <Button className="mt-3 w-full rounded-full" onClick={handleCheckout}>
           Mua vé trúng thăm
         </Button>
@@ -314,7 +273,6 @@ function LotteryOperatorControls({
   const isOperator =
     session?.roles.includes('ORGANIZER') || session?.roles.includes('ADMIN') || false;
   const [showRegistrations, setShowRegistrations] = useState(false);
-  const [ttlMinutes, setTtlMinutes] = useState('15');
 
   const configQuery = useQuery({
     queryKey: lotteryKeys.config(ticketType.id),
@@ -323,27 +281,11 @@ function LotteryOperatorControls({
     retry: false,
   });
 
-  useEffect(() => {
-    if (configQuery.data?.entitlementTtlMinutes) {
-      setTtlMinutes(String(configQuery.data.entitlementTtlMinutes));
-    }
-  }, [configQuery.data?.entitlementTtlMinutes]);
-
   const registrationsQuery = useQuery({
     queryKey: lotteryKeys.registrations(ticketType.id),
     queryFn: () => fetchLotteryRegistrations(ticketType.id),
     enabled: isOperator && showRegistrations,
     retry: false,
-  });
-
-  const updateTtlMutation = useMutation({
-    mutationFn: () =>
-      updateLotteryTtl(ticketType.id, {
-        entitlementTtlMinutes: Number(ttlMinutes),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: lotteryKeys.config(ticketType.id) });
-    },
   });
 
   const drawNowMutation = useMutation({
@@ -361,8 +303,6 @@ function LotteryOperatorControls({
   if (!isOperator || !configQuery.data) return null;
 
   const registrations = registrationsQuery.data?.registrations ?? [];
-  const ttlValue = Number(ttlMinutes);
-  const ttlInvalid = !Number.isInteger(ttlValue) || ttlValue < 1;
 
   return (
     <div className="mt-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3 text-left text-xs">
@@ -370,24 +310,7 @@ function LotteryOperatorControls({
         <span className="font-semibold text-primary">Lottery test controls</span>
         <Badge variant="secondary">{configQuery.data.status}</Badge>
       </div>
-      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-        <Input
-          className="h-9 rounded-full bg-background text-xs"
-          type="number"
-          min={1}
-          value={ttlMinutes}
-          aria-label="TTL phut"
-          onChange={(event) => setTtlMinutes(event.target.value)}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-          disabled={ttlInvalid || updateTtlMutation.isPending}
-          onClick={() => updateTtlMutation.mutate()}
-        >
-          Sua TTL
-        </Button>
+      <div className="grid gap-2">
         <Button
           size="sm"
           className="rounded-full"
@@ -412,7 +335,7 @@ function LotteryOperatorControls({
           Granted {drawNowMutation.data.granted}, not selected {drawNowMutation.data.notSelected}.
         </p>
       )}
-      {(updateTtlMutation.isError || drawNowMutation.isError || registrationsQuery.isError) && (
+      {(drawNowMutation.isError || registrationsQuery.isError) && (
         <p className="mt-2 text-destructive">Khong the thuc hien thao tac lottery.</p>
       )}
       {showRegistrations && registrations.length > 0 && (
@@ -429,8 +352,8 @@ function LotteryOperatorControls({
               <span className="text-muted-foreground">{registration.userEmail}</span>
               <span className="text-muted-foreground">
                 SL {registration.desiredQuantity}
-                {registration.entitlement
-                  ? ` · entitlement ${registration.entitlement.status}`
+                {registration.status === 'WON'
+                  ? ` · trúng ${registration.wonQuantity} (đã mua ${registration.purchasedQuantity})`
                   : ''}
               </span>
             </div>

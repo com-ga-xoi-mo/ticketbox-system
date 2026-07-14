@@ -15,21 +15,18 @@ import { DatabaseModule } from '../platform/database/database.module';
 import { QueueModule } from '../platform/queue/queue.module';
 import { OrganizerLotteryController } from './adapters/http/organizer-lottery.controller';
 import { PresaleLotteryController } from './adapters/http/presale-lottery.controller';
-import { LotteryEntitlementEmailComposer } from './application/services/lottery-entitlement-email-composer';
+import { LotteryWinnerEmailComposer } from './application/services/lottery-entitlement-email-composer';
 import {
   CancelLotteryUseCase,
   ConfigureLotteryUseCase,
-  ExpireLotteryEntitlementsUseCase,
   GetLotteryConfigUseCase,
   GetLotteryStatusUseCase,
   ListLotteryRegistrationsUseCase,
   RegisterForLotteryUseCase,
   RunDueLotteryDrawsUseCase,
   RunLotteryDrawUseCase,
-  SendLotteryEntitlementRemindersUseCase,
-  UpdateLotteryTtlUseCase,
   WithdrawLotteryRegistrationUseCase,
-  type LotteryGrantNotifier,
+  type LotteryDrawNotifier,
 } from './application/use-cases/lottery.use-cases';
 import {
   PRESALE_LOTTERY_REPOSITORY,
@@ -38,7 +35,7 @@ import {
 import { PrismaPresaleLotteryRepository } from './infrastructure/database/prisma-presale-lottery.repository';
 import { LotteryNotificationService } from './infrastructure/notification/lottery-notification.service';
 
-export const LOTTERY_GRANT_NOTIFIER = Symbol('LotteryGrantNotifier');
+export const LOTTERY_DRAW_NOTIFIER = Symbol('LotteryDrawNotifier');
 
 @Module({
   imports: [DatabaseModule, NotificationModule, PlatformConfigModule, QueueModule],
@@ -49,25 +46,25 @@ export const LOTTERY_GRANT_NOTIFIER = Symbol('LotteryGrantNotifier');
       useClass: PrismaPresaleLotteryRepository,
     },
     {
-      provide: LotteryEntitlementEmailComposer,
+      provide: LotteryWinnerEmailComposer,
       inject: [PlatformConfigService],
       useFactory: (config: PlatformConfigService) =>
-        new LotteryEntitlementEmailComposer(config.ticketAccessBaseUrl),
+        new LotteryWinnerEmailComposer(config.ticketAccessBaseUrl),
     },
     {
-      provide: LOTTERY_GRANT_NOTIFIER,
+      provide: LOTTERY_DRAW_NOTIFIER,
       inject: [
         NOTIFICATION_REPOSITORY,
         PRESALE_LOTTERY_REPOSITORY,
         getQueueToken(NOTIFICATION_DELIVERY_QUEUE),
-        LotteryEntitlementEmailComposer,
+        LotteryWinnerEmailComposer,
         PlatformConfigService,
       ],
       useFactory: (
         notificationRepository: NotificationRepositoryPort,
         lotteryRepository: PresaleLotteryRepositoryPort,
         deliveryQueue: Queue<NotificationDeliveryJobData>,
-        emailComposer: LotteryEntitlementEmailComposer,
+        emailComposer: LotteryWinnerEmailComposer,
         config: PlatformConfigService,
       ) =>
         new LotteryNotificationService(
@@ -103,12 +100,6 @@ export const LOTTERY_GRANT_NOTIFIER = Symbol('LotteryGrantNotifier');
         new ListLotteryRegistrationsUseCase(repository),
     },
     {
-      provide: UpdateLotteryTtlUseCase,
-      inject: [PRESALE_LOTTERY_REPOSITORY],
-      useFactory: (repository: PresaleLotteryRepositoryPort) =>
-        new UpdateLotteryTtlUseCase(repository),
-    },
-    {
       provide: RegisterForLotteryUseCase,
       inject: [PRESALE_LOTTERY_REPOSITORY],
       useFactory: (repository: PresaleLotteryRepositoryPort) =>
@@ -128,10 +119,10 @@ export const LOTTERY_GRANT_NOTIFIER = Symbol('LotteryGrantNotifier');
     },
     {
       provide: RunLotteryDrawUseCase,
-      inject: [PRESALE_LOTTERY_REPOSITORY, LOTTERY_GRANT_NOTIFIER],
+      inject: [PRESALE_LOTTERY_REPOSITORY, LOTTERY_DRAW_NOTIFIER],
       useFactory: (
         repository: PresaleLotteryRepositoryPort,
-        notifier: LotteryGrantNotifier,
+        notifier: LotteryDrawNotifier,
       ) => new RunLotteryDrawUseCase(repository, notifier),
     },
     {
@@ -142,27 +133,11 @@ export const LOTTERY_GRANT_NOTIFIER = Symbol('LotteryGrantNotifier');
         runDraw: RunLotteryDrawUseCase,
       ) => new RunDueLotteryDrawsUseCase(repository, runDraw),
     },
-    {
-      provide: ExpireLotteryEntitlementsUseCase,
-      inject: [PRESALE_LOTTERY_REPOSITORY],
-      useFactory: (repository: PresaleLotteryRepositoryPort) =>
-        new ExpireLotteryEntitlementsUseCase(repository),
-    },
-    {
-      provide: SendLotteryEntitlementRemindersUseCase,
-      inject: [PRESALE_LOTTERY_REPOSITORY, LOTTERY_GRANT_NOTIFIER],
-      useFactory: (
-        repository: PresaleLotteryRepositoryPort,
-        notifier: LotteryGrantNotifier,
-      ) => new SendLotteryEntitlementRemindersUseCase(repository, notifier, 5),
-    },
   ],
   exports: [
     PRESALE_LOTTERY_REPOSITORY,
     RunLotteryDrawUseCase,
     RunDueLotteryDrawsUseCase,
-    ExpireLotteryEntitlementsUseCase,
-    SendLotteryEntitlementRemindersUseCase,
   ],
 })
 export class PresaleLotteryModule {}

@@ -6,11 +6,10 @@ import {
   Get,
   NotFoundException,
   Param,
-  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ConfigureLotteryRequestSchema, UpdateLotteryTtlRequestSchema } from '@ticketbox/api-types';
+import { ConfigureLotteryRequestSchema } from '@ticketbox/api-types';
 
 import { Roles } from '../../../identity/adapters/http/decorators/roles.decorator';
 import { RolesGuard } from '../../../identity/adapters/http/guards/roles.guard';
@@ -22,7 +21,6 @@ import {
   GetLotteryConfigUseCase,
   ListLotteryRegistrationsUseCase,
   RunLotteryDrawUseCase,
-  UpdateLotteryTtlUseCase,
 } from '../../application/use-cases/lottery.use-cases';
 import {
   LotteryAllocationExceedsInventoryError,
@@ -42,7 +40,6 @@ export class OrganizerLotteryController {
     private readonly getLotteryConfig: GetLotteryConfigUseCase,
     private readonly runLotteryDraw: RunLotteryDrawUseCase,
     private readonly listLotteryRegistrations: ListLotteryRegistrationsUseCase,
-    private readonly updateLotteryTtl: UpdateLotteryTtlUseCase,
   ) {}
 
   @Post()
@@ -56,7 +53,6 @@ export class OrganizerLotteryController {
         drawAt: new Date(dto.drawAt),
         publicSaleStartsAt: new Date(dto.publicSaleStartsAt),
         allocation: dto.allocation,
-        entitlementTtlMinutes: dto.entitlementTtlMinutes,
       });
       return serializeConfig(config);
     } catch (error: unknown) {
@@ -68,20 +64,6 @@ export class OrganizerLotteryController {
   async status(@Param('ticketTypeId') ticketTypeId: string) {
     try {
       const config = await this.getLotteryConfig.execute({ ticketTypeId });
-      return serializeConfig(config);
-    } catch (error: unknown) {
-      return this.mapError(error);
-    }
-  }
-
-  @Patch(':ticketTypeId/ttl')
-  async updateTtl(@Param('ticketTypeId') ticketTypeId: string, @Body() body: unknown) {
-    const dto = UpdateLotteryTtlRequestSchema.parse(body);
-    try {
-      const config = await this.updateLotteryTtl.execute({
-        ticketTypeId,
-        entitlementTtlMinutes: dto.entitlementTtlMinutes,
-      });
       return serializeConfig(config);
     } catch (error: unknown) {
       return this.mapError(error);

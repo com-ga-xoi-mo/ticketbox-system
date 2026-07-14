@@ -367,22 +367,6 @@ enum WaitlistEntryStatus {
   @@map("waitlist_entry_status")
 }
 
-enum PurchaseEntitlementStatus {
-  ACTIVE
-  CONSUMED
-  EXPIRED
-  REVOKED
-
-  @@map("purchase_entitlement_status")
-}
-
-enum PurchaseEntitlementSource {
-  WAITLIST
-  LOTTERY
-
-  @@map("purchase_entitlement_source")
-}
-
 enum LotteryConfigStatus {
   SCHEDULED
   DRAWING
@@ -547,7 +531,6 @@ model User {
   concertReviews        ConcertReview[]           @relation("ConcertReviewUser")
   hiddenConcertReviews  ConcertReview[]           @relation("ConcertReviewHiddenBy")
   waitlistEntries       WaitlistEntry[]
-  purchaseEntitlements  PurchaseEntitlement[]
   lotteryRegistrations  LotteryRegistration[]
 
   @@map("users")
@@ -689,7 +672,6 @@ model Concert {
   resaleListings   ResaleListing[]
   reviews          ConcertReview[]
   waitlistEntries  WaitlistEntry[]
-  purchaseEntitlements PurchaseEntitlement[]
   lotteryConfigs   LotteryConfig[]
   lotteryRegistrations LotteryRegistration[]
   waitingRoomConfig WaitingRoomConfig?
@@ -746,7 +728,7 @@ model TicketType {
   guestListRows  GuestListEntry[]
   resaleListings ResaleListing[]
   waitlistEntries WaitlistEntry[]
-  purchaseEntitlements PurchaseEntitlement[]
+  waitlistAvailability WaitlistTicketAvailability?
   lotteryConfig       LotteryConfig?
   lotteryRegistrations LotteryRegistration[]
   lotteryDraws        LotteryDraw[]
@@ -802,7 +784,6 @@ model Order {
   refundRequests  RefundRequest[]
   promotion       Promotion?       @relation(fields: [promotionId], references: [id], onDelete: SetNull)
   promotionUsages PromotionUsage[]
-  consumedEntitlements PurchaseEntitlement[]
 
   @@unique([userId, idempotencyKey])
   @@index([userId, status])
@@ -846,7 +827,6 @@ model WaitlistEntry {
   user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   concert      Concert               @relation(fields: [concertId], references: [id], onDelete: Cascade)
   ticketType   TicketType            @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
-  entitlements PurchaseEntitlement[]
 
   @@index([ticketTypeId, status, joinedAt])
   @@index([userId, concertId, ticketTypeId, status])
@@ -854,37 +834,25 @@ model WaitlistEntry {
   @@map("waitlist_entries")
 }
 
-model PurchaseEntitlement {
-  id              String                    @id @default(uuid()) @db.Uuid
-  waitlistEntryId String?                   @map("waitlist_entry_id") @db.Uuid
-  lotteryRegistrationId String?             @map("lottery_registration_id") @db.Uuid
-  userId          String                    @map("user_id") @db.Uuid
-  concertId       String                    @map("concert_id") @db.Uuid
-  ticketTypeId    String                    @map("ticket_type_id") @db.Uuid
-  orderId         String?                   @map("order_id") @db.Uuid
-  source          PurchaseEntitlementSource @default(WAITLIST)
-  status          PurchaseEntitlementStatus @default(ACTIVE)
-  quantity        Int
-  grantedAt       DateTime                  @default(now()) @map("granted_at") @db.Timestamptz(6)
-  expiresAt       DateTime                  @map("expires_at") @db.Timestamptz(6)
-  consumedAt      DateTime?                 @map("consumed_at") @db.Timestamptz(6)
-  revokedAt       DateTime?                 @map("revoked_at") @db.Timestamptz(6)
-  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+enum WaitlistAvailabilityMarker {
+  AVAILABLE
+  SOLD_OUT
+  NOTIFIED
 
-  waitlistEntry WaitlistEntry? @relation(fields: [waitlistEntryId], references: [id], onDelete: SetNull)
-  lotteryRegistration LotteryRegistration? @relation(fields: [lotteryRegistrationId], references: [id], onDelete: SetNull)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  concert       Concert        @relation(fields: [concertId], references: [id], onDelete: Cascade)
-  ticketType    TicketType     @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
-  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  @@map("waitlist_availability_marker")
+}
 
-  @@index([ticketTypeId, status, expiresAt])
-  @@index([userId, concertId, ticketTypeId, status])
-  @@index([waitlistEntryId])
-  @@index([lotteryRegistrationId])
-  @@index([orderId])
-  @@map("purchase_entitlements")
+model WaitlistTicketAvailability {
+  id             String                     @id @default(uuid()) @db.Uuid
+  ticketTypeId   String                     @unique @map("ticket_type_id") @db.Uuid
+  markerState    WaitlistAvailabilityMarker @default(AVAILABLE) @map("marker_state")
+  lastNotifiedAt DateTime?                  @map("last_notified_at") @db.Timestamptz(6)
+  createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@map("waitlist_ticket_availability")
 }
 
 model LotteryConfig {
@@ -895,7 +863,6 @@ model LotteryConfig {
   registrationClosesAt DateTime           @map("registration_closes_at") @db.Timestamptz(6)
   drawAt              DateTime            @map("draw_at") @db.Timestamptz(6)
   allocation          Int
-  entitlementTtlMinutes Int               @default(15) @map("entitlement_ttl_minutes")
   status              LotteryConfigStatus @default(SCHEDULED)
   seed                String?             @db.VarChar(120)
   drawnAt             DateTime?           @map("drawn_at") @db.Timestamptz(6)
@@ -917,6 +884,8 @@ model LotteryRegistration {
   concertId       String                    @map("concert_id") @db.Uuid
   ticketTypeId    String                    @map("ticket_type_id") @db.Uuid
   desiredQuantity Int                       @map("desired_quantity")
+  wonQuantity     Int                       @default(0) @map("won_quantity")
+  purchasedQuantity Int                     @default(0) @map("purchased_quantity")
   status          LotteryRegistrationStatus @default(REGISTERED)
   registeredAt    DateTime                  @default(now()) @map("registered_at") @db.Timestamptz(6)
   wonAt           DateTime?                 @map("won_at") @db.Timestamptz(6)
@@ -929,7 +898,6 @@ model LotteryRegistration {
   user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   concert      Concert               @relation(fields: [concertId], references: [id], onDelete: Cascade)
   ticketType   TicketType            @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
-  entitlements PurchaseEntitlement[]
 
   @@index([ticketTypeId, status])
   @@index([userId, ticketTypeId, status])

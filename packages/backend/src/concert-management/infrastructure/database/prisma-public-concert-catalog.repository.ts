@@ -63,7 +63,6 @@ type TicketTypeRecord = {
   status: string;
   zones?: TicketTypeZoneRecord[];
   waitlistEntries?: Array<{ id: string }>;
-  purchaseEntitlements?: Array<{ id: string }>;
 };
 
 type ConcertArtistRecord = {
@@ -284,12 +283,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
           orderBy: { code: 'asc' },
           include: {
             waitlistEntries: {
-              where: { status: { in: ['WAITING', 'GRANTED'] } },
-              select: { id: true },
-              take: 1,
-            },
-            purchaseEntitlements: {
-              where: { status: 'ACTIVE' },
+              where: { status: 'WAITING' },
               select: { id: true },
               take: 1,
             },
@@ -467,9 +461,7 @@ export class PrismaPublicConcertCatalogRepository implements PublicConcertCatalo
       saleEndsAt: ticketType.saleEndsAt,
       status: ticketType.status,
       zoneIds: this.zoneIdsForTicketType(ticketType, concertId),
-      waitlistGated:
-        (ticketType.waitlistEntries?.length ?? 0) > 0 ||
-        (ticketType.purchaseEntitlements?.length ?? 0) > 0,
+      waitlistGated: false,
     };
   }
 

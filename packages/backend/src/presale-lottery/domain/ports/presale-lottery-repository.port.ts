@@ -1,11 +1,10 @@
 import type {
   LotteryConfigRecord,
-  LotteryEntitlementNotificationContext,
-  LotteryEntitlementRecord,
   LotteryNotSelectedNotificationContext,
   LotteryRegistrationListItem,
   LotteryRegistrationRecord,
   LotteryStatusRecord,
+  LotteryWinnerNotificationContext,
   TicketTypeLotteryInfo,
 } from '../lottery.types';
 import type { DrawWinner } from '../lottery-draw';
@@ -19,7 +18,6 @@ export interface CreateLotteryConfigInput {
   registrationClosesAt: Date;
   drawAt: Date;
   allocation: number;
-  entitlementTtlMinutes: number;
   /** Ticket sale start - opens the presale gate window on the ticket type. */
   saleStartsAt: Date;
   /** Public sale start — closes the presale gate window on the ticket type. */
@@ -43,7 +41,6 @@ export interface CommitDrawInput {
   winners: DrawWinner[];
   notSelectedRegistrationIds: string[];
   allocationConsumed: number;
-  ttlMinutes: number;
   now: Date;
 }
 
@@ -51,10 +48,6 @@ export interface PresaleLotteryRepositoryPort {
   findTicketType(ticketTypeId: string): Promise<TicketTypeLotteryInfo | null>;
   findConfigByTicketType(ticketTypeId: string): Promise<LotteryConfigRecord | null>;
   createConfig(input: CreateLotteryConfigInput): Promise<LotteryConfigRecord>;
-  updateConfigTtl(input: {
-    ticketTypeId: string;
-    entitlementTtlMinutes: number;
-  }): Promise<LotteryConfigRecord | null>;
   cancelConfig(ticketTypeId: string, now: Date): Promise<LotteryConfigRecord | null>;
   listRegistrations(ticketTypeId: string): Promise<LotteryRegistrationListItem[]>;
 
@@ -85,7 +78,6 @@ export interface PresaleLotteryRepositoryPort {
     now: Date;
   }): Promise<LotteryStatusRecord>;
 
-  sumActiveEntitlementQuantity(ticketTypeId: string, now: Date): Promise<number>;
   listRegisteredForDraw(ticketTypeId: string): Promise<LotteryRegistrationRecord[]>;
   /** Ticket type ids of SCHEDULED lotteries whose drawAt has passed. */
   listDueDrawTicketTypeIds(now: Date): Promise<string[]>;
@@ -94,19 +86,15 @@ export interface PresaleLotteryRepositoryPort {
   withConfigLock<T>(ticketTypeId: string, work: () => Promise<T>): Promise<T>;
   /** Transition SCHEDULED → DRAWING atomically; returns null if not SCHEDULED (idempotent). */
   beginDraw(ticketTypeId: string): Promise<LotteryConfigRecord | null>;
-  /** Persist winners/non-winners/entitlements/audit and set config COMPLETED. */
-  commitDraw(input: CommitDrawInput): Promise<LotteryEntitlementRecord[]>;
+  /**
+   * Persist winner allotment (wonQuantity) on registrations, mark non-winners, write the audit
+   * record and set config COMPLETED. Returns the winning registration ids for notification.
+   */
+  commitDraw(input: CommitDrawInput): Promise<string[]>;
 
-  listActiveEntitlementsExpiringSoon(input: {
-    now: Date;
-    reminderWindowEndsAt: Date;
-    limit: number;
-  }): Promise<LotteryEntitlementRecord[]>;
-  expireEntitlements(now: Date): Promise<number>;
-
-  findEntitlementNotificationContext(
-    entitlementId: string,
-  ): Promise<LotteryEntitlementNotificationContext | null>;
+  findWinnerNotificationContext(
+    registrationId: string,
+  ): Promise<LotteryWinnerNotificationContext | null>;
   findNotSelectedNotificationContext(
     registrationId: string,
   ): Promise<LotteryNotSelectedNotificationContext | null>;

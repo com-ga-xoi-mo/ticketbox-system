@@ -11,15 +11,13 @@ import {
 import { selectWinners } from '../../domain/lottery-draw';
 import type {
   LotteryConfigRecord,
-  LotteryEntitlementRecord,
   LotteryRegistrationRecord,
   LotteryStatusRecord,
 } from '../../domain/lottery.types';
 import type { PresaleLotteryRepositoryPort } from '../../domain/ports/presale-lottery-repository.port';
 
-export interface LotteryGrantNotifier {
-  notifyEntitlementGranted(entitlement: LotteryEntitlementRecord): Promise<void>;
-  notifyEntitlementExpiringSoon(entitlement: LotteryEntitlementRecord): Promise<void>;
+export interface LotteryDrawNotifier {
+  notifyWinner(registrationId: string): Promise<void>;
   notifyNotSelected(registrationId: string): Promise<void>;
 }
 
@@ -30,7 +28,6 @@ export interface ConfigureLotteryCommand {
   drawAt: Date;
   publicSaleStartsAt: Date;
   allocation: number;
-  entitlementTtlMinutes?: number;
 }
 
 export class ConfigureLotteryUseCase {
@@ -53,10 +50,6 @@ export class ConfigureLotteryUseCase {
 
     if (command.allocation <= 0) {
       throw new LotteryConfigInvalidError('allocation must be positive');
-    }
-    const entitlementTtlMinutes = command.entitlementTtlMinutes ?? 15;
-    if (!Number.isInteger(entitlementTtlMinutes) || entitlementTtlMinutes < 1) {
-      throw new LotteryConfigInvalidError('entitlementTtlMinutes must be a positive integer');
     }
     if (!(command.registrationOpensAt < command.registrationClosesAt)) {
       throw new LotteryConfigInvalidError(
@@ -90,7 +83,6 @@ export class ConfigureLotteryUseCase {
       registrationClosesAt: command.registrationClosesAt,
       drawAt: command.drawAt,
       allocation: command.allocation,
-      entitlementTtlMinutes,
       saleStartsAt: ticketType.saleStartsAt,
       publicSaleStartsAt: command.publicSaleStartsAt,
     });
@@ -109,33 +101,6 @@ export class CancelLotteryUseCase {
       throw new LotteryNotConfiguredError(input.ticketTypeId);
     }
     return config;
-  }
-}
-
-export class UpdateLotteryTtlUseCase {
-  constructor(private readonly repository: PresaleLotteryRepositoryPort) {}
-
-  async execute(input: {
-    ticketTypeId: string;
-    entitlementTtlMinutes: number;
-  }): Promise<LotteryConfigRecord> {
-    if (!Number.isInteger(input.entitlementTtlMinutes) || input.entitlementTtlMinutes < 1) {
-      throw new LotteryConfigInvalidError('entitlementTtlMinutes must be a positive integer');
-    }
-
-    const existing = await this.repository.findConfigByTicketType(input.ticketTypeId);
-    if (!existing) {
-      throw new LotteryNotConfiguredError(input.ticketTypeId);
-    }
-    if (existing.status !== 'SCHEDULED') {
-      throw new LotteryConfigInvalidError('lottery config can only be updated while SCHEDULED');
-    }
-
-    const updated = await this.repository.updateConfigTtl(input);
-    if (!updated) {
-      throw new LotteryNotConfiguredError(input.ticketTypeId);
-    }
-    return updated;
   }
 }
 
@@ -275,7 +240,7 @@ export class ListLotteryRegistrationsUseCase {
 export class RunLotteryDrawUseCase {
   constructor(
     private readonly repository: PresaleLotteryRepositoryPort,
-    private readonly notifier: LotteryGrantNotifier,
+    private readonly notifier: LotteryDrawNotifier,
   ) {}
 
   async execute(input: {
@@ -297,15 +262,10 @@ export class RunLotteryDrawUseCase {
       }
 
       const registrations = await this.repository.listRegisteredForDraw(input.ticketTypeId);
-      const activeEntitlementUnits = await this.repository.sumActiveEntitlementQuantity(
-        input.ticketTypeId,
-        now,
-      );
+      // Winners buy from the public pool during the presale window; award at most the
+      // configured allocation, bounded by currently-available primary inventory.
       const available =
-        ticketType.totalQuantity -
-        ticketType.reservedQuantity -
-        ticketType.soldQuantity -
-        activeEntitlementUnits;
+        ticketType.totalQuantity - ticketType.reservedQuantity - ticketType.soldQuantity;
       const grantableUnits = Math.max(Math.min(config.allocation, available), 0);
 
       const seed = config.seed ?? this.deriveSeed(config);
@@ -330,7 +290,7 @@ export class RunLotteryDrawUseCase {
         remainingAllowanceByUser,
       });
 
-      const grantedEntitlements = await this.repository.commitDraw({
+      const winnerRegistrationIds = await this.repository.commitDraw({
         configId: config.id,
         ticketTypeId: input.ticketTypeId,
         concertId: ticketType.concertId,
@@ -339,12 +299,11 @@ export class RunLotteryDrawUseCase {
         winners: selection.winners,
         notSelectedRegistrationIds: selection.notSelectedRegistrationIds,
         allocationConsumed: selection.allocationConsumed,
-        ttlMinutes: config.entitlementTtlMinutes,
         now,
       });
 
       return {
-        grantedEntitlements,
+        winnerRegistrationIds,
         notSelectedRegistrationIds: selection.notSelectedRegistrationIds,
       };
     });
@@ -353,9 +312,9 @@ export class RunLotteryDrawUseCase {
       return { granted: 0, notSelected: 0 };
     }
 
-    for (const entitlement of result.grantedEntitlements) {
+    for (const registrationId of result.winnerRegistrationIds) {
       try {
-        await this.notifier.notifyEntitlementGranted(entitlement);
+        await this.notifier.notifyWinner(registrationId);
       } catch {
         // Notification failure must not roll back the completed draw.
       }
@@ -369,7 +328,7 @@ export class RunLotteryDrawUseCase {
     }
 
     return {
-      granted: result.grantedEntitlements.length,
+      granted: result.winnerRegistrationIds.length,
       notSelected: result.notSelectedRegistrationIds.length,
     };
   }
@@ -401,38 +360,3 @@ export class RunDueLotteryDrawsUseCase {
   }
 }
 
-export class ExpireLotteryEntitlementsUseCase {
-  constructor(private readonly repository: PresaleLotteryRepositoryPort) {}
-
-  async execute(input: { now?: Date } = {}): Promise<{ expired: number }> {
-    const expired = await this.repository.expireEntitlements(input.now ?? new Date());
-    return { expired };
-  }
-}
-
-export class SendLotteryEntitlementRemindersUseCase {
-  constructor(
-    private readonly repository: PresaleLotteryRepositoryPort,
-    private readonly notifier: LotteryGrantNotifier,
-    private readonly reminderWindowMinutes: number,
-  ) {}
-
-  async execute(input: { now?: Date; limit?: number } = {}): Promise<{ enqueued: number }> {
-    const now = input.now ?? new Date();
-    const entitlements = await this.repository.listActiveEntitlementsExpiringSoon({
-      now,
-      reminderWindowEndsAt: new Date(now.getTime() + this.reminderWindowMinutes * 60 * 1000),
-      limit: input.limit ?? 100,
-    });
-    let enqueued = 0;
-    for (const entitlement of entitlements) {
-      try {
-        await this.notifier.notifyEntitlementExpiringSoon(entitlement);
-        enqueued += 1;
-      } catch {
-        // Reminder failure must not block the expiry scan.
-      }
-    }
-    return { enqueued };
-  }
-}

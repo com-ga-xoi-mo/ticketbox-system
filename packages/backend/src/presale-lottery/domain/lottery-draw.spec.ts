@@ -10,6 +10,8 @@ function reg(id: string, userId: string, desiredQuantity = 1): LotteryRegistrati
     concertId: 'concert-1',
     ticketTypeId: 'tt-1',
     desiredQuantity,
+    wonQuantity: 0,
+    purchasedQuantity: 0,
     status: 'REGISTERED',
     registeredAt: new Date('2026-01-01T00:00:00Z'),
     wonAt: null,

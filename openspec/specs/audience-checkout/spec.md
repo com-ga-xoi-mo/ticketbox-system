@@ -160,56 +160,30 @@ The audience-web app SHALL map backend error codes to Vietnamese user-facing mes
 - **THEN** the app SHALL display the corresponding Vietnamese error message as an inline Alert and allow the user to remove the promo code and retry
 
 ### Requirement: Audience can join waitlist from sold-out ticket selection
-The audience web app SHALL show an official waitlist action for primary-sale ticket types that are sold out or waitlist-gated and SHALL let an authenticated audience user join the waitlist.
+The audience web app SHALL show an official waitlist action ("Báo tôi khi có vé") for a primary-sale ticket type only when it is currently sold out, and SHALL let an authenticated audience user subscribe to a return-to-sale notification. The action SHALL NOT present the waitlist as a purchase priority or reserved slot.
 
-#### Scenario: Sold-out primary ticket shows waitlist action
+#### Scenario: Sold-out primary ticket shows notify action
 - **WHEN** a user views a published event with a sold-out primary-sale ticket type that supports official waitlist
-- **THEN** the app SHALL show a waitlist action instead of presenting normal checkout as available
+- **THEN** the app SHALL show a "báo khi có vé" action instead of presenting normal checkout as available
 
-#### Scenario: Authenticated user joins waitlist
+#### Scenario: Authenticated user subscribes
 - **WHEN** an authenticated user joins the waitlist for a ticket type
-- **THEN** the app SHALL call the waitlist join endpoint and display the user's waitlist status
+- **THEN** the app SHALL call the waitlist join endpoint and display the user's subscribed status
 
 #### Scenario: Unauthenticated user is asked to log in
-- **WHEN** an unauthenticated user clicks the waitlist action
+- **WHEN** an unauthenticated user clicks the notify action
 - **THEN** the app SHALL redirect to login with a return URL back to the event detail page
 
 ### Requirement: Audience can view and leave waitlist status
-The audience web app SHALL display the user's current official waitlist status for a ticket type and allow the user to leave while the entry or entitlement is still active.
+The audience web app SHALL display whether the user is subscribed to the official waitlist for a ticket type and allow the user to leave. It SHALL NOT display any entitlement, priority slot, queue position, or expiry, because the waitlist grants none.
 
-#### Scenario: Waiting status shown
-- **WHEN** the user has an active waiting entry for a ticket type
-- **THEN** the app SHALL display the waiting status and approximate queue position returned by the backend
+#### Scenario: Subscribed status shown
+- **WHEN** the user has an active waitlist subscription for a ticket type
+- **THEN** the app SHALL display a subscribed status ("Bạn sẽ được thông báo khi vé quay lại") without any slot, position, or countdown
 
 #### Scenario: User leaves waitlist
-- **WHEN** the user leaves the waitlist from the event detail or checkout-related surface
+- **WHEN** the user leaves the waitlist from the event detail surface
 - **THEN** the app SHALL call the leave endpoint and update the ticket type state without creating a checkout order
-
-### Requirement: Entitled user can enter checkout
-The audience web app SHALL let a user with an active official waitlist entitlement proceed to checkout for the granted ticket type before the entitlement expires.
-
-#### Scenario: Entitlement countdown shown
-- **WHEN** the user has an active waitlist entitlement
-- **THEN** the app SHALL display the entitlement expiry countdown and a checkout action for the granted ticket type
-
-#### Scenario: Entitlement submitted with checkout
-- **WHEN** the user starts checkout from an active waitlist entitlement
-- **THEN** the app SHALL include the entitlement identifier in the `POST /checkout/orders` request
-
-#### Scenario: Entitlement expires before checkout
-- **WHEN** the entitlement countdown reaches zero before order creation
-- **THEN** the app SHALL disable entitlement checkout and refresh waitlist status from the backend
-
-### Requirement: Waitlist checkout errors are user-facing
-The audience web app SHALL map official waitlist checkout errors to Vietnamese user-facing messages and SHALL not treat them as generic unknown failures.
-
-#### Scenario: Missing entitlement error
-- **WHEN** checkout is rejected because the ticket type requires an official waitlist entitlement
-- **THEN** the app SHALL show a message explaining that the user must wait for their purchase turn
-
-#### Scenario: Expired entitlement error
-- **WHEN** checkout is rejected because the entitlement expired
-- **THEN** the app SHALL show a message explaining that the purchase window has expired and refresh waitlist status
 
 ### Requirement: Audience can register for a presale lottery from event detail
 The audience web app SHALL show a lottery registration action for a lottery-enabled ticket type while its registration window is open and SHALL let an authenticated audience user register with a desired quantity.
@@ -246,37 +220,37 @@ The audience web app SHALL display the user's current lottery status for a ticke
 - **THEN** the app SHALL call the withdraw endpoint and update the ticket type state without creating a checkout order
 
 ### Requirement: Lottery winner can enter checkout
-The audience web app SHALL let a user with an active `LOTTERY` purchase entitlement proceed to checkout for the won ticket type before the entitlement expires.
+The audience web app SHALL let a lottery winner proceed to checkout for the won ticket type at any time while the presale window is open, showing the remaining quantity they may buy. It SHALL NOT display an entitlement countdown or submit any entitlement identifier.
 
-#### Scenario: Winner entitlement countdown shown
-- **WHEN** the user has an active `LOTTERY` entitlement
-- **THEN** the app SHALL display the entitlement expiry countdown and a checkout action for the won ticket type
+#### Scenario: Winner sees remaining purchasable quantity
+- **WHEN** the user is a lottery winner for a ticket type whose presale window is open
+- **THEN** the app SHALL show that the user may buy during the presale window and the remaining quantity, with a checkout action
 
-#### Scenario: Entitlement submitted with checkout
-- **WHEN** the user starts checkout from an active `LOTTERY` entitlement
-- **THEN** the app SHALL include the entitlement identifier in the `POST /checkout/orders` request
+#### Scenario: Winner checkout submits an ordinary order
+- **WHEN** the winner starts checkout during the presale window
+- **THEN** the app SHALL submit an ordinary `POST /checkout/orders` request without any entitlement identifier
 
-#### Scenario: Entitlement expires before checkout
-- **WHEN** the entitlement countdown reaches zero before order creation
-- **THEN** the app SHALL disable entitlement checkout and refresh lottery status from the backend
+#### Scenario: Winner status refreshes after purchase
+- **WHEN** the winner completes a purchase for part of their won quantity
+- **THEN** the app SHALL refresh lottery status and reflect the reduced remaining quantity
 
 ### Requirement: Lottery checkout errors are user-facing
 The audience web app SHALL map presale lottery checkout errors to Vietnamese user-facing messages and SHALL NOT treat them as generic unknown failures.
 
-#### Scenario: Missing lottery entitlement error
-- **WHEN** checkout is rejected because the ticket type requires a lottery entitlement during the presale window
+#### Scenario: Non-winner during presale error
+- **WHEN** checkout is rejected because the ticket type is in its presale window and the user is not a winner
 - **THEN** the app SHALL show a message explaining that only draw winners can buy during the presale window
 
-#### Scenario: Expired lottery entitlement error
-- **WHEN** checkout is rejected because the `LOTTERY` entitlement expired
-- **THEN** the app SHALL show a message explaining that the purchase window has expired and refresh lottery status
+#### Scenario: Won quantity exceeded error
+- **WHEN** checkout is rejected because the winner has already bought their full won quantity
+- **THEN** the app SHALL show a message explaining they have used their winning allotment and refresh lottery status
 
 ### Requirement: Audience web can expose temporary lottery operator controls for testing
 The audience web app MAY expose a temporary operator/testing panel for organizer/admin users during this change so the team can test presale lottery end-to-end before the dedicated organizer admin UI exists. The panel SHALL call organizer/admin endpoints and SHALL NOT bypass backend authorization.
 
 #### Scenario: Organizer tests manual draw from event detail
 - **WHEN** an authenticated organizer/admin views a lottery-enabled event in the audience web test flow
-- **THEN** the app MAY show controls to view registrations, update the lottery TTL before draw, and run the draw immediately
+- **THEN** the app MAY show controls to view registrations and run the draw immediately
 - **AND** after a manual draw completes, the app SHALL refresh lottery status and registration list data
 
 #### Scenario: Audience user does not get operator controls

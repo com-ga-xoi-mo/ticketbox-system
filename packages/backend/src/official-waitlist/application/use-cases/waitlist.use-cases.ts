@@ -6,7 +6,7 @@ import {
 } from '../../domain/errors';
 import type { OfficialWaitlistRepositoryPort } from '../../domain/ports/official-waitlist-repository.port';
 import type {
-  PurchaseEntitlementRecord,
+  WaitlistRecoveryNotificationContext,
   WaitlistEntryRecord,
   WaitlistStatusRecord,
 } from '../../domain/waitlist.types';
@@ -55,8 +55,7 @@ export class JoinWaitlistUseCase {
 
     const available =
       ticketType.totalQuantity - ticketType.reservedQuantity - ticketType.soldQuantity;
-    const gated = await this.repository.hasActiveGate(command.ticketTypeId);
-    if (available > 0 && !gated) {
+    if (available > 0) {
       throw new WaitlistTicketTypeNotEligibleError(command.ticketTypeId);
     }
 
@@ -86,19 +85,18 @@ export class LeaveWaitlistUseCase {
     now?: Date;
   }): Promise<{
     entry: WaitlistEntryRecord | null;
-    revokedEntitlementId: string | null;
   }> {
-    const result = await this.repository.cancelEntryAndRevokeEntitlement({
+    const entry = await this.repository.cancelEntry({
       userId: input.userId,
       ticketTypeId: input.ticketTypeId,
       now: input.now ?? new Date(),
     });
 
-    if (!result.entry) {
+    if (!entry) {
       throw new WaitlistEntryNotFoundError(input.ticketTypeId);
     }
 
-    return result;
+    return { entry };
   }
 }
 
@@ -121,138 +119,82 @@ export class GetWaitlistStatusUseCase {
 }
 
 export interface WaitlistGrantNotifier {
-  notifyEntitlementGranted(entitlement: PurchaseEntitlementRecord): Promise<void>;
-  notifyEntitlementExpiringSoon(entitlement: PurchaseEntitlementRecord): Promise<void>;
+  notifyAvailabilityRecovered(
+    context: WaitlistRecoveryNotificationContext,
+    notifiedAt: Date,
+  ): Promise<void>;
 }
 
-export class GrantWaitlistEntitlementsUseCase {
+export class WatchWaitlistAvailabilityUseCase {
   constructor(
     private readonly repository: OfficialWaitlistRepositoryPort,
     private readonly notifier: WaitlistGrantNotifier,
-    private readonly ttlMinutes: number,
   ) {}
 
-  async execute(input: {
-    ticketTypeId: string;
-    releasedQuantity?: number;
-    now?: Date;
-  }): Promise<PurchaseEntitlementRecord[]> {
-    const now = input.now ?? new Date();
-    return this.repository.withTicketTypeLock(input.ticketTypeId, async () => {
-      const ticketType = await this.repository.findTicketType(input.ticketTypeId);
-      if (!ticketType) {
-        return [];
-      }
-
-      const available =
-        ticketType.totalQuantity -
-        ticketType.reservedQuantity -
-        ticketType.soldQuantity -
-        (await this.repository.sumActiveEntitlementQuantity(input.ticketTypeId, now));
-      let remainingToGrant = Math.max(
-        Math.min(input.releasedQuantity ?? available, available),
-        0,
-      );
-      if (remainingToGrant <= 0) {
-        return [];
-      }
-
-      const entries = await this.repository.listNextWaitingEntries({
-        ticketTypeId: input.ticketTypeId,
-        limit: 50,
-      });
-      const granted: PurchaseEntitlementRecord[] = [];
-
-      for (const entry of entries) {
-        if (remainingToGrant <= 0) break;
-        const alreadyHeld = await this.repository.countAlreadyReservedOrSoldByUser({
-          userId: entry.userId,
-          ticketTypeId: entry.ticketTypeId,
-        });
-        const remainingAllowance = Math.max(ticketType.maxPerUser - alreadyHeld, 0);
-        const quantity = Math.min(
-          entry.desiredQuantity,
-          remainingAllowance,
-          remainingToGrant,
-        );
-        if (quantity <= 0) continue;
-
-        const entitlement = await this.repository.grantEntitlement({
-          entryId: entry.id,
-          userId: entry.userId,
-          concertId: entry.concertId,
-          ticketTypeId: entry.ticketTypeId,
-          quantity,
-          grantedAt: now,
-          expiresAt: new Date(now.getTime() + this.ttlMinutes * 60 * 1000),
-        });
-        granted.push(entitlement);
-        remainingToGrant -= quantity;
-
-        try {
-          await this.notifier.notifyEntitlementGranted(entitlement);
-        } catch {
-          // Notification failure is observable by logs/tests but must not roll back the grant.
-        }
-      }
-
-      return granted;
-    });
-  }
-}
-
-export class ExpireWaitlistEntitlementsUseCase {
-  constructor(
-    private readonly repository: OfficialWaitlistRepositoryPort,
-    private readonly grantUseCase: GrantWaitlistEntitlementsUseCase,
-  ) {}
-
-  async execute(input: { now?: Date } = {}): Promise<{
-    expired: number;
-    grantsTriggered: number;
+  async execute(input: { now?: Date; limit?: number } = {}): Promise<{
+    scanned: number;
+    notifiedTicketTypes: number;
+    notifications: number;
   }> {
     const now = input.now ?? new Date();
-    const expired = await this.repository.expireEntitlements(now);
-    let grantsTriggered = 0;
-    for (const item of expired) {
-      await this.grantUseCase.execute({
-        ticketTypeId: item.ticketTypeId,
-        releasedQuantity: item.quantity,
-        now,
+    const ticketTypeIds = await this.repository.listTicketTypesWithActiveSubscribers(
+      input.limit ?? 500,
+    );
+    let notifiedTicketTypes = 0;
+    let notifications = 0;
+
+    for (const ticketTypeId of ticketTypeIds) {
+      const result = await this.repository.withTicketTypeLock(ticketTypeId, async () => {
+        const ticketType = await this.repository.findTicketType(ticketTypeId);
+        if (!ticketType) return 0;
+
+        const available =
+          ticketType.totalQuantity - ticketType.reservedQuantity - ticketType.soldQuantity;
+        const marker = await this.repository.getOrCreateAvailabilityMarker(ticketTypeId);
+
+        if (available <= 0) {
+          if (marker.markerState !== 'SOLD_OUT') {
+            await this.repository.updateAvailabilityMarker({
+              ticketTypeId,
+              markerState: 'SOLD_OUT',
+            });
+          }
+          return 0;
+        }
+
+        if (marker.markerState !== 'SOLD_OUT') {
+          if (marker.markerState === 'AVAILABLE') {
+            await this.repository.updateAvailabilityMarker({
+              ticketTypeId,
+              markerState: 'AVAILABLE',
+            });
+          }
+          return 0;
+        }
+
+        const contexts = await this.repository.listActiveSubscriberNotificationContexts({
+          ticketTypeId,
+        });
+        for (const context of contexts) {
+          try {
+            await this.notifier.notifyAvailabilityRecovered(context, now);
+          } catch {
+            // Notification failures must not block marker progression or other subscribers.
+          }
+        }
+        await this.repository.updateAvailabilityMarker({
+          ticketTypeId,
+          markerState: 'NOTIFIED',
+          lastNotifiedAt: now,
+        });
+        return contexts.length;
       });
-      grantsTriggered += 1;
-    }
-    return { expired: expired.length, grantsTriggered };
-  }
-}
-
-export class SendWaitlistEntitlementRemindersUseCase {
-  constructor(
-    private readonly repository: OfficialWaitlistRepositoryPort,
-    private readonly notifier: WaitlistGrantNotifier,
-    private readonly reminderWindowMinutes: number,
-  ) {}
-
-  async execute(input: { now?: Date; limit?: number } = {}): Promise<{ enqueued: number }> {
-    const now = input.now ?? new Date();
-    const entitlements = await this.repository.listActiveEntitlementsExpiringSoon({
-      now,
-      reminderWindowEndsAt: new Date(
-        now.getTime() + this.reminderWindowMinutes * 60 * 1000,
-      ),
-      limit: input.limit ?? 100,
-    });
-    let enqueued = 0;
-
-    for (const entitlement of entitlements) {
-      try {
-        await this.notifier.notifyEntitlementExpiringSoon(entitlement);
-        enqueued += 1;
-      } catch {
-        // Reminder failure must not block the expiry scan or waitlist grants.
+      if (result > 0) {
+        notifiedTicketTypes += 1;
+        notifications += result;
       }
     }
 
-    return { enqueued };
+    return { scanned: ticketTypeIds.length, notifiedTicketTypes, notifications };
   }
 }

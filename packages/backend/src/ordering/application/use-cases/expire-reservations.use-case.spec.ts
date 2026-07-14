@@ -49,7 +49,7 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 0,
       conflicted: 0,
       failed: 0,
-      releasedItems: [],
+
     });
   });
 
@@ -68,7 +68,7 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 0,
       conflicted: 1,
       failed: 0,
-      releasedItems: [],
+
     });
   });
 
@@ -84,7 +84,7 @@ describe('ExpireReservationsUseCase', () => {
       skippedPaid: 1,
       conflicted: 0,
       failed: 0,
-      releasedItems: [],
+
     });
   });
 });

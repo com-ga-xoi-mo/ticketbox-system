@@ -4,17 +4,15 @@ vi.mock('./client', () => ({
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiDelete: vi.fn(),
-  apiPatch: vi.fn(),
 }));
 
-import { apiDelete, apiGet, apiPatch, apiPost } from './client';
+import { apiDelete, apiGet, apiPost } from './client';
 import {
   fetchLotteryConfig,
   fetchLotteryRegistrations,
   fetchLotteryStatus,
   registerForLottery,
   runLotteryDrawNow,
-  updateLotteryTtl,
   withdrawFromLottery,
 } from './lottery';
 
@@ -23,11 +21,13 @@ const statusPayload = {
   registrationId: '22222222-2222-2222-2222-222222222222',
   registrationStatus: 'REGISTERED',
   desiredQuantity: 2,
+  wonQuantity: 0,
+  purchasedQuantity: 0,
+  remainingWonQuantity: 0,
   configStatus: 'SCHEDULED',
   registrationOpensAt: '2026-01-01T00:00:00.000Z',
   registrationClosesAt: '2026-01-10T00:00:00.000Z',
   drawAt: '2026-01-11T00:00:00.000Z',
-  entitlement: null,
 };
 
 const configPayload = {
@@ -37,7 +37,6 @@ const configPayload = {
   registrationClosesAt: '2026-01-10T00:00:00.000Z',
   drawAt: '2026-01-11T00:00:00.000Z',
   allocation: 2,
-  entitlementTtlMinutes: 15,
 };
 
 describe('lottery api client', () => {
@@ -82,19 +81,7 @@ describe('lottery api client', () => {
     expect(apiGet).toHaveBeenCalledWith(
       '/organizer/lottery/11111111-1111-1111-1111-111111111111',
     );
-    expect(result.entitlementTtlMinutes).toBe(15);
-  });
-
-  it('updates lottery TTL via PATCH /organizer/lottery/:ticketTypeId/ttl', async () => {
-    vi.mocked(apiPatch).mockResolvedValue({ ...configPayload, entitlementTtlMinutes: 5 });
-    const result = await updateLotteryTtl('11111111-1111-1111-1111-111111111111', {
-      entitlementTtlMinutes: 5,
-    });
-    expect(apiPatch).toHaveBeenCalledWith(
-      '/organizer/lottery/11111111-1111-1111-1111-111111111111/ttl',
-      { entitlementTtlMinutes: 5 },
-    );
-    expect(result.entitlementTtlMinutes).toBe(5);
+    expect(result.allocation).toBe(2);
   });
 
   it('runs manual draw via POST /organizer/lottery/:ticketTypeId/draw-now', async () => {
@@ -116,9 +103,7 @@ describe('lottery api client', () => {
       ticketTypeId: '11111111-1111-1111-1111-111111111111',
       registrations: [],
     });
-    const result = await fetchLotteryRegistrations(
-      '11111111-1111-1111-1111-111111111111',
-    );
+    const result = await fetchLotteryRegistrations('11111111-1111-1111-1111-111111111111');
     expect(apiGet).toHaveBeenCalledWith(
       '/organizer/lottery/11111111-1111-1111-1111-111111111111/registrations',
     );
