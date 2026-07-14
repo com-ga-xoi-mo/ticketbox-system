@@ -5,6 +5,16 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 type UnauthorizedHandler = () => void;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void {
   unauthorizedHandler = handler;
 }
@@ -43,7 +53,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(extractErrorMessage(body, res.status));
+    throw new ApiError(extractErrorMessage(body, res.status), res.status);
   }
   return res.json() as Promise<T>;
 }

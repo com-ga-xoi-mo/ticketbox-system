@@ -18,6 +18,7 @@ import { ArtistSelector } from '../../concerts-shared/ui/ArtistSelector';
 import { toast } from 'sonner';
 
 import { VenueLocationPicker } from '../../concerts-shared/components/VenueLocationPicker';
+import { WaitingRoomConfigSection } from '../../concerts-shared/waiting-room/WaitingRoomConfigSection';
 
 import { getAssetUrl } from '../../../shared/api/client';
 
@@ -494,6 +495,10 @@ export function ConcertEditPage() {
                 error={errors.seoImageUrl}
                 placeholder="Link ảnh (https://...). Để trống sẽ tự dùng Poster."
               />
+            </FormSection>
+
+            <FormSection icon="hourglass_top" title="Phòng chờ ảo">
+              <WaitingRoomConfigSection concertId={concert.id} />
             </FormSection>
 
             {submitError && (

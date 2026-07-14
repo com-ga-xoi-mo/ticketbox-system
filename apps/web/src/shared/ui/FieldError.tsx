@@ -1,8 +1,9 @@
 interface Props {
   message?: string;
+  id?: string;
 }
 
-export function FieldError({ message }: Props) {
+export function FieldError({ message, id }: Props) {
   if (!message) return null;
-  return <p className="text-xs text-error mt-1">{message}</p>;
+  return <p id={id} className="text-xs text-error mt-1">{message}</p>;
 }
