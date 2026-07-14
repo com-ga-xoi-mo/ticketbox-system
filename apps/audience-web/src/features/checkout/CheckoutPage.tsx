@@ -140,8 +140,8 @@ export function CheckoutPage() {
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
-      const status = await leaveWaitingRoom(state.concertId);
-      setWaitingRoomStatus(status.active ? status : null);
+      await leaveWaitingRoom(state.concertId);
+      setWaitingRoomStatus(null);
     } catch (error) {
       setErrorMsg(parseOrderError(error));
     } finally {
@@ -256,12 +256,12 @@ export function CheckoutPage() {
                           onClick={handleCreateOrder}
                           disabled={
                             isSubmitting ||
-                            waitingRoomStatus.status !== 'ADMITTED' ||
-                            !waitingRoomStatus.admissionToken
+                            (waitingRoomStatus.status !== 'ADMITTED' && waitingRoomStatus.status !== 'NOT_JOINED') ||
+                            (waitingRoomStatus.status === 'ADMITTED' && !waitingRoomStatus.admissionToken)
                           }
                         >
                           {isSubmitting ? <Loader2 className="mr-2 animate-spin size-4" /> : null}
-                          Tiếp tục đặt vé
+                          {waitingRoomStatus.status === 'NOT_JOINED' ? 'Vào lại phòng chờ' : 'Tiếp tục đặt vé'}
                         </Button>
                         <Button
                           variant="outline"
