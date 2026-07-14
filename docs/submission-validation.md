@@ -15,7 +15,7 @@
 | **Admin Guest List UI** | Automated + Manual | `apps/web/src/features/admin/guest-list/` | `apps/web/src/features/admin/guest-list/*.spec.ts*` |
 | **Mobile VIP Lookup** | Automated + Manual | `apps/checkin-mobile/src/features/vip-lookup/` | `apps/checkin-mobile/src/features/vip-lookup/*.spec.ts`, `apps/checkin-mobile/src/api/http-checkin-mobile-api-client.spec.ts` |
 | **Notification Delivery (QR Email)** | Automated | `backend/src/notification/application/use-cases/deliver-notification.use-case.ts` | `backend/src/notification/purchase-confirmation-qr-delivery.integration.spec.ts` |
-| **AI Artist Bio Generation** | Gap | `N/A` | `N/A` |
+| **AI Artist Bio Generation** | Automated + Manual | `packages/backend/src/ai-artist-bio/` (pdf-validation, `infrastructure/pdf/`, `infrastructure/ai/gemini-artist-bio-generator.adapter.ts`, `infrastructure/queue/artist-bio.processor.ts`), `apps/web/src/features/artist-bio/` | `packages/backend/src/ai-artist-bio/**/*.spec.ts`, `apps/web/src/features/artist-bio/*.spec.*`, `docs/manual-tests/ai-artist-bio.md` |
 | **RBAC / Security Boundaries** | Automated | `backend/src/identity/adapters/http/guards/roles.guard.ts` | `test/checkin/shared-api-contract-flow.integration.spec.ts` |
 | **Database Migrations & Setup** | Automated | `prisma/migrations` | `npm run build:prisma` (Setup) |
 | **Seed Data** | Automated | `prisma/seed.ts` | `npm run seed` |
@@ -59,9 +59,18 @@ npx vitest run test/guest-list/guest-list-database.integration.spec.ts test/gues
 
 Test `test/guest-list/guest-list-database.integration.spec.ts` chứng minh scheduled integration riêng: tệp dưới `data/guest-list-inbox/<concertId>/*.csv` được discovery/archiving theo convention. Test và UI không cần nút discovery thủ công.
 
-### 2.5 Tests Intentionally Not Run Automatically
+### 2.5 AI Artist Bio
+```bash
+npx vitest run packages/backend/src/ai-artist-bio/
+npx vitest run --root apps/web apps/web/src/features/artist-bio
+```
+**Mục tiêu (Pass Criteria):** PDF hợp lệ được chấp nhận, PDF giả (sai đuôi, sai content-type, sai chữ ký nhị phân `%PDF-`, vượt dung lượng) bị từ chối trước khi lưu file; job chuyển `DRAFT → PROCESSING → READY_FOR_REVIEW`; PDF lỗi/không trích được text đưa job sang `FAILED` kèm `errorMessage` và retry backoff mũ 2 (tối đa 15 phút) tới `maxAttempts`; bio chỉ công khai sau khi organizer/admin bấm publish (chống hallucination); UI panel render đúng theo từng trạng thái.
+
+Test chạy được **không cần API key**: `AiBioGeneratorPort` có adapter Gemini và một bộ sinh cục bộ tất định (deterministic fallback) tự động dùng khi không cấu hình key hoặc khi provider lỗi — xem `infrastructure/ai/artist-bio-generator.provider.ts`.
+
+### 2.6 Tests Intentionally Not Run Automatically
 - **Real VNPay/MoMo E2E:** Yêu cầu sandbox keys và UI interaction. Sử dụng Unit/Simulator thay thế.
-- **AI Integration Tests:** Yêu cầu OpenAI API keys.
+- **Gemini live API:** Không gọi API thật trong test tự động. Pipeline được kiểm thử qua deterministic fallback; muốn chạy với Gemini thật thì đặt `GEMINI_API_KEY` rồi làm theo `docs/manual-tests/ai-artist-bio.md`.
 
 ## 3. Manual Checklists
 
@@ -113,4 +122,14 @@ Test `test/guest-list/guest-list-database.integration.spec.ts` chứng minh sche
 Nếu PostgreSQL, Redis, worker hoặc emulator/device không sẵn sàng, ghi rõ bước nào bị block. Không suy diễn focused unit tests thành bằng chứng E2E/manual đã pass.
 
 ## 4. Gap Analysis
-- **AI Artist Bio Generation:** Chưa có test evidence hoàn chỉnh, cần OpenSpec change riêng (`implement-ai-artist-bio`).
+
+Các yêu cầu chức năng (Blueprint BP01–BP15, Cài đặt IM01–IM18) đã hoàn thành và có bằng chứng; xem mục 1 và 2.
+
+- ~~**AI Artist Bio Generation:** Chưa có test evidence hoàn chỉnh.~~ **Đã đóng.** OpenSpec change `implement-ai-artist-bio` (archive `2026-06-18-implement-ai-artist-bio`) đã hoàn thành, cùng `2026-06-24-fix-artist-bio-bugs` và `2026-07-14-artist-bio-ai-press-kit`. Pipeline, worker, UI panel và test đầy đủ — chạy theo mục 2.5.
+
+**Gap còn lại (không phải code — thuộc khâu nộp bài):**
+- **Google Drive nộp bài:** chưa tạo thư mục public.
+- **blueprint.pdf trên Drive:** Blueprint đã có trong repo (`blueprint/design.md`, `proposal.md`, `specs/`) nhưng chưa xuất PDF và tải lên Drive.
+- **Gói `src/` + `data/` + `README.md` trên Drive:** đã có trong repo, chưa đóng gói lên Drive.
+- **`clips/` video demo:** chưa quay (MP4 1080p, ~720 kbps, có camera thành viên và demo trực tiếp).
+- **File text nộp LMS:** `{mã-nhóm}_{mssv1}_{mssv2}_{mssv3}_{mssv4}.txt` chứa link Drive — chưa tạo.
