@@ -1,23 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  ExpireWaitlistEntitlementsUseCase,
-  GetWaitlistStatusUseCase,
-  GrantWaitlistEntitlementsUseCase,
-  JoinWaitlistUseCase,
-  LeaveWaitlistUseCase,
-  SendWaitlistEntitlementRemindersUseCase,
-} from './waitlist.use-cases';
-import {
   WaitlistQuantityExceededError,
   WaitlistTicketTypeNotEligibleError,
 } from '../../domain/errors';
 import type { OfficialWaitlistRepositoryPort } from '../../domain/ports/official-waitlist-repository.port';
 import type {
-  PurchaseEntitlementRecord,
   TicketTypeWaitlistInfo,
   WaitlistEntryRecord,
+  WaitlistRecoveryNotificationContext,
 } from '../../domain/waitlist.types';
+import {
+  GetWaitlistStatusUseCase,
+  JoinWaitlistUseCase,
+  LeaveWaitlistUseCase,
+  WatchWaitlistAvailabilityUseCase,
+} from './waitlist.use-cases';
 
 function makeEntry(overrides: Partial<WaitlistEntryRecord> = {}): WaitlistEntryRecord {
   return {
@@ -28,31 +26,7 @@ function makeEntry(overrides: Partial<WaitlistEntryRecord> = {}): WaitlistEntryR
     desiredQuantity: 1,
     status: 'WAITING',
     joinedAt: new Date('2026-07-07T01:00:00.000Z'),
-    grantedAt: null,
-    fulfilledAt: null,
     cancelledAt: null,
-    expiredAt: null,
-    ...overrides,
-  };
-}
-
-function makeEntitlement(
-  overrides: Partial<PurchaseEntitlementRecord> = {},
-): PurchaseEntitlementRecord {
-  return {
-    id: 'entitlement-1',
-    waitlistEntryId: 'entry-1',
-    userId: 'user-1',
-    concertId: 'concert-1',
-    ticketTypeId: 'ticket-type-1',
-    orderId: null,
-    source: 'WAITLIST',
-    status: 'ACTIVE',
-    quantity: 1,
-    grantedAt: new Date('2026-07-07T01:05:00.000Z'),
-    expiresAt: new Date('2026-07-07T01:20:00.000Z'),
-    consumedAt: null,
-    revokedAt: null,
     ...overrides,
   };
 }
@@ -74,6 +48,21 @@ function makeTicketType(
   };
 }
 
+function makeContext(
+  overrides: Partial<WaitlistRecoveryNotificationContext> = {},
+): WaitlistRecoveryNotificationContext {
+  return {
+    entry: makeEntry(),
+    userEmail: 'audience@ticketbox.test',
+    userDisplayName: 'Nguyễn Linh',
+    concertTitle: 'Anh Trai Say Hi Live Concert',
+    concertSlug: 'anh-trai-say-hi-2026',
+    ticketTypeName: 'SVIP',
+    ticketTypeCode: 'SVIP',
+    ...overrides,
+  };
+}
+
 function makeRepository(
   overrides: Partial<OfficialWaitlistRepositoryPort> = {},
 ): OfficialWaitlistRepositoryPort {
@@ -82,29 +71,25 @@ function makeRepository(
     countAlreadyReservedOrSoldByUser: vi.fn().mockResolvedValue(0),
     findActiveEntry: vi.fn().mockResolvedValue(null),
     createEntry: vi.fn().mockResolvedValue(makeEntry()),
-    cancelEntryAndRevokeEntitlement: vi.fn().mockResolvedValue({
-      entry: makeEntry({ status: 'CANCELLED', cancelledAt: new Date() }),
-      revokedEntitlementId: null,
+    cancelEntry: vi.fn().mockResolvedValue(makeEntry({ status: 'CANCELLED' })),
+    getStatus: vi.fn().mockResolvedValue({ entry: makeEntry() }),
+    listTicketTypesWithActiveSubscribers: vi.fn().mockResolvedValue(['ticket-type-1']),
+    getOrCreateAvailabilityMarker: vi.fn().mockResolvedValue({
+      ticketTypeId: 'ticket-type-1',
+      markerState: 'SOLD_OUT',
+      lastNotifiedAt: null,
     }),
-    getStatus: vi.fn().mockResolvedValue({
-      entry: makeEntry(),
-      queuePosition: 1,
-      entitlement: null,
-    }),
-    hasActiveGate: vi.fn().mockResolvedValue(false),
-    sumActiveEntitlementQuantity: vi.fn().mockResolvedValue(0),
-    listNextWaitingEntries: vi.fn().mockResolvedValue([makeEntry()]),
-    grantEntitlement: vi.fn().mockResolvedValue(makeEntitlement()),
-    findEntitlementNotificationContext: vi.fn().mockResolvedValue(null),
-    listActiveEntitlementsExpiringSoon: vi.fn().mockResolvedValue([]),
-    expireEntitlements: vi.fn().mockResolvedValue([]),
+    updateAvailabilityMarker: vi.fn().mockResolvedValue(undefined),
+    listActiveSubscriberNotificationContexts: vi
+      .fn()
+      .mockResolvedValue([makeContext(), makeContext({ entry: makeEntry({ id: 'entry-2' }) })]),
     withTicketTypeLock: vi.fn((_, work) => work()),
     ...overrides,
   };
 }
 
 describe('official waitlist use cases', () => {
-  it('joins a sold-out primary ticket type and returns queue status', async () => {
+  it('joins a sold-out primary ticket type and returns subscribed status', async () => {
     const repository = makeRepository();
     const useCase = new JoinWaitlistUseCase(repository);
 
@@ -118,7 +103,7 @@ describe('official waitlist use cases', () => {
     expect(repository.createEntry).toHaveBeenCalledWith(
       expect.objectContaining({ desiredQuantity: 2 }),
     );
-    expect(result.queuePosition).toBe(1);
+    expect(result.entry?.status).toBe('WAITING');
   });
 
   it('returns existing status instead of creating a duplicate active entry', async () => {
@@ -138,7 +123,7 @@ describe('official waitlist use cases', () => {
     expect(repository.getStatus).toHaveBeenCalled();
   });
 
-  it('rejects joining when normal checkout is still available and not gated', async () => {
+  it('rejects joining when public availability is greater than zero', async () => {
     const repository = makeRepository({
       findTicketType: vi.fn().mockResolvedValue(
         makeTicketType({ totalQuantity: 10, reservedQuantity: 0, soldQuantity: 0 }),
@@ -172,29 +157,20 @@ describe('official waitlist use cases', () => {
     ).rejects.toBeInstanceOf(WaitlistQuantityExceededError);
   });
 
-  it('leaves waitlist and revokes active entitlement when present', async () => {
-    const repository = makeRepository({
-      cancelEntryAndRevokeEntitlement: vi.fn().mockResolvedValue({
-        entry: makeEntry({ status: 'CANCELLED' }),
-        revokedEntitlementId: 'entitlement-1',
-      }),
-    });
+  it('leaves waitlist by cancelling the active subscription', async () => {
+    const repository = makeRepository();
+
     const result = await new LeaveWaitlistUseCase(repository).execute({
       userId: 'user-1',
       ticketTypeId: 'ticket-type-1',
     });
 
-    expect(result.revokedEntitlementId).toBe('entitlement-1');
+    expect(repository.cancelEntry).toHaveBeenCalled();
+    expect(result.entry?.status).toBe('CANCELLED');
   });
 
-  it('reads waitlist status with queue position and entitlement details', async () => {
-    const repository = makeRepository({
-      getStatus: vi.fn().mockResolvedValue({
-        entry: makeEntry({ status: 'GRANTED' }),
-        queuePosition: null,
-        entitlement: makeEntitlement(),
-      }),
-    });
+  it('reads waitlist status without entitlement details', async () => {
+    const repository = makeRepository();
 
     const result = await new GetWaitlistStatusUseCase(repository).execute({
       userId: 'user-1',
@@ -202,98 +178,55 @@ describe('official waitlist use cases', () => {
       ticketTypeId: 'ticket-type-1',
     });
 
-    expect(result.entitlement?.id).toBe('entitlement-1');
+    expect(result).toEqual({ entry: makeEntry() });
   });
 
-  it('grants FIFO entitlements without mutating inventory quantities', async () => {
-    const repository = makeRepository({
-      findTicketType: vi.fn().mockResolvedValue(
-        makeTicketType({ totalQuantity: 10, reservedQuantity: 9, soldQuantity: 0 }),
-      ),
-      listNextWaitingEntries: vi.fn().mockResolvedValue([
-        makeEntry({ id: 'entry-1', joinedAt: new Date('2026-07-07T01:00:00.000Z') }),
-      ]),
-    });
-    const notifier = {
-      notifyEntitlementGranted: vi.fn(),
-      notifyEntitlementExpiringSoon: vi.fn(),
-    };
-    const useCase = new GrantWaitlistEntitlementsUseCase(repository, notifier, 15);
-
-    const result = await useCase.execute({
-      ticketTypeId: 'ticket-type-1',
-      releasedQuantity: 1,
-      now: new Date('2026-07-07T01:05:00.000Z'),
-    });
-
-    expect(result).toHaveLength(1);
-    expect(repository.grantEntitlement).toHaveBeenCalledWith(
-      expect.objectContaining({ entryId: 'entry-1', quantity: 1 }),
-    );
-  });
-
-  it('keeps granted entitlement when notification fails', async () => {
+  it('notifies all subscribers once when sold-out ticket type recovers', async () => {
+    const now = new Date('2026-07-07T01:05:00.000Z');
     const repository = makeRepository({
       findTicketType: vi.fn().mockResolvedValue(
         makeTicketType({ totalQuantity: 10, reservedQuantity: 9, soldQuantity: 0 }),
       ),
     });
-    const notifier = {
-      notifyEntitlementGranted: vi.fn().mockRejectedValue(new Error('mail down')),
-      notifyEntitlementExpiringSoon: vi.fn(),
-    };
-    const useCase = new GrantWaitlistEntitlementsUseCase(repository, notifier, 15);
+    const notifier = { notifyAvailabilityRecovered: vi.fn() };
 
-    await expect(
-      useCase.execute({ ticketTypeId: 'ticket-type-1', releasedQuantity: 1 }),
-    ).resolves.toHaveLength(1);
-  });
-
-  it('expires unused entitlements and triggers the next grant opportunity', async () => {
-    const repository = makeRepository({
-      expireEntitlements: vi.fn().mockResolvedValue([
-        { ticketTypeId: 'ticket-type-1', quantity: 1 },
-      ]),
-    });
-    const grantUseCase = {
-      execute: vi.fn().mockResolvedValue([]),
-    } as unknown as GrantWaitlistEntitlementsUseCase;
-
-    const result = await new ExpireWaitlistEntitlementsUseCase(
-      repository,
-      grantUseCase,
-    ).execute();
-
-    expect(result).toEqual({ expired: 1, grantsTriggered: 1 });
-    expect(grantUseCase.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ ticketTypeId: 'ticket-type-1', releasedQuantity: 1 }),
-    );
-  });
-
-  it('enqueues one-time reminders for active entitlements approaching expiry', async () => {
-    const entitlement = makeEntitlement({
-      expiresAt: new Date('2026-07-07T01:09:00.000Z'),
-    });
-    const repository = makeRepository({
-      listActiveEntitlementsExpiringSoon: vi.fn().mockResolvedValue([entitlement]),
-    });
-    const notifier = {
-      notifyEntitlementGranted: vi.fn(),
-      notifyEntitlementExpiringSoon: vi.fn(),
-    };
-
-    const result = await new SendWaitlistEntitlementRemindersUseCase(
+    const result = await new WatchWaitlistAvailabilityUseCase(
       repository,
       notifier,
-      5,
-    ).execute({ now: new Date('2026-07-07T01:05:00.000Z') });
+    ).execute({ now });
 
-    expect(result).toEqual({ enqueued: 1 });
-    expect(repository.listActiveEntitlementsExpiringSoon).toHaveBeenCalledWith({
-      now: new Date('2026-07-07T01:05:00.000Z'),
-      reminderWindowEndsAt: new Date('2026-07-07T01:10:00.000Z'),
-      limit: 100,
+    expect(result).toEqual({ scanned: 1, notifiedTicketTypes: 1, notifications: 2 });
+    expect(notifier.notifyAvailabilityRecovered).toHaveBeenCalledTimes(2);
+    expect(repository.updateAvailabilityMarker).toHaveBeenCalledWith({
+      ticketTypeId: 'ticket-type-1',
+      markerState: 'NOTIFIED',
+      lastNotifiedAt: now,
     });
-    expect(notifier.notifyEntitlementExpiringSoon).toHaveBeenCalledWith(entitlement);
+  });
+
+  it('re-arms the marker when availability returns to zero', async () => {
+    const repository = makeRepository({
+      getOrCreateAvailabilityMarker: vi.fn().mockResolvedValue({
+        ticketTypeId: 'ticket-type-1',
+        markerState: 'NOTIFIED',
+        lastNotifiedAt: new Date('2026-07-07T01:05:00.000Z'),
+      }),
+      findTicketType: vi.fn().mockResolvedValue(
+        makeTicketType({ totalQuantity: 10, reservedQuantity: 10, soldQuantity: 0 }),
+      ),
+    });
+    const notifier = { notifyAvailabilityRecovered: vi.fn() };
+
+    const result = await new WatchWaitlistAvailabilityUseCase(
+      repository,
+      notifier,
+    ).execute();
+
+    expect(result).toEqual({ scanned: 1, notifiedTicketTypes: 0, notifications: 0 });
+    expect(notifier.notifyAvailabilityRecovered).not.toHaveBeenCalled();
+    expect(repository.updateAvailabilityMarker).toHaveBeenCalledWith({
+      ticketTypeId: 'ticket-type-1',
+      markerState: 'SOLD_OUT',
+    });
   });
 });

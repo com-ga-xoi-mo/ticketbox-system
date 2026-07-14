@@ -3,10 +3,8 @@ import { Test } from '@nestjs/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  ExpireLotteryEntitlementsUseCase,
   RunDueLotteryDrawsUseCase,
   RunLotteryDrawUseCase,
-  SendLotteryEntitlementRemindersUseCase,
 } from './application/use-cases/lottery.use-cases';
 import { PRESALE_LOTTERY_QUEUE } from './infrastructure/queue/presale-lottery-queue.constants';
 import { PresaleLotteryProcessor } from './infrastructure/queue/presale-lottery.processor';
@@ -18,8 +16,6 @@ describe('PresaleLotteryProcessor provider wiring', () => {
         PresaleLotteryProcessor,
         { provide: RunLotteryDrawUseCase, useValue: { execute: vi.fn() } },
         { provide: RunDueLotteryDrawsUseCase, useValue: { execute: vi.fn() } },
-        { provide: ExpireLotteryEntitlementsUseCase, useValue: { execute: vi.fn() } },
-        { provide: SendLotteryEntitlementRemindersUseCase, useValue: { execute: vi.fn() } },
         { provide: getQueueToken(PRESALE_LOTTERY_QUEUE), useValue: { add: vi.fn() } },
       ],
     }).compile();

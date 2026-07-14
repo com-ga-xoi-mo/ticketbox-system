@@ -3,14 +3,12 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { Job, Queue } from 'bullmq';
 
 import {
-  ExpireLotteryEntitlementsUseCase,
   RunDueLotteryDrawsUseCase,
   RunLotteryDrawUseCase,
-  SendLotteryEntitlementRemindersUseCase,
 } from '../../application/use-cases/lottery.use-cases';
 import {
-  EXPIRE_LOTTERY_ENTITLEMENTS_JOB,
   PRESALE_LOTTERY_QUEUE,
+  RUN_DUE_LOTTERY_DRAWS_JOB,
   RUN_LOTTERY_DRAW_JOB,
 } from './presale-lottery-queue.constants';
 
@@ -22,8 +20,6 @@ export class PresaleLotteryProcessor extends WorkerHost implements OnModuleInit 
   constructor(
     private readonly runLotteryDraw: RunLotteryDrawUseCase,
     private readonly runDueLotteryDraws: RunDueLotteryDrawsUseCase,
-    private readonly expireLotteryEntitlements: ExpireLotteryEntitlementsUseCase,
-    private readonly sendLotteryEntitlementReminders: SendLotteryEntitlementRemindersUseCase,
     @InjectQueue(PRESALE_LOTTERY_QUEUE)
     private readonly queue: Queue,
   ) {
@@ -31,12 +27,12 @@ export class PresaleLotteryProcessor extends WorkerHost implements OnModuleInit 
   }
 
   async onModuleInit(): Promise<void> {
-    // Periodic scan: run due draws, expire entitlements, and send reminders.
+    // Periodic scan: run due draws.
     await this.queue.add(
-      EXPIRE_LOTTERY_ENTITLEMENTS_JOB,
+      RUN_DUE_LOTTERY_DRAWS_JOB,
       {},
       {
-        jobId: EXPIRE_LOTTERY_ENTITLEMENTS_JOB,
+        jobId: RUN_DUE_LOTTERY_DRAWS_JOB,
         repeat: { every: 60_000 },
         removeOnComplete: 10,
         removeOnFail: 50,
@@ -56,16 +52,9 @@ export class PresaleLotteryProcessor extends WorkerHost implements OnModuleInit 
     }
 
     const draws = await this.runDueLotteryDraws.execute();
-    const expired = await this.expireLotteryEntitlements.execute();
-    const reminders = await this.sendLotteryEntitlementReminders.execute();
     this.logger.debug(
-      `Lottery scan job ${job.id} drawsRun=${draws.drawsRun}, granted=${draws.granted}, expired=${expired.expired}, remindersEnqueued=${reminders.enqueued}`,
+      `Lottery scan job ${job.id} drawsRun=${draws.drawsRun}, granted=${draws.granted}`,
     );
-    return {
-      drawsRun: draws.drawsRun,
-      granted: draws.granted,
-      expired: expired.expired,
-      remindersEnqueued: reminders.enqueued,
-    };
+    return { drawsRun: draws.drawsRun, granted: draws.granted };
   }
 }

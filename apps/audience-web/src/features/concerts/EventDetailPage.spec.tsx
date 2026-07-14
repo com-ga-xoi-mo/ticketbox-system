@@ -143,7 +143,9 @@ describe('EventDetailPage lottery operator controls', () => {
       registrationOpensAt: '2026-01-01T00:00:00.000Z',
       registrationClosesAt: '2030-01-01T00:00:00.000Z',
       drawAt: '2030-01-02T00:00:00.000Z',
-      entitlement: null,
+      wonQuantity: 0,
+      purchasedQuantity: 0,
+      remainingWonQuantity: 0,
     });
     vi.mocked(lotteryApi.fetchLotteryConfig).mockResolvedValue({
       ticketTypeId: '22222222-2222-2222-2222-222222222222',
@@ -152,7 +154,6 @@ describe('EventDetailPage lottery operator controls', () => {
       registrationClosesAt: '2030-01-01T00:00:00.000Z',
       drawAt: '2030-01-02T00:00:00.000Z',
       allocation: 2,
-      entitlementTtlMinutes: 15,
     });
     vi.mocked(lotteryApi.fetchLotteryRegistrations).mockResolvedValue({
       ticketTypeId: '22222222-2222-2222-2222-222222222222',
@@ -163,13 +164,15 @@ describe('EventDetailPage lottery operator controls', () => {
           userEmail: 'user@example.com',
           userDisplayName: 'User One',
           desiredQuantity: 2,
+          wonQuantity: 0,
+          purchasedQuantity: 0,
+          remainingWonQuantity: 0,
           status: 'REGISTERED',
           registeredAt: '2026-01-01T01:00:00.000Z',
           wonAt: null,
           notSelectedAt: null,
           withdrawnAt: null,
           fulfilledAt: null,
-          entitlement: null,
         },
       ],
     });
@@ -203,7 +206,9 @@ describe('EventDetailPage lottery operator controls', () => {
       registrationOpensAt: '2026-01-01T00:00:00.000Z',
       registrationClosesAt: '2030-01-01T00:00:00.000Z',
       drawAt: '2030-01-02T00:00:00.000Z',
-      entitlement: null,
+      wonQuantity: 0,
+      purchasedQuantity: 0,
+      remainingWonQuantity: 0,
     });
 
     renderWithAuthProviders();

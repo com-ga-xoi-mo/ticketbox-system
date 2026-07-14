@@ -34,7 +34,6 @@ function makeController(overrides: {
 const emptyStatus: LotteryStatusRecord = {
   registration: null,
   config: null,
-  entitlement: null,
 };
 
 describe('PresaleLotteryController', () => {

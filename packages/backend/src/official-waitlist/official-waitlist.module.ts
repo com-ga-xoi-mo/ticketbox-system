@@ -14,17 +14,12 @@ import { PlatformConfigModule } from '../platform/config/platform-config.module'
 import { PlatformConfigService } from '../platform/config/platform-config.service';
 import { DatabaseModule } from '../platform/database/database.module';
 import { QueueModule } from '../platform/queue/queue.module';
-import {
-  WAITLIST_RELEASE_PUBLISHER,
-} from '../ordering/domain/ports/waitlist-release-publisher.port';
 import { OfficialWaitlistController } from './adapters/http/official-waitlist.controller';
 import {
-  ExpireWaitlistEntitlementsUseCase,
   GetWaitlistStatusUseCase,
-  GrantWaitlistEntitlementsUseCase,
   JoinWaitlistUseCase,
   LeaveWaitlistUseCase,
-  SendWaitlistEntitlementRemindersUseCase,
+  WatchWaitlistAvailabilityUseCase,
   type WaitlistGrantNotifier,
 } from './application/use-cases/waitlist.use-cases';
 import { WaitlistEntitlementEmailComposer } from './application/services/waitlist-entitlement-email-composer';
@@ -35,7 +30,6 @@ import {
 import { PrismaOfficialWaitlistRepository } from './infrastructure/database/prisma-official-waitlist.repository';
 import { WaitlistNotificationService } from './infrastructure/notification/waitlist-notification.service';
 import { OFFICIAL_WAITLIST_QUEUE } from './infrastructure/queue/official-waitlist-queue.constants';
-import { WaitlistReleasePublisher } from './infrastructure/queue/waitlist-release.publisher';
 
 export const WAITLIST_GRANT_NOTIFIER = Symbol('WaitlistGrantNotifier');
 
@@ -57,21 +51,18 @@ export const WAITLIST_GRANT_NOTIFIER = Symbol('WaitlistGrantNotifier');
       provide: WAITLIST_GRANT_NOTIFIER,
       inject: [
         NOTIFICATION_REPOSITORY,
-        OFFICIAL_WAITLIST_REPOSITORY,
         getQueueToken(NOTIFICATION_DELIVERY_QUEUE),
         WaitlistEntitlementEmailComposer,
         PlatformConfigService,
       ],
       useFactory: (
         notificationRepository: NotificationRepositoryPort,
-        waitlistRepository: OfficialWaitlistRepositoryPort,
         deliveryQueue: Queue<NotificationDeliveryJobData>,
         emailComposer: WaitlistEntitlementEmailComposer,
         config: PlatformConfigService,
       ) =>
         new WaitlistNotificationService(
           notificationRepository,
-          waitlistRepository,
           deliveryQueue,
           emailComposer,
           config,
@@ -102,53 +93,14 @@ export const WAITLIST_GRANT_NOTIFIER = Symbol('WaitlistGrantNotifier');
         new GetWaitlistStatusUseCase(repository),
     },
     {
-      provide: GrantWaitlistEntitlementsUseCase,
-      inject: [
-        OFFICIAL_WAITLIST_REPOSITORY,
-        WAITLIST_GRANT_NOTIFIER,
-        PlatformConfigService,
-      ],
+      provide: WatchWaitlistAvailabilityUseCase,
+      inject: [OFFICIAL_WAITLIST_REPOSITORY, WAITLIST_GRANT_NOTIFIER],
       useFactory: (
         repository: OfficialWaitlistRepositoryPort,
         notifier: WaitlistGrantNotifier,
-        config: PlatformConfigService,
-      ) =>
-        new GrantWaitlistEntitlementsUseCase(
-          repository,
-          notifier,
-          config.waitlistEntitlementTtlMinutes,
-        ),
-    },
-    {
-      provide: ExpireWaitlistEntitlementsUseCase,
-      inject: [OFFICIAL_WAITLIST_REPOSITORY, GrantWaitlistEntitlementsUseCase],
-      useFactory: (
-        repository: OfficialWaitlistRepositoryPort,
-        grantUseCase: GrantWaitlistEntitlementsUseCase,
-      ) => new ExpireWaitlistEntitlementsUseCase(repository, grantUseCase),
-    },
-    {
-      provide: SendWaitlistEntitlementRemindersUseCase,
-      inject: [
-        OFFICIAL_WAITLIST_REPOSITORY,
-        WAITLIST_GRANT_NOTIFIER,
-      ],
-      useFactory: (
-        repository: OfficialWaitlistRepositoryPort,
-        notifier: WaitlistGrantNotifier,
-      ) => new SendWaitlistEntitlementRemindersUseCase(repository, notifier, 5),
-    },
-    {
-      provide: WAITLIST_RELEASE_PUBLISHER,
-      useClass: WaitlistReleasePublisher,
+      ) => new WatchWaitlistAvailabilityUseCase(repository, notifier),
     },
   ],
-  exports: [
-    WAITLIST_RELEASE_PUBLISHER,
-    OFFICIAL_WAITLIST_REPOSITORY,
-    GrantWaitlistEntitlementsUseCase,
-    ExpireWaitlistEntitlementsUseCase,
-    SendWaitlistEntitlementRemindersUseCase,
-  ],
+  exports: [OFFICIAL_WAITLIST_REPOSITORY, WatchWaitlistAvailabilityUseCase],
 })
 export class OfficialWaitlistModule {}

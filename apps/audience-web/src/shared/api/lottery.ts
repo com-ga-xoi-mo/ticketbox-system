@@ -5,7 +5,6 @@ import {
   ConfigureLotteryRequestSchema,
   ConfigureLotteryResponseSchema,
   LotteryRegistrationListResponseSchema,
-  UpdateLotteryTtlRequestSchema,
   WithdrawLotteryResponseSchema,
   type ConfigureLotteryRequest,
   type ConfigureLotteryResponse,
@@ -13,11 +12,10 @@ import {
   type LotteryStatusResponse,
   type RegisterForLotteryRequest,
   type RunLotteryDrawNowResponse,
-  type UpdateLotteryTtlRequest,
   type WithdrawLotteryResponse,
 } from '@ticketbox/api-types';
 
-import { apiDelete, apiGet, apiPatch, apiPost } from './client';
+import { apiDelete, apiGet, apiPost } from './client';
 
 export const lotteryKeys = {
   all: ['lottery'] as const,
@@ -62,15 +60,6 @@ export async function fetchLotteryConfig(
   ticketTypeId: string,
 ): Promise<ConfigureLotteryResponse> {
   const response = await apiGet<unknown>(`/organizer/lottery/${ticketTypeId}`);
-  return ConfigureLotteryResponseSchema.parse(response);
-}
-
-export async function updateLotteryTtl(
-  ticketTypeId: string,
-  input: UpdateLotteryTtlRequest,
-): Promise<ConfigureLotteryResponse> {
-  const dto = UpdateLotteryTtlRequestSchema.parse(input);
-  const response = await apiPatch<unknown>(`/organizer/lottery/${ticketTypeId}/ttl`, dto);
   return ConfigureLotteryResponseSchema.parse(response);
 }
 

@@ -18,7 +18,6 @@ import type { PromotionValidationPort } from '../../domain/ports/promotion-valid
 
 export interface CreateOrderCommand {
   promoCode?: string;
-  waitlistEntitlementId?: string;
   waitingRoomAdmissionToken?: string;
   userId: string;
   concertId: string;
@@ -156,9 +155,7 @@ export class CreateOrderUseCase {
       items,
     });
 
-    const createdOrder = await this.inventoryReservationRepository.reserve(order, {
-      waitlistEntitlementId: command.waitlistEntitlementId,
-    });
+    const createdOrder = await this.inventoryReservationRepository.reserve(order);
     try {
       await this.waitingRoomAdmissionPort.release({
         concertId: command.concertId,

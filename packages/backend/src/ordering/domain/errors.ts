@@ -94,37 +94,25 @@ export class PerUserTicketLimitExceededError extends Error {
   }
 }
 
-export class WaitlistEntitlementRequiredError extends Error {
+export class PresaleAccessRequiredError extends Error {
   constructor(public readonly ticketTypeId: string) {
-    super(`Waitlist entitlement is required for ticket type: ${ticketTypeId}`);
-    this.name = 'WaitlistEntitlementRequiredError';
+    super(
+      `Presale access required: only lottery winners may buy ticket type ${ticketTypeId} during its presale window`,
+    );
+    this.name = 'PresaleAccessRequiredError';
   }
 }
 
-export class WaitlistEntitlementInvalidError extends Error {
-  constructor(public readonly entitlementId: string) {
-    super(`Waitlist entitlement is invalid: ${entitlementId}`);
-    this.name = 'WaitlistEntitlementInvalidError';
-  }
-}
-
-export class WaitlistEntitlementExpiredError extends Error {
-  constructor(public readonly entitlementId: string) {
-    super(`Waitlist entitlement is expired: ${entitlementId}`);
-    this.name = 'WaitlistEntitlementExpiredError';
-  }
-}
-
-export class WaitlistEntitlementQuantityExceededError extends Error {
+export class PresaleAccessQuantityExceededError extends Error {
   constructor(
-    public readonly entitlementId: string,
-    public readonly allowedQuantity: number,
+    public readonly ticketTypeId: string,
+    public readonly remainingQuantity: number,
     public readonly requestedQuantity: number,
   ) {
     super(
-      `Waitlist entitlement quantity exceeded for ${entitlementId}: allowed=${allowedQuantity}, requested=${requestedQuantity}`,
+      `Presale won quantity exceeded for ticket type ${ticketTypeId}: remaining=${remainingQuantity}, requested=${requestedQuantity}`,
     );
-    this.name = 'WaitlistEntitlementQuantityExceededError';
+    this.name = 'PresaleAccessQuantityExceededError';
   }
 }
 
