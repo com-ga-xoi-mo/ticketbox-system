@@ -16,6 +16,7 @@ import { IncrementWaitingRoomLoadUseCase } from './application/use-cases/increme
 import { JoinWaitingRoomUseCase } from './application/use-cases/join-waiting-room.use-case';
 import { LeaveWaitingRoomUseCase } from './application/use-cases/leave-waiting-room.use-case';
 import { ReleaseAdmissionSlotUseCase } from './application/use-cases/release-admission-slot.use-case';
+import { ConsumeAndHoldSlotUseCase } from './application/use-cases/consume-and-hold-slot.use-case';
 import { SetWaitingRoomOverrideUseCase } from './application/use-cases/set-waiting-room-override.use-case';
 import { ValidateAdmissionUseCase } from './application/use-cases/validate-admission.use-case';
 import { WAITING_ROOM_CONFIG_REPOSITORY } from './domain/ports/waiting-room-config-repository.port';
@@ -46,6 +47,7 @@ import { RedisWaitingRoomStore } from './infrastructure/redis/redis-waiting-room
     AdmitWaitingRoomUseCase,
     ValidateAdmissionUseCase,
     ReleaseAdmissionSlotUseCase,
+    ConsumeAndHoldSlotUseCase,
     IncrementWaitingRoomLoadUseCase,
     SetWaitingRoomOverrideUseCase,
     WaitingRoomStreamTokenService,
@@ -61,6 +63,7 @@ import { RedisWaitingRoomStore } from './infrastructure/redis/redis-waiting-room
     AdmitWaitingRoomUseCase,
     ValidateAdmissionUseCase,
     ReleaseAdmissionSlotUseCase,
+    ConsumeAndHoldSlotUseCase,
     IncrementWaitingRoomLoadUseCase,
   ],
 })

@@ -54,6 +54,7 @@ function buildStore(): WaitingRoomStorePort {
     updateLoadState: vi.fn(),
     readLoadState: vi.fn(),
     withConcertLock: vi.fn(),
+    consumeAndHoldSlot: vi.fn(),
   };
 }
 

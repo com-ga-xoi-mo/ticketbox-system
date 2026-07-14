@@ -8,5 +8,10 @@ export interface WaitingRoomAdmissionPort {
     token?: string;
   }): Promise<void>;
   release(input: { concertId: string; userId: string }): Promise<void>;
+  consumeAndHoldSlot(input: {
+    concertId: string;
+    userId: string;
+    holdTtlMinutes: number;
+  }): Promise<void>;
 }
 

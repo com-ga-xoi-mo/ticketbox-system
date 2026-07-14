@@ -2,7 +2,7 @@ import {
   LoginResponseSchema,
   OnlineScanResponseSchema,
   StaffAssignmentsResponseSchema,
-  StaffProfileResponseSchema,
+  MyProfileResponseSchema,
   TicketCacheDeltaResponseSchema,
   TicketCacheFullResponseSchema,
   type LoginRequest,
@@ -80,7 +80,7 @@ export class HttpCheckinMobileApiClient implements CheckinMobileApiClient {
     const profile = await this.request(
       '/me/profile',
       { method: 'GET' },
-      StaffProfileResponseSchema,
+      MyProfileResponseSchema,
       login.accessToken,
     );
 

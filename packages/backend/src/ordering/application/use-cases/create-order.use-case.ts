@@ -157,12 +157,13 @@ export class CreateOrderUseCase {
 
     const createdOrder = await this.inventoryReservationRepository.reserve(order);
     try {
-      await this.waitingRoomAdmissionPort.release({
+      await this.waitingRoomAdmissionPort.consumeAndHoldSlot({
         concertId: command.concertId,
         userId: command.userId,
+        holdTtlMinutes: this.reservationTtlMinutes,
       });
     } catch {
-      // The admission token has a TTL, so an unreleased slot is reclaimed shortly.
+      // If consuming fails, the admission token has a natural TTL, and the slot will be reclaimed.
     }
     return createdOrder;
   }

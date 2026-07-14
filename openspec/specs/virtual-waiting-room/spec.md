@@ -77,14 +77,14 @@ The system SHALL let an authenticated AUDIENCE user join a concert's waiting que
 - **THEN** the system SHALL remove the user from the queue and SHALL free their place
 
 ### Requirement: Bounded admission issues short-lived admission tokens
-The system SHALL admit waiting users so that at most the configured maximum concurrency are admitted at once. When an admitted user's admission token expires, the user creates an order, or the user leaves, the freed slot SHALL be given to the next waiting user, who SHALL receive a short-lived admission token bound to that user and concert.
+The system SHALL admit waiting users so that at most the configured maximum concurrency are admitted at once. When an admitted user's admission token expires, the user's pending order is finalized (paid, cancelled, or expired), or the user explicitly leaves, the freed slot SHALL be given to the next waiting user, who SHALL receive a short-lived admission token bound to that user and concert. When an admitted user creates a pending order, the system SHALL consume their admission token (preventing reuse) but SHALL NOT release their concurrency slot, extending their expiry in the active concurrency pool to match the order's reservation TTL.
 
 #### Scenario: Admission respects the concurrency cap
 - **WHEN** the number of currently admitted users is below the maximum concurrency and the queue is non-empty
 - **THEN** the system SHALL admit the earliest waiting users up to the maximum concurrency and SHALL issue each an admission token
 
 #### Scenario: Expired admission frees a slot
-- **WHEN** an admitted user's admission token expires without an order being created
+- **WHEN** an admitted user's admission token expires
 - **THEN** the system SHALL reclaim that slot and SHALL admit the next waiting user
 
 #### Scenario: Admission token is bound to the user and concert
@@ -98,6 +98,16 @@ The system SHALL admit waiting users so that at most the configured maximum conc
 #### Scenario: Admission is idempotent under concurrent runs
 - **WHEN** the admit routine runs concurrently for the same concert
 - **THEN** the system SHALL NOT admit more users than the maximum concurrency and SHALL NOT issue duplicate tokens for one slot
+
+#### Scenario: Admission token is consumed but slot is held during checkout
+- **WHEN** an admitted user creates a pending order (checkout starts)
+- **THEN** the system SHALL consume their admission token to prevent duplicate checkouts
+- **AND** the system SHALL extend their expiry in the concurrency pool to match the order's TTL
+- **AND** the user SHALL continue to be counted towards the maximum concurrency limit
+
+#### Scenario: Finalized order frees an admission slot
+- **WHEN** a user's pending order is paid, cancelled, or expires
+- **THEN** the system SHALL release their waiting room slot and SHALL admit the next waiting user
 
 ### Requirement: Live queue position is streamed over SSE
 The system SHALL stream a waiting user's current position and status over Server-Sent Events, authenticated by a short-lived stream token minted for the authenticated user and concert. The API instance serving the SSE connection SHALL compute position/status from Redis on its stream tick; the worker SHALL NOT push directly into an API instance's in-memory stream registry.
