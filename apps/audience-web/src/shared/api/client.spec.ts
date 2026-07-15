@@ -6,7 +6,14 @@ vi.mock('../auth/token-storage', () => ({
 }));
 
 import { getToken, clearToken } from '../auth/token-storage';
-import { apiGet, apiPost, registerUnauthorizedHandler, resolveAvatarImageUrl } from './client';
+import {
+  apiGet,
+  apiPost,
+  apiPostFormData,
+  apiPut,
+  registerUnauthorizedHandler,
+  resolveAvatarImageUrl,
+} from './client';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -77,13 +84,52 @@ describe('apiPost', () => {
   });
 });
 
+describe('apiPut', () => {
+  it('sends PUT with JSON body and the audience authorization token', async () => {
+    vi.mocked(getToken).mockReturnValue('my-token');
+    mockFetch.mockResolvedValue(mockResponse(200, { updated: true }));
+
+    await apiPut('/me/bank-profile', { bankName: 'MB' });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.method).toBe('PUT');
+    expect(options.body).toBe(JSON.stringify({ bankName: 'MB' }));
+    expect((options.headers as Record<string, string>)['Authorization']).toBe('Bearer my-token');
+  });
+});
+
+describe('apiPostFormData', () => {
+  it('attaches authorization without overriding the multipart content type', async () => {
+    vi.mocked(getToken).mockReturnValue('my-token');
+    mockFetch.mockResolvedValue(mockResponse(200, { uploaded: true }));
+    const formData = new FormData();
+    formData.append('file', new Blob(['proof'], { type: 'image/png' }), 'bill.png');
+
+    await apiPostFormData('/resale/orders/order-1/confirm-payment', formData);
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(options.method).toBe('POST');
+    expect(options.body).toBe(formData);
+    expect((options.headers as Record<string, string>)['Authorization']).toBe('Bearer my-token');
+    expect((options.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+  });
+});
+
 describe('avatar URL precedence', () => {
   it('prefers managed URL, then asset route, then HTTPS external URL', () => {
-    expect(resolveAvatarImageUrl('asset-id', 'https://assets.example.com/managed.jpg', 'https://google/avatar')).toBe(
-      'https://assets.example.com/managed.jpg',
+    expect(
+      resolveAvatarImageUrl(
+        'asset-id',
+        'https://assets.example.com/managed.jpg',
+        'https://google/avatar',
+      ),
+    ).toBe('https://assets.example.com/managed.jpg');
+    expect(resolveAvatarImageUrl('asset-id', null, 'https://google/avatar')).toContain(
+      '/assets/asset-id',
     );
-    expect(resolveAvatarImageUrl('asset-id', null, 'https://google/avatar')).toContain('/assets/asset-id');
-    expect(resolveAvatarImageUrl(null, null, 'https://google/avatar')).toBe('https://google/avatar');
+    expect(resolveAvatarImageUrl(null, null, 'https://google/avatar')).toBe(
+      'https://google/avatar',
+    );
     expect(resolveAvatarImageUrl(null, null, 'http://insecure.example/avatar')).toBeUndefined();
   });
 });

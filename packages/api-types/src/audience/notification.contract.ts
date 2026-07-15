@@ -9,6 +9,7 @@ export const AudienceNotificationTypeSchema = z.enum([
   'REFUND_UPDATE',
   'TICKET_UPDATE',
   'TICKET_RESEND',
+  'RESALE_PAYMENT_PROOF_UPLOADED',
 ]);
 export type AudienceNotificationType = z.infer<typeof AudienceNotificationTypeSchema>;
 
@@ -41,9 +42,7 @@ export const AudienceNotificationItemSchema = z
   .strict();
 export type AudienceNotificationItem = z.infer<typeof AudienceNotificationItemSchema>;
 
-export const AudienceNotificationListResponseSchema = z.array(
-  AudienceNotificationItemSchema,
-);
+export const AudienceNotificationListResponseSchema = z.array(AudienceNotificationItemSchema);
 export type AudienceNotificationListResponse = z.infer<
   typeof AudienceNotificationListResponseSchema
 >;

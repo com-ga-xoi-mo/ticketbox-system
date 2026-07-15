@@ -25,6 +25,7 @@ export enum NotificationType {
   REFUND_UPDATE = 'REFUND_UPDATE',
   TICKET_UPDATE = 'TICKET_UPDATE',
   TICKET_RESEND = 'TICKET_RESEND',
+  RESALE_PAYMENT_PROOF_UPLOADED = 'RESALE_PAYMENT_PROOF_UPLOADED',
 }
 
 export enum NotificationResourceType {

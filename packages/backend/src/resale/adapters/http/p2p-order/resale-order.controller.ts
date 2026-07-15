@@ -1,4 +1,18 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, HttpCode, GoneException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  GoneException,
+  HttpCode,
+  Param,
+  Post,
+  Request,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../../../identity/infrastructure/passport/jwt-auth.guard';
 import { RolesGuard } from '../../../../identity/adapters/http/guards/roles.guard';
 import { InitiateP2POrderUseCase } from '../../../application/use-cases/p2p-order/initiate-p2p-order.use-case';
@@ -9,7 +23,11 @@ import { RaiseDisputeUseCase } from '../../../application/use-cases/p2p-order/ra
 import { GetP2POrderUseCase } from '../../../application/use-cases/p2p-order/get-p2p-order.use-case';
 import type { AuthenticatedUser } from '../../../../identity/domain/authenticated-user.interface';
 
-import { InitiateOrderDto, ConfirmPaymentDto, RaiseDisputeDto } from '../dto/p2p-order.dto';
+import { InitiateOrderDto, RaiseDisputeDto } from '../dto/p2p-order.dto';
+import {
+  InvalidPaymentProofError,
+  PAYMENT_PROOF_MAX_BYTES,
+} from '../../../application/services/payment-proof-image-validator';
 
 @Controller('resale')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -31,51 +49,53 @@ export class ResaleOrderController {
 
   @Post('purchase/initiate')
   @HttpCode(201)
-  async initiateOrder(
-    @Request() req: { user: AuthenticatedUser },
-    @Body() body: InitiateOrderDto
-  ) {
+  async initiateOrder(@Request() req: { user: AuthenticatedUser }, @Body() body: InitiateOrderDto) {
     return this.initiateP2POrderUseCase.execute({
       buyerId: req.user.id,
-      listingId: body.listingId
+      listingId: body.listingId,
     });
   }
 
   @Post('orders/:id/confirm-payment')
   @HttpCode(200)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: PAYMENT_PROOF_MAX_BYTES } }))
   async confirmPayment(
     @Request() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() body: ConfirmPaymentDto
+    @UploadedFile() file?: { buffer: Buffer; originalname: string; mimetype: string; size: number },
   ) {
-    return this.confirmPaymentUseCase.execute({
-      orderId: id,
-      buyerId: req.user.id,
-      paymentProofUrl: body.paymentProofUrl
-    });
+    try {
+      return await this.confirmPaymentUseCase.execute({
+        orderId: id,
+        buyerId: req.user.id,
+        fileBuffer: file?.buffer ?? Buffer.alloc(0),
+        originalName: file?.originalname ?? '',
+        mimeType: file?.mimetype ?? '',
+        sizeBytes: file?.size ?? 0,
+      });
+    } catch (error) {
+      if (error instanceof InvalidPaymentProofError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
   }
 
   @Post('orders/:id/confirm-receipt')
   @HttpCode(200)
-  async confirmReceipt(
-    @Request() req: { user: AuthenticatedUser },
-    @Param('id') id: string
-  ) {
+  async confirmReceipt(@Request() req: { user: AuthenticatedUser }, @Param('id') id: string) {
     return this.confirmReceiptUseCase.execute({
       orderId: id,
-      sellerId: req.user.id
+      sellerId: req.user.id,
     });
   }
 
   @Post('orders/:id/cancel')
   @HttpCode(200)
-  async cancelOrder(
-    @Request() req: { user: AuthenticatedUser },
-    @Param('id') id: string
-  ) {
+  async cancelOrder(@Request() req: { user: AuthenticatedUser }, @Param('id') id: string) {
     return this.cancelP2POrderUseCase.execute({
       orderId: id,
-      userId: req.user.id
+      userId: req.user.id,
     });
   }
 
@@ -84,23 +104,20 @@ export class ResaleOrderController {
   async raiseDispute(
     @Request() req: { user: AuthenticatedUser },
     @Param('id') id: string,
-    @Body() body: RaiseDisputeDto
+    @Body() body: RaiseDisputeDto,
   ) {
     return this.raiseDisputeUseCase.execute({
       orderId: id,
       userId: req.user.id,
-      reason: body.reason
+      reason: body.reason,
     });
   }
 
   @Get('orders/:id')
-  async getOrder(
-    @Request() req: { user: AuthenticatedUser },
-    @Param('id') id: string
-  ) {
+  async getOrder(@Request() req: { user: AuthenticatedUser }, @Param('id') id: string) {
     return this.getP2POrderUseCase.execute({
       orderId: id,
-      userId: req.user.id
+      userId: req.user.id,
     });
   }
 }

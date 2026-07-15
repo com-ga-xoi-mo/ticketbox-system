@@ -24,10 +24,26 @@ import { GetFeedUseCase } from './application/use-cases/get-feed.use-case';
 import { GetListingDetailUseCase } from './application/use-cases/get-listing-detail.use-case';
 import { GetMyListingsUseCase } from './application/use-cases/get-my-listings.use-case';
 import { ExecutePurchaseUseCase } from './application/use-cases/execute-purchase.use-case';
-import { ToggleUpvoteUseCase, AddCommentUseCase, AddReplyUseCase, GetCommentsUseCase, FlagCommentUseCase } from './application/use-cases/social.use-cases';
-import { SendMessageUseCase, GetMyThreadsUseCase, GetThreadMessagesUseCase } from './application/use-cases/messaging.use-cases';
-import { GetSellerProfileUseCase, ComputeTrustScoreUseCase } from './application/use-cases/trust.use-cases';
-import { GetMyTransactionsUseCase, ProcessPayoutUseCase } from './application/use-cases/transaction.use-cases';
+import {
+  ToggleUpvoteUseCase,
+  AddCommentUseCase,
+  AddReplyUseCase,
+  GetCommentsUseCase,
+  FlagCommentUseCase,
+} from './application/use-cases/social.use-cases';
+import {
+  SendMessageUseCase,
+  GetMyThreadsUseCase,
+  GetThreadMessagesUseCase,
+} from './application/use-cases/messaging.use-cases';
+import {
+  GetSellerProfileUseCase,
+  ComputeTrustScoreUseCase,
+} from './application/use-cases/trust.use-cases';
+import {
+  GetMyTransactionsUseCase,
+  ProcessPayoutUseCase,
+} from './application/use-cases/transaction.use-cases';
 
 // Infrastructure / Repositories
 import { PrismaResaleListingRepository } from './infrastructure/database/prisma-resale-listing.repository';
@@ -73,6 +89,8 @@ import { ResaleDomainErrorFilter } from './adapters/http/filters/resale-domain-e
 
 import { EVENT_PUBLISHER } from './domain/ports/event-publisher.port';
 import { BullmqEventPublisher } from './infrastructure/queue/bullmq-event-publisher';
+import { PaymentProofImageValidator } from './application/services/payment-proof-image-validator';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -80,16 +98,29 @@ import { BullmqEventPublisher } from './infrastructure/queue/bullmq-event-publis
     PlatformConfigModule,
     RedisModule,
     UsersModule,
+    NotificationModule,
     JwtModule.registerAsync({
       imports: [PlatformConfigModule],
       inject: [PlatformConfigService],
       useFactory: (config: PlatformConfigService) => ({ secret: config.jwtSecret }),
     }),
     BullModule.registerQueue(
-      { name: 'compute-seller-trust', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
-      { name: 'resale-listing-expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
-      { name: 'resale.order.reserved.expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } },
-      { name: 'resale.order.confirm.expiry', defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } } }
+      {
+        name: 'compute-seller-trust',
+        defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      },
+      {
+        name: 'resale-listing-expiry',
+        defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      },
+      {
+        name: 'resale.order.reserved.expiry',
+        defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      },
+      {
+        name: 'resale.order.confirm.expiry',
+        defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      },
     ),
   ],
   controllers: [
@@ -100,16 +131,17 @@ import { BullmqEventPublisher } from './infrastructure/queue/bullmq-event-publis
     ResaleMessagingController,
     ResaleTransactionController,
     ResaleOrderController,
-    AdminResaleOrderController
+    AdminResaleOrderController,
   ],
   providers: [
     // Gateways & Subject singletons
     ResaleMessagingGateway,
     { provide: 'SSE_SUBJECT', useValue: new Subject<any>() },
-    { 
+    {
       provide: 'GATEWAY_SENDER',
       inject: [ResaleMessagingGateway],
-      useFactory: (gateway: ResaleMessagingGateway) => (userId: string, payload: any) => gateway.sendMessageToUser(userId, payload)
+      useFactory: (gateway: ResaleMessagingGateway) => (userId: string, payload: any) =>
+        gateway.sendMessageToUser(userId, payload),
     },
 
     // Repositories
@@ -127,21 +159,37 @@ import { BullmqEventPublisher } from './infrastructure/queue/bullmq-event-publis
     // Use Cases
     InitiateP2POrderUseCase,
     ConfirmPaymentUseCase,
+    PaymentProofImageValidator,
     ConfirmReceiptUseCase,
     CancelP2POrderUseCase,
     RaiseDisputeUseCase,
     GetP2POrderUseCase,
     ResolveDisputeUseCase,
-    CreateListingUseCase, CancelListingUseCase, GetFeedUseCase, GetListingDetailUseCase, GetMyListingsUseCase,
+    CreateListingUseCase,
+    CancelListingUseCase,
+    GetFeedUseCase,
+    GetListingDetailUseCase,
+    GetMyListingsUseCase,
     ExecutePurchaseUseCase,
-    ToggleUpvoteUseCase, AddCommentUseCase, AddReplyUseCase, GetCommentsUseCase, FlagCommentUseCase,
-    SendMessageUseCase, GetMyThreadsUseCase, GetThreadMessagesUseCase,
-    GetSellerProfileUseCase, ComputeTrustScoreUseCase,
-    GetMyTransactionsUseCase, ProcessPayoutUseCase,
+    ToggleUpvoteUseCase,
+    AddCommentUseCase,
+    AddReplyUseCase,
+    GetCommentsUseCase,
+    FlagCommentUseCase,
+    SendMessageUseCase,
+    GetMyThreadsUseCase,
+    GetThreadMessagesUseCase,
+    GetSellerProfileUseCase,
+    ComputeTrustScoreUseCase,
+    GetMyTransactionsUseCase,
+    ProcessPayoutUseCase,
 
     // Queue / Processors
-    ResaleListingExpiryProcessor, ResaleListingExpiryScheduler, ResaleTrustProcessor,
-    ResaleOrderReservedExpiryProcessor, ResaleOrderConfirmExpiryProcessor
+    ResaleListingExpiryProcessor,
+    ResaleListingExpiryScheduler,
+    ResaleTrustProcessor,
+    ResaleOrderReservedExpiryProcessor,
+    ResaleOrderConfirmExpiryProcessor,
   ],
   exports: [ResaleMessagingGateway],
 })

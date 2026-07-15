@@ -84,6 +84,15 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return handleResponse<T>(res);
 }
 
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(res);
+}
+
 export async function apiPostFormData<T>(path: string, formData: FormData): Promise<T> {
   const headers = buildHeaders();
   // Remove explicit Content-Type to allow the browser to set it with the correct boundary

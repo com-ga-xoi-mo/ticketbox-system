@@ -6,12 +6,6 @@ export class InitiateOrderDto {
   listingId!: string;
 }
 
-export class ConfirmPaymentDto {
-  @IsString()
-  @IsNotEmpty()
-  paymentProofUrl!: string;
-}
-
 export class RaiseDisputeDto {
   @IsString()
   @IsNotEmpty()

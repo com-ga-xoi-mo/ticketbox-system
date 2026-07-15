@@ -1,5 +1,16 @@
 import { Injectable, Inject, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { IResaleOrderRepository, RESALE_ORDER_REPOSITORY } from '../../../domain/ports/p2p-order/resale-order-repository.port';
+import {
+  IResaleOrderRepository,
+  RESALE_ORDER_REPOSITORY,
+} from '../../../domain/ports/p2p-order/resale-order-repository.port';
+import {
+  IResaleListingRepository,
+  RESALE_LISTING_REPOSITORY,
+} from '../../../domain/ports/resale-listing-repository.port';
+import {
+  ISellerBankProfileRepository,
+  SELLER_BANK_PROFILE_REPOSITORY,
+} from '../../../../users/domain/ports/seller-bank-profile-repository.port';
 
 export interface GetP2POrderCommand {
   orderId: string;
@@ -10,6 +21,9 @@ export interface GetP2POrderCommand {
 export class GetP2POrderUseCase {
   constructor(
     @Inject(RESALE_ORDER_REPOSITORY) private readonly orderRepo: IResaleOrderRepository,
+    @Inject(RESALE_LISTING_REPOSITORY) private readonly listingRepo: IResaleListingRepository,
+    @Inject(SELLER_BANK_PROFILE_REPOSITORY)
+    private readonly bankProfileRepo: ISellerBankProfileRepository,
   ) {}
 
   async execute(command: GetP2POrderCommand) {
@@ -22,6 +36,21 @@ export class GetP2POrderUseCase {
       throw new ForbiddenException('NOT_ORDER_PARTICIPANT');
     }
 
-    return order;
+    const [listing, bankProfile] = await Promise.all([
+      this.listingRepo.findListingById(order.listingId),
+      this.bankProfileRepo.findByUserId(order.sellerId),
+    ]);
+
+    return {
+      ...order,
+      amountVnd: listing?.askingPriceVnd ?? null,
+      bankInfo: bankProfile
+        ? {
+            bankAccountName: bankProfile.bankAccountName,
+            bankAccountNumber: bankProfile.bankAccountNumber,
+            bankName: bankProfile.bankName,
+          }
+        : null,
+    };
   }
 }

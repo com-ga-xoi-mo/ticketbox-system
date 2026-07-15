@@ -49,6 +49,7 @@ export const notificationTypeLabels: Record<AudienceNotificationType, string> = 
   REFUND_UPDATE: 'Hoàn tiền',
   TICKET_UPDATE: 'Vé',
   TICKET_RESEND: 'Gửi lại vé',
+  RESALE_PAYMENT_PROOF_UPLOADED: 'Bill chuyển khoản resale',
 };
 
 export const notificationResourceLabels: Record<AudienceNotificationResourceType, string> = {
@@ -76,7 +77,11 @@ export function formatDateTime(value?: string | null): string {
   });
 }
 
-export function notificationActionPath(resourceType?: string | null, resourceId?: string | null, actionUrl?: string | null): string | null {
+export function notificationActionPath(
+  resourceType?: string | null,
+  resourceId?: string | null,
+  actionUrl?: string | null,
+): string | null {
   if (actionUrl) return actionUrl;
   if (!resourceType || !resourceId) return null;
   if (resourceType === 'ORDER') return `/account/orders/${resourceId}`;
