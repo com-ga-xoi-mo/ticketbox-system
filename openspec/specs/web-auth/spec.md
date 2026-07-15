@@ -66,6 +66,22 @@ The app SHALL persist the access token in `localStorage` under a single key and 
 - **WHEN** the stored token is missing or cannot be decoded into `{ sub, roles }`
 - **THEN** no session is established and the app treats the user as signed out
 
+### Requirement: Sign-out and account-switch data isolation
+
+Signing out SHALL clear the stored access token and reset the authenticated session to signed-out. Both signing in and signing out SHALL clear any cached client-side query data (e.g. the console profile) so that no other account's cached data can be displayed after switching accounts, whether through an explicit sign-out or by signing in directly as a different account without signing out first.
+
+#### Scenario: Sign-out clears session and cached data
+
+- **WHEN** an authenticated user signs out
+- **THEN** the app clears the stored access token, resets the session to signed-out, and clears cached query data
+- **AND** no previously displayed identity information (name, email, avatar, role) remains visible after the sign-out completes
+
+#### Scenario: Signing in as a different account does not show stale data
+
+- **WHEN** a user signs in with different credentials than the previous session, without first completing an explicit sign-out
+- **THEN** the app clears cached query data from the previous session before establishing the new session
+- **AND** identity-derived UI (including the console top navbar) reflects only the newly signed-in account's data
+
 ### Requirement: Redirect by role after sign-in
 
 After a successful sign-in, the app SHALL route the user to a destination determined by their roles, applying a fixed precedence when a user holds more than one role: `ADMIN` outranks `ORGANIZER`. Organizers SHALL land on `/concerts` (the management surface); admins SHALL land on `/dashboard`. A user whose roles include neither `ADMIN` nor `ORGANIZER` (e.g. `CHECKIN_STAFF`, `AUDIENCE`) SHALL be routed to an access-denied destination rather than a portal page, to avoid a redirect loop.

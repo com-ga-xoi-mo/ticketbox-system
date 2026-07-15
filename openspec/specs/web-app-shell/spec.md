@@ -90,7 +90,7 @@ The shell SHALL render a collapsible sidebar (expandable label mode and collapse
 - **THEN** its corresponding sidebar item is visually marked as active
 
 ### Requirement: Console top navbar uses profile identity
-The console top navbar SHALL render the authenticated user's display name, email, and avatar from current profile data fetched through `GET /me/profile`.
+The console top navbar SHALL render the authenticated user's display name, email, and avatar from current profile data fetched through `GET /me/profile`. This profile data SHALL be scoped to the active session and MUST NOT be served from a previous session's cache after a sign-out or an account switch.
 
 #### Scenario: Console profile has avatar URL
 - **WHEN** the authenticated console user's profile includes `avatarUrl`
@@ -99,6 +99,11 @@ The console top navbar SHALL render the authenticated user's display name, email
 #### Scenario: Console profile has no avatar URL
 - **WHEN** the authenticated console user's profile has no avatar URL
 - **THEN** the top navbar displays fallback initials derived from the user's display name or email
+
+#### Scenario: Navbar reflects the newly signed-in account after switching users
+- **WHEN** a user signs out and a different account signs in, or a user signs in as a different account without an explicit prior sign-out
+- **THEN** the top navbar displays the newly authenticated user's display name, email, and avatar
+- **AND** it does NOT display the previous session's cached profile data
 
 ### Requirement: Console avatar dropdown exposes account actions
 The console avatar dropdown SHALL expose account actions for the current user's role: Account, Change Password, and Logout.

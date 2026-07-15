@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAdminArtists, useCreateArtistMutation } from './hooks';
+import { useAdminArtists } from './hooks';
+import { CreateArtistDialog } from './CreateArtistDialog';
 import { Button } from '../../../shared/ui/button';
 import { Input } from '../../../shared/ui/input';
 import { Badge } from '../../../shared/ui/badge';
-import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 export function ArtistsPage() {
@@ -11,6 +11,7 @@ export function ArtistsPage() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [status, setStatus] = useState<string>('');
   const [page, setPage] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
   const limit = 20;
 
   useEffect(() => {
@@ -25,23 +26,6 @@ export function ArtistsPage() {
     offset: page * limit,
   });
 
-  const createMutation = useCreateArtistMutation();
-
-  const handleCreate = () => {
-    const slug = prompt('Nhập slug nghệ sĩ:');
-    if (!slug) return;
-    const displayName = prompt('Nhập tên hiển thị nghệ sĩ:');
-    if (!displayName) return;
-
-    createMutation.mutate(
-      { slug, displayName, status: 'ACTIVE' },
-      {
-        onSuccess: () => toast.success('Đã tạo nghệ sĩ'),
-        onError: (err: any) => toast.error(err.message || 'Tạo nghệ sĩ thất bại'),
-      }
-    );
-  };
-
   return (
     <div className="p-6 md:p-10 min-h-full">
       <div className="flex items-center justify-between mb-8">
@@ -49,7 +33,7 @@ export function ArtistsPage() {
           <h1 className="text-2xl font-bold font-display text-on-surface">Danh mục nghệ sĩ</h1>
           <p className="text-sm text-on-surface-variant font-mono">Quản lý nghệ sĩ</p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={() => setCreateOpen(true)}>
           <span className="material-symbols-outlined mr-2">add</span>
           Thêm nghệ sĩ
         </Button>
@@ -151,6 +135,8 @@ export function ArtistsPage() {
           </Button>
         </div>
       )}
+
+      <CreateArtistDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

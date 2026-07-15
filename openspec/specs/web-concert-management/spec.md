@@ -368,14 +368,19 @@ The concert form SHALL provide banner upload/preview and nullable SEO fields wit
 - **THEN** the form SHALL show a field-level error and SHALL NOT submit until corrected or cleared
 
 ### Requirement: Admin artist catalog UI
-The admin web app SHALL expose `/admin/artists` for paginated artist search, status filtering, create/edit, and avatar/poster management.
+The admin web app SHALL expose `/admin/artists` for paginated artist search, status filtering, create/edit, and avatar/poster management. Creating an artist SHALL use an in-app dialog form with field-level validation for required fields and slug format, not native browser `prompt`/`confirm` dialogs.
 
 #### Scenario: Admin searches all artist statuses
 - **WHEN** an admin opens the artist catalog and searches or filters by status
 - **THEN** the UI SHALL request protected paginated data and display ACTIVE and INACTIVE artists with safe image metadata
 
-#### Scenario: Admin creates or edits artist
-- **WHEN** an admin submits valid slug, display name, optional bio, and status
+#### Scenario: Admin creates an artist
+- **WHEN** an admin opens the "Thêm nghệ sĩ" dialog and submits a display name and a URL-safe slug, with optional bio and status
+- **THEN** the UI SHALL validate the required fields and slug format client-side before submission, call the canonical admin contract, refresh affected queries, and show validation or conflict errors safely
+- **AND** the UI SHALL NOT use `window.prompt` or `window.confirm` to collect this input
+
+#### Scenario: Admin edits artist
+- **WHEN** an admin submits valid slug, display name, optional bio, and status from the artist edit page
 - **THEN** the UI SHALL call the canonical admin contract, refresh affected queries, and show validation or conflict errors safely
 
 #### Scenario: Admin uploads artist images
