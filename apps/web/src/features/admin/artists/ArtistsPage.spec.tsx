@@ -155,13 +155,15 @@ describe('ArtistsPage', () => {
     });
   });
 
-  it('creates an artist from the Add Artist action and refreshes the list', async () => {
+  it('creates an artist via the Add Artist dialog and refreshes the list', async () => {
     vi.mocked(api.listArtists).mockResolvedValue(makeListResponse([]));
     vi.mocked(api.createArtist).mockResolvedValue(makeArtist({ slug: 'new-artist', displayName: 'New Artist' }));
-    vi.stubGlobal('prompt', vi.fn().mockReturnValueOnce('new-artist').mockReturnValueOnce('New Artist'));
     renderPage();
 
     await userEvent.click(await screen.findByRole('button', { name: /Thêm nghệ sĩ/ }));
+    await userEvent.type(await screen.findByLabelText('Tên hiển thị'), 'New Artist');
+    await userEvent.type(screen.getByLabelText('Đường dẫn URL (Slug)'), 'new-artist');
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo nghệ sĩ' }));
 
     await waitFor(() => {
       expect(api.createArtist).toHaveBeenCalledWith({
@@ -170,7 +172,34 @@ describe('ArtistsPage', () => {
         status: 'ACTIVE',
       });
     });
+  });
+
+  it('does not use native browser prompts to collect artist creation input', async () => {
+    const promptSpy = vi.fn();
+    vi.stubGlobal('prompt', promptSpy);
+    vi.mocked(api.listArtists).mockResolvedValue(makeListResponse([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Thêm nghệ sĩ/ }));
+    await screen.findByLabelText('Tên hiển thị');
+
+    expect(promptSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it('shows a field-level error and does not submit when the slug is not URL-safe', async () => {
+    vi.mocked(api.listArtists).mockResolvedValue(makeListResponse([]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Thêm nghệ sĩ/ }));
+    await userEvent.type(await screen.findByLabelText('Tên hiển thị'), 'Bad Slug');
+    await userEvent.type(screen.getByLabelText('Đường dẫn URL (Slug)'), 'Not Valid!!');
+    await userEvent.click(screen.getByRole('button', { name: 'Tạo nghệ sĩ' }));
+
+    expect(
+      await screen.findByText('Slug chỉ gồm chữ thường, số và dấu gạch ngang'),
+    ).toBeInTheDocument();
+    expect(api.createArtist).not.toHaveBeenCalled();
   });
 
   it('shows an error state when the list request fails', async () => {
