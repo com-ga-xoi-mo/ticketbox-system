@@ -1,8 +1,7 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost, apiPostFormData } from '@/shared/api/client';
@@ -10,6 +9,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/shared/auth/AuthContext';
 import { ChevronLeft, Upload, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 type ResaleOrder = {
   id: string;
@@ -35,6 +35,7 @@ export function P2POrderTrackingPage() {
   const { session } = useAuth();
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!proofFile) {
@@ -67,6 +68,7 @@ export function P2POrderTrackingPage() {
     },
     onSuccess: () => {
       setProofFile(null);
+      if (proofInputRef.current) proofInputRef.current.value = '';
       toast.success('Đã tải bill lên, đang chờ người bán xác nhận');
       refetch();
     },
@@ -192,15 +194,35 @@ export function P2POrderTrackingPage() {
               </div>
 
               <FieldGroup>
-                <Field>
+                <Field data-disabled={confirmPaymentMutation.isPending || undefined}>
                   <FieldLabel htmlFor="payment-proof">Ảnh bill chuyển khoản</FieldLabel>
-                  <Input
-                    id="payment-proof"
-                    type="file"
-                    accept={PAYMENT_PROOF_ACCEPT}
-                    onChange={handleProofFileChange}
-                    disabled={confirmPaymentMutation.isPending}
-                  />
+                  <Button
+                    asChild
+                    variant="outline"
+                    className={cn(
+                      'relative w-full',
+                      confirmPaymentMutation.isPending && 'pointer-events-none opacity-50',
+                    )}
+                  >
+                    <label htmlFor="payment-proof">
+                      <Upload data-icon="inline-start" />
+                      {proofFile ? 'Chọn ảnh bill khác' : 'Chọn ảnh bill'}
+                      <input
+                        ref={proofInputRef}
+                        id="payment-proof"
+                        type="file"
+                        accept={PAYMENT_PROOF_ACCEPT}
+                        onChange={handleProofFileChange}
+                        disabled={confirmPaymentMutation.isPending}
+                        className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                      />
+                    </label>
+                  </Button>
+                  {proofFile && (
+                    <p className="truncate text-sm font-medium" title={proofFile.name}>
+                      Đã chọn: {proofFile.name}
+                    </p>
+                  )}
                   <FieldDescription>Chấp nhận PNG, JPEG hoặc WebP, tối đa 5 MB.</FieldDescription>
                   {proofPreviewUrl && (
                     <img

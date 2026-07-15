@@ -23,6 +23,8 @@ export interface ResaleListingFeedItem extends ResaleListing {
   concertSlug?: string;
   concertStartsAt?: Date;
   upvotedByMe?: boolean;
+  currentOrderId?: string;
+  currentOrderStatus?: 'RESERVED' | 'PENDING_CONFIRM' | 'IN_DISPUTE';
 }
 
 export interface ResaleListingDetail extends ResaleListing {

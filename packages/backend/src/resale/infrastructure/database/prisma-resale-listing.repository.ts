@@ -60,7 +60,8 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
 
     let orderByClause = '';
     if (sort === 'trending') {
-      orderByClause = 'ORDER BY (l.upvote_count * 1.5 + l.comment_count * 0.5 - (EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600) * 0.1) DESC';
+      orderByClause =
+        'ORDER BY (l.upvote_count * 1.5 + l.comment_count * 0.5 - (EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600) * 0.1) DESC';
     } else if (sort === 'newest') {
       orderByClause = 'ORDER BY l.created_at DESC';
     } else if (sort === 'price_asc') {
@@ -72,7 +73,16 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
     const queryParams: any[] = [];
     let paramIndex = 1;
 
-    let whereClause = `WHERE l.status = 'ACTIVE'`;
+    let userParamIndex: number | undefined;
+    if (userId) {
+      userParamIndex = paramIndex;
+      queryParams.push(userId);
+      paramIndex++;
+    }
+
+    let whereClause = userId
+      ? `WHERE (l.status = 'ACTIVE' OR (l.status = 'RESERVED' AND current_order.id IS NOT NULL))`
+      : `WHERE l.status = 'ACTIVE'`;
 
     if (concertId) {
       whereClause += ` AND l.concert_id = $${paramIndex}::uuid`;
@@ -98,21 +108,31 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
       paramIndex++;
     }
 
-    const userParamIndex = paramIndex;
-    if (userId) {
-      queryParams.push(userId);
-      paramIndex++;
-    }
-
     const limitParamIndex = paramIndex;
     queryParams.push(limit);
     paramIndex++;
-    
+
     const offsetParamIndex = paramIndex;
     queryParams.push(offset);
     paramIndex++;
 
-    const userSelect = userId ? `, EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = $${userParamIndex}::uuid) as "upvotedByMe"` : '';
+    const userSelect = userId
+      ? `,
+        EXISTS(SELECT 1 FROM listing_upvotes u WHERE u.listing_id = l.id AND u.user_id = $${userParamIndex}::uuid) as "upvotedByMe",
+        current_order.id as "currentOrderId",
+        current_order.status as "currentOrderStatus"`
+      : '';
+    const currentOrderJoin = userId
+      ? `LEFT JOIN LATERAL (
+        SELECT o.id, o.status
+        FROM resale_orders o
+        WHERE o.listing_id = l.id
+          AND o.buyer_id = $${userParamIndex}::uuid
+          AND o.status IN ('RESERVED', 'PENDING_CONFIRM', 'IN_DISPUTE')
+        ORDER BY o.created_at DESC
+        LIMIT 1
+      ) current_order ON TRUE`
+      : '';
 
     const query = `
       SELECT 
@@ -140,32 +160,42 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
       JOIN concerts c ON l.concert_id = c.id
       LEFT JOIN seller_trust_profiles tp ON l.seller_id = tp.user_id
       LEFT JOIN ticket_types tt ON l.ticket_type_id = tt.id
+      ${currentOrderJoin}
       ${whereClause}
       ${orderByClause}
       LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
     `;
 
     const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...queryParams);
-    return results.map(r => ({ ...r, upvotedByMe: r.upvotedByMe || false }));
+    return results.map((r) => ({ ...r, upvotedByMe: r.upvotedByMe || false }));
   }
 
   async getListingDetail(listingId: string, userId?: string) {
     const listing = await this.prisma.resaleListing.findUnique({
       where: { id: listingId },
-      include: { seller: { select: { displayName: true } }, ticket: true, concert: true, ticketType: true }
+      include: {
+        seller: { select: { displayName: true } },
+        ticket: true,
+        concert: true,
+        ticketType: true,
+      },
     });
     if (!listing) throw new errors.ListingNotFoundError();
 
-    const trustProfile = await this.prisma.sellerTrustProfile.findUnique({ where: { userId: listing.sellerId } });
+    const trustProfile = await this.prisma.sellerTrustProfile.findUnique({
+      where: { userId: listing.sellerId },
+    });
     const comments = await this.prisma.listingComment.findMany({
       where: { listingId, isHidden: false },
       orderBy: { createdAt: 'desc' },
-      take: 20
+      take: 20,
     });
 
     let upvotedByMe = false;
     if (userId) {
-      const upvote = await this.prisma.listingUpvote.findUnique({ where: { listingId_userId: { listingId, userId } } });
+      const upvote = await this.prisma.listingUpvote.findUnique({
+        where: { listingId_userId: { listingId, userId } },
+      });
       upvotedByMe = !!upvote;
     }
 
@@ -174,7 +204,7 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
 
   async findActiveExpiredListings(now: Date) {
     return this.prisma.resaleListing.findMany({
-      where: { status: 'ACTIVE', expiresAt: { lte: now } }
+      where: { status: 'ACTIVE', expiresAt: { lte: now } },
     });
   }
 
@@ -186,8 +216,14 @@ export class PrismaResaleListingRepository implements IResaleListingRepository {
 
         const newQrHash = require('crypto').randomBytes(32).toString('hex');
         await tx.resaleListing.update({ where: { id: listing.id }, data: { status: 'EXPIRED' } });
-        await tx.ticket.update({ where: { id: listing.ticketId }, data: { status: 'ISSUED', qrTokenHash: newQrHash } });
-        await tx.directMessageThread.updateMany({ where: { listingId: listing.id }, data: { isClosed: true } });
+        await tx.ticket.update({
+          where: { id: listing.ticketId },
+          data: { status: 'ISSUED', qrTokenHash: newQrHash },
+        });
+        await tx.directMessageThread.updateMany({
+          where: { listingId: listing.id },
+          data: { isClosed: true },
+        });
       }
     });
   }
