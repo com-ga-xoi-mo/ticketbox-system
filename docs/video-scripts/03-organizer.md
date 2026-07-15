@@ -301,15 +301,33 @@ dưới dạng JSON để đối chiếu."
 - Chọn 1 concert cụ thể để demo phần Phòng chờ ảo trong trang sửa concert
 
 ### Cảnh 1 — Organizer Dashboard
-[Thao tác] Vào `/organizer/dashboard` → chỉ vào 3 thẻ KPI đầu trang (Tổng doanh thu, Sự kiện
-đang hoạt động, Tỉ lệ check-in trung bình) → đổi dropdown khoảng thời gian của biểu đồ (7/14/30/90
-ngày) để thấy đường biểu đồ tốc độ bán vé đổi theo → cuộn xuống bảng "Sự kiện đang hoạt động" → chỉ
-vào donut "Trạng thái Check-in trực tiếp" bên phải → bấm Quick Actions "Quản lý sự kiện" và "Quản lý
-sơ đồ ghế".
+[Thao tác] Đăng nhập `organizer@ticketbox.test` → vào `/organizer/dashboard` → chỉ vào 3 thẻ KPI
+đầu trang: "Tổng doanh thu", "Sự kiện đang hoạt động", "Tỉ lệ check-in trung bình" → đổi dropdown
+khoảng thời gian biểu đồ (7/14/30/90 ngày) → biểu đồ area "Tốc độ bán vé" đổi theo → cuộn xuống bảng
+"Sự kiện đang hoạt động": chỉ vào badge trạng thái "Đang bán" (xanh) vs "Bản nháp" (xám) → bấm "Xem
+tất cả" → quay lại, chỉ vào donut tròn "Trạng thái Check-in trực tiếp" bên phải và dòng số "x / y vé
+hợp lệ" bên dưới → bấm Quick Actions "Quản lý sự kiện" và "Quản lý sơ đồ ghế".
 
-[Lời thoại] "Dashboard tổng quan cho organizer gồm 3 thẻ thống kê, biểu đồ tốc độ bán vé theo
-khoảng thời gian tuỳ chọn, bảng các sự kiện đang hoạt động, biểu đồ tròn tỉ lệ check-in trực tiếp, và
-lối tắt Quick Actions sang 2 màn hình hay dùng nhất."
+[Lời thoại] "Dashboard của Organizer gồm 3 thẻ thống kê, biểu đồ tốc độ bán vé theo khoảng thời
+gian tuỳ chọn, bảng các sự kiện đang hoạt động, biểu đồ tròn tỉ lệ check-in trực tiếp, và lối tắt
+Quick Actions sang 2 màn hình hay dùng nhất. Toàn bộ số liệu ở đây chỉ tính trên những concert do
+chính tài khoản organizer đang đăng nhập tạo ra."
+
+
+### Cảnh 1b — Admin Dashboard
+[Thao tác] Đăng xuất, đăng nhập lại bằng `admin@ticketbox.test` → vào `/admin/dashboard` → chỉ vào
+3 thẻ KPI đầu trang: "Tổng doanh thu nền tảng", "Sự kiện hoạt động", "Tổng số buổi biểu diễn (Toàn
+thời gian)" → đổi dropdown khoảng thời gian (7/14/30/90 ngày) → biểu đồ cột "Xu hướng doanh thu nền
+tảng" đổi theo → cuộn xuống bảng "Các buổi biểu diễn doanh thu cao nhất": chỉ vào cột thứ 2 hiển thị
+tên organizer sở hữu từng concert → cuộn sang cột phải: "Các buổi biểu diễn sắp tới" (timeline toàn
+nền tảng) và "Hành động hệ thống" (Quick Actions riêng của Admin: Quản lý người dùng, Phân công nhân
+viên, Quản lý bản đồ địa điểm).
+
+[Lời thoại] "Đây là Dashboard của Admin — khác với Dashboard của Organizer vừa xem. Ba KPI ở đây là
+số liệu toàn nền tảng: tổng doanh thu của mọi organizer cộng lại, tổng số sự kiện đang hoạt động, và
+tổng số buổi biểu diễn từ trước tới nay. Bảng doanh thu cao nhất liệt kê concert từ nhiều organizer
+khác nhau. Quick Actions bên phải là những lối tắt chỉ Admin mới có: quản lý tài khoản người dùng,
+phân công nhân viên soát vé, và quản lý bản đồ địa điểm."
 
 
 ### Cảnh 2 — Vào phần Phòng chờ ảo trong trang sửa concert
